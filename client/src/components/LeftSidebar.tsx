@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ExternalLink, Film, Tv, X, Star, Clock, Play, Users } from 'lucide-react';
+import { API_BASE } from '../config';
 import type { HackerNewsItem, HistoryEntry, UpcomingRelease } from '../types';
 
 interface ReleaseDetail {
@@ -185,7 +186,7 @@ export function LeftSidebar({ hackerNews, releases, dates, selectedDate, onSelec
     const key = `${r.type}-${r.id}`;
     setLoadingId(key);
     try {
-      const resp = await fetch(`/api/widgets/releases/${r.type}/${r.id}`);
+      const resp = await fetch(`${API_BASE}/widgets/releases/${r.type}/${r.id}`);
       const data = await resp.json();
       if (!data.error) setDetail(data);
     } catch {

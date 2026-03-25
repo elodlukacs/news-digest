@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Rss, FileText, Globe, Search } from 'lucide-react';
+import { API_BASE } from '../config';
 import type { Feed } from '../types';
 
 const LANGUAGES = [
@@ -32,7 +33,7 @@ export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, 
   const [discovered, setDiscovered] = useState<{ title: string; url: string }[]>([]);
 
   useEffect(() => {
-    fetch(`/api/categories/${categoryId}`)
+    fetch(`${API_BASE}/categories/${categoryId}`)
       .then((r) => r.json())
       .then((data) => {
         setPrompt(data.custom_prompt || '');
@@ -49,7 +50,7 @@ export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, 
   };
 
   const handleSavePrompt = async () => {
-    await fetch(`/api/categories/${categoryId}/prompt`, {
+    await fetch(`${API_BASE}/categories/${categoryId}/prompt`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt }),
@@ -60,7 +61,7 @@ export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, 
 
   const handleSaveLanguage = async (lang: string) => {
     setLanguage(lang);
-    await fetch(`/api/categories/${categoryId}/language`, {
+    await fetch(`${API_BASE}/categories/${categoryId}/language`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ language: lang }),
@@ -74,7 +75,7 @@ export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, 
     setDiscovering(true);
     setDiscovered([]);
     try {
-      const res = await fetch('/api/discover-feed', {
+      const res = await fetch(`${API_BASE}/discover-feed`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: discoverUrl.trim() }),

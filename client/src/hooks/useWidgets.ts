@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { API_BASE } from '../config';
 import type { CryptoPrice, HackerNewsItem, OnThisDayEvent, UpcomingRelease } from '../types';
 
 interface ForecastDay {
@@ -43,14 +44,14 @@ export function useWidgets() {
   const [trending, setTrending] = useState<{ tag: string; count: number }[]>([]);
 
   useEffect(() => {
-    fetch('/api/widgets/weather').then((r) => r.json()).then(setWeather).catch(() => {});
-    fetch('/api/widgets/rates').then((r) => r.json()).then(setRates).catch(() => {});
-    fetch('/api/widgets/headlines').then((r) => r.json()).then(setHeadlines).catch(() => {});
-    fetch('/api/widgets/crypto').then((r) => r.json()).then(setCrypto).catch(() => {});
-    fetch('/api/widgets/hackernews').then((r) => r.json()).then(setHackerNews).catch(() => {});
-    fetch('/api/widgets/on-this-day').then((r) => r.json()).then(setOnThisDay).catch(() => {});
-    fetch('/api/widgets/releases').then((r) => r.json()).then(setReleases).catch(() => {});
-    fetch('/api/tags/trending').then((r) => r.json()).then(setTrending).catch(() => {});
+    fetch(`${API_BASE}/widgets/weather`).then((r) => r.json()).then(setWeather).catch(() => {});
+    fetch(`${API_BASE}/widgets/rates`).then((r) => r.json()).then(setRates).catch(() => {});
+    fetch(`${API_BASE}/widgets/headlines`).then((r) => r.json()).then(setHeadlines).catch(() => {});
+    fetch(`${API_BASE}/widgets/crypto`).then((r) => r.json()).then(setCrypto).catch(() => {});
+    fetch(`${API_BASE}/widgets/hackernews`).then((r) => r.json()).then(setHackerNews).catch(() => {});
+    fetch(`${API_BASE}/widgets/on-this-day`).then((r) => r.json()).then(setOnThisDay).catch(() => {});
+    fetch(`${API_BASE}/widgets/releases`).then((r) => r.json()).then(setReleases).catch(() => {});
+    fetch(`${API_BASE}/tags/trending`).then((r) => r.json()).then(setTrending).catch(() => {});
   }, []);
 
   return { weather, rates, headlines, crypto, hackerNews, onThisDay, releases, trending };

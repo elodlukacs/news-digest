@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { API_BASE } from '../config';
 
 const THEMES = ['classic', 'broadsheet', 'evening', 'morning'] as const;
 export type Theme = (typeof THEMES)[number];
@@ -12,7 +13,7 @@ export function useTheme() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     localStorage.setItem('theme', theme);
-    fetch('/api/settings/theme', {
+    fetch(`${API_BASE}/settings/theme`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ value: theme }),
@@ -20,7 +21,7 @@ export function useTheme() {
   }, [theme]);
 
   useEffect(() => {
-    fetch('/api/settings')
+    fetch(`${API_BASE}/settings`)
       .then((r) => r.json())
       .then((data) => {
         if (data.theme && THEMES.includes(data.theme)) {

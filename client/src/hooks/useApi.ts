@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Category, Feed, Summary, HistoryEntry, ChatMessage, LlmStats } from '../types';
 
-const BASE = '/api';
+import { API_BASE as BASE } from '../config';
 
 export function useCategories() {
   const [categories, setCategories] = useState<Category[]>([]);

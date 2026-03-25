@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { RefreshCw, AlertCircle, Clock, X, Zap, Send } from 'lucide-react';
+import { API_BASE } from '../config';
 import { SentimentBadge } from './SentimentBadge';
 import { ChatPanel } from './ChatPanel';
 import type { Summary, ChatMessage } from '../types';
@@ -126,7 +127,7 @@ export function SummaryView({
     setSent(false);
     setTelegramError(null);
     try {
-      const resp = await fetch('/api/telegram/send', {
+      const resp = await fetch(`${API_BASE}/telegram/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ categoryId }),

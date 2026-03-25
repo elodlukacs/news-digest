@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Zap, Clock, BarChart3, Gauge } from 'lucide-react';
+import { API_BASE } from '../config';
 import type { LlmStats, ProviderQuota } from '../types';
 
 interface Props {
@@ -10,7 +11,7 @@ export function LlmStatsModal({ onClose }: Props) {
   const [stats, setStats] = useState<LlmStats | null>(null);
 
   useEffect(() => {
-    fetch('/api/stats/llm?days=30')
+    fetch(`${API_BASE}/stats/llm?days=30`)
       .then((r) => r.json())
       .then(setStats)
       .catch(() => {});
