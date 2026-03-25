@@ -1,0 +1,86 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&family=Lora:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-body: 'Lora', Georgia, serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-widget: 'Source Sans 3', 'Inter', system-ui, sans-serif;
+  --color-ink: #09090B;
+  --color-ink-light: #3F3F46;
+  --color-ink-muted: #71717A;
+  --color-paper: #F5F0E8;
+  --color-paper-dark: #EDE7DB;
+  --color-rule: #D4D4D8;
+  --color-rule-light: #E4E4E7;
+  --color-accent: #DC2626;
+  --color-masthead: #8B4513;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--color-paper);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: #09090B;
+  color: #FAFAF9;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #D4D4D8;
+  border-radius: 2px;
+}
+
+/* Theme: Broadsheet (NYT-inspired, cool tones) */
+[data-theme="broadsheet"] {
+  --color-ink: #1C1917;
+  --color-ink-light: #44403C;
+  --color-ink-muted: #78716C;
+  --color-paper: #FAFAF9;
+  --color-paper-dark: #F5F5F4;
+  --color-rule: #D6D3D1;
+  --color-rule-light: #E7E5E4;
+  --color-accent: #C53030;
+  --color-masthead: #1A365D;
+}
+
+/* Theme: Evening Edition (dark mode) */
+[data-theme="evening"] {
+  --color-ink: #E8E6E3;
+  --color-ink-light: #A8A29E;
+  --color-ink-muted: #78716C;
+  --color-paper: #1A1A2E;
+  --color-paper-dark: #16162A;
+  --color-rule: #3D3D5C;
+  --color-rule-light: #2D2D4A;
+  --color-accent: #E07B5F;
+  --color-masthead: #C9A04E;
+}
+
+/* Theme: Morning Post (fresh, green) */
+[data-theme="morning"] {
+  --color-ink: #2D3436;
+  --color-ink-light: #4A5568;
+  --color-ink-muted: #718096;
+  --color-paper: #FDF6EC;
+  --color-paper-dark: #F7EDDB;
+  --color-rule: #CBD5E0;
+  --color-rule-light: #E2E8F0;
+  --color-accent: #E76F51;
+  --color-masthead: #2D6A4F;
+}
