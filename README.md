@@ -2,6 +2,8 @@
 
 AI-powered news aggregation and summarization platform with a newspaper-inspired editorial UI. Fetches RSS feeds, summarizes them using LLM APIs, and presents everything in a clean, multi-column layout with real-time widgets.
 
+![Screenshot](screenshot.png)
+
 ![React](https://img.shields.io/badge/React-19-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)
 ![Tailwind](https://img.shields.io/badge/Tailwind_CSS-4-blue)
