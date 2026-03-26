@@ -1,6 +1,6 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { ExternalLink, Clock, RefreshCw, Film, Tv, Star, ChevronLeft, ChevronRight } from 'lucide-react';
-import type { CryptoPrice, HackerNewsItem, UpcomingRelease } from '../types';
+import { useState } from 'react';
+import { ExternalLink, Clock, RefreshCw } from 'lucide-react';
+import type { CryptoPrice, HackerNewsItem } from '../types';
 import type { HomepageBrief, HomepageArticle } from '../hooks/useApi';
 
 /* ─── Types ──────────────────────────────────────────────── */
@@ -36,7 +36,6 @@ interface Props {
   rates: Rates | null;
   headlines: Headline[];
   hackerNews: HackerNewsItem[];
-  releases: UpcomingRelease[];
 }
 
 /* ─── Helpers ────────────────────────────────────────────── */
@@ -50,12 +49,6 @@ function timeAgo(dateStr: string) {
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `${hrs}h ago`;
   return `${Math.floor(hrs / 24)}d ago`;
-}
-
-function formatReleaseDate(dateStr: string) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 /* ─── Placeholder gradient for feeds without images ──────── */
@@ -283,127 +276,6 @@ function flattenBriefs(briefs: HomepageBrief[]): CardItem[] {
   return items;
 }
 
-/* ─── Releases Carousel ──────────────────────────────────── */
-
-function ReleasesCarousel({ releases }: { releases: UpcomingRelease[] }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-
-  const checkScroll = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    setCanScrollLeft(el.scrollLeft > 4);
-    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 4);
-  }, []);
-
-  useEffect(() => {
-    checkScroll();
-    const el = scrollRef.current;
-    if (!el) return;
-    el.addEventListener('scroll', checkScroll, { passive: true });
-    window.addEventListener('resize', checkScroll);
-    return () => {
-      el.removeEventListener('scroll', checkScroll);
-      window.removeEventListener('resize', checkScroll);
-    };
-  }, [checkScroll, releases]);
-
-  const scroll = (dir: 'left' | 'right') => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const amount = el.clientWidth * 0.75;
-    el.scrollBy({ left: dir === 'left' ? -amount : amount, behavior: 'smooth' });
-  };
-
-  return (
-    <div className="mt-1 border-t border-rule overflow-hidden">
-      <div className="pt-4 pb-5">
-        {/* Header with arrows */}
-        <div className="flex items-center justify-between mb-4 px-4">
-          <div className="flex items-center gap-4 flex-1 min-w-0">
-            <div className="flex-1 h-px bg-rule" />
-            <span className="text-[10px] uppercase tracking-[0.25em] font-bold text-ink-muted whitespace-nowrap">
-              This Week in Entertainment
-            </span>
-            <div className="flex-1 h-px bg-rule" />
-          </div>
-          <div className="flex items-center gap-1 ml-4">
-            <button
-              onClick={() => scroll('left')}
-              disabled={!canScrollLeft}
-              className="w-7 h-7 flex items-center justify-center border border-rule rounded-full cursor-pointer transition-all duration-200 hover:border-ink hover:text-ink text-ink-muted disabled:opacity-20 disabled:cursor-default"
-              aria-label="Scroll left"
-            >
-              <ChevronLeft size={14} />
-            </button>
-            <button
-              onClick={() => scroll('right')}
-              disabled={!canScrollRight}
-              className="w-7 h-7 flex items-center justify-center border border-rule rounded-full cursor-pointer transition-all duration-200 hover:border-ink hover:text-ink text-ink-muted disabled:opacity-20 disabled:cursor-default"
-              aria-label="Scroll right"
-            >
-              <ChevronRight size={14} />
-            </button>
-          </div>
-        </div>
-
-        {/* Scrollable track */}
-        <div className="relative">
-          {/* Left fade */}
-          {canScrollLeft && (
-            <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-paper to-transparent z-10 pointer-events-none" />
-          )}
-          {/* Right fade */}
-          {canScrollRight && (
-            <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-paper to-transparent z-10 pointer-events-none" />
-          )}
-
-          <div
-            ref={scrollRef}
-            className="overflow-x-auto scrollbar-none scroll-smooth"
-          >
-            <div className="flex gap-4 px-4 pb-2 w-max">
-              {releases.map(r => (
-                <div key={`${r.type}-${r.id}`} className="w-28 sm:w-32 group cursor-pointer">
-                  {r.poster ? (
-                    <img
-                      src={r.poster}
-                      alt={r.title}
-                      className="w-28 sm:w-32 h-[168px] sm:h-48 object-cover bg-paper-dark rounded-sm"
-                    />
-                  ) : (
-                    <div className="w-28 sm:w-32 h-[168px] sm:h-48 bg-paper-dark border border-rule flex items-center justify-center rounded-sm">
-                      {r.type === 'movie' ? <Film size={20} className="text-ink-muted" /> : <Tv size={20} className="text-ink-muted" />}
-                    </div>
-                  )}
-                  <div className="mt-2">
-                    <p className="text-[12px] font-serif font-bold text-ink leading-snug line-clamp-2 group-hover:text-masthead transition-colors">
-                      {r.title}
-                    </p>
-                    <div className="flex items-center gap-1.5 mt-1">
-                      {r.type === 'movie'
-                        ? <Film size={9} className="text-ink-muted shrink-0" />
-                        : <Tv size={9} className="text-ink-muted shrink-0" />
-                      }
-                      <span className="text-[10px] text-ink-muted">{formatReleaseDate(r.date)}</span>
-                      {r.rating !== null && r.rating > 0 && (
-                        <span className="flex items-center gap-0.5 text-[10px] text-masthead font-medium">
-                          <Star size={8} /> {r.rating.toFixed(1)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ─── Main Component ─────────────────────────────────────── */
 
 export function NewspaperHome({
@@ -417,7 +289,6 @@ export function NewspaperHome({
   rates,
   headlines,
   hackerNews,
-  releases,
 }: Props) {
   const allCards = flattenBriefs(briefs);
 
@@ -655,11 +526,6 @@ export function NewspaperHome({
           )}
         </div>
       </div>
-
-      {/* ─── Releases Carousel ─── */}
-      {releases.length > 0 && (
-        <ReleasesCarousel releases={releases} />
-      )}
 
     </div>
   );

@@ -1076,24 +1076,24 @@ app.get('/api/widgets/releases', async (req, res) => {
     const moviesData = await moviesResp.json();
     const tvData = await tvResp.json();
 
-    const movies = (moviesData.results || []).slice(0, 5).map(m => ({
+    const movies = (moviesData.results || []).slice(0, 20).map(m => ({
       id: m.id,
       title: m.title,
       date: m.release_date,
       type: 'movie',
       rating: m.vote_average || null,
       overview: m.overview?.slice(0, 120) || '',
-      poster: m.poster_path ? `https://image.tmdb.org/t/p/w92${m.poster_path}` : null,
+      poster: m.poster_path ? `https://image.tmdb.org/t/p/w185${m.poster_path}` : null,
     }));
 
-    const shows = (tvData.results || []).slice(0, 5).map(t => ({
+    const shows = (tvData.results || []).slice(0, 20).map(t => ({
       id: t.id,
       title: t.name,
       date: t.first_air_date,
       type: 'tv',
       rating: t.vote_average || null,
       overview: t.overview?.slice(0, 120) || '',
-      poster: t.poster_path ? `https://image.tmdb.org/t/p/w92${t.poster_path}` : null,
+      poster: t.poster_path ? `https://image.tmdb.org/t/p/w185${t.poster_path}` : null,
     }));
 
     // Merge and sort by date

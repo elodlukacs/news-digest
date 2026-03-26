@@ -1,13 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
-import { Plus, X, Settings, Trash2, Coffee, Menu, Home, ChevronRight } from 'lucide-react';
+import { Plus, X, Settings, Trash2, Coffee, Menu, Home, ChevronRight, Film } from 'lucide-react';
 import type { Category } from '../types';
 
 interface Props {
   categories: Category[];
   activeId: number | null;
   showBriefing: boolean;
+  showReleases: boolean;
   onSelect: (id: number) => void;
   onBriefing: () => void;
+  onReleases: () => void;
   onAdd: (name: string) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
   onManageFeeds: (id: number) => void;
@@ -18,8 +20,10 @@ export function CategoryNav({
   categories,
   activeId,
   showBriefing,
+  showReleases,
   onSelect,
   onBriefing,
+  onReleases,
   onAdd,
   onDelete,
   onManageFeeds,
@@ -76,12 +80,17 @@ export function CategoryNav({
     setDrawerOpen(false);
   };
 
+  const releasesAndClose = () => {
+    onReleases();
+    setDrawerOpen(false);
+  };
+
   const homeAndClose = () => {
     onHome();
     setDrawerOpen(false);
   };
 
-  const isHome = !activeId && !showBriefing;
+  const isHome = !activeId && !showBriefing && !showReleases;
 
   return (
     <>
@@ -115,6 +124,22 @@ export function CategoryNav({
               Briefing
               <span className={`absolute bottom-0 left-3 right-3 h-[2px] bg-masthead transition-all duration-300 ease-out
                 ${showBriefing ? 'opacity-100 scale-x-100' : 'opacity-0 scale-x-0 group-hover:opacity-40 group-hover:scale-x-100'}`}
+                style={{ transformOrigin: 'center' }}
+              />
+            </button>
+
+            <div className="w-px h-4 bg-rule mx-1 shrink-0" />
+
+            {/* Releases */}
+            <button
+              onClick={onReleases}
+              className={`group relative shrink-0 px-3 py-2 font-serif text-[15px] cursor-pointer flex items-center gap-1.5 transition-colors duration-200
+                ${showReleases ? 'text-masthead font-bold' : 'text-ink-muted font-semibold hover:text-ink'}`}
+            >
+              <Film size={14} />
+              Releases
+              <span className={`absolute bottom-0 left-3 right-3 h-[2px] bg-masthead transition-all duration-300 ease-out
+                ${showReleases ? 'opacity-100 scale-x-100' : 'opacity-0 scale-x-0 group-hover:opacity-40 group-hover:scale-x-100'}`}
                 style={{ transformOrigin: 'center' }}
               />
             </button>
@@ -218,7 +243,7 @@ export function CategoryNav({
 
           {/* Current section label */}
           <span className="text-[13px] font-serif font-bold text-masthead truncate max-w-[50%] text-right">
-            {showBriefing ? 'Briefing' : activeId ? categories.find(c => c.id === activeId)?.name : 'Home'}
+            {showReleases ? 'Releases' : showBriefing ? 'Briefing' : activeId ? categories.find(c => c.id === activeId)?.name : 'Home'}
           </span>
         </div>
       </nav>
@@ -276,6 +301,19 @@ export function CategoryNav({
           >
             <Coffee size={16} className={showBriefing ? 'text-masthead' : 'text-ink-muted'} />
             <span className="font-serif text-[16px]">Morning Briefing</span>
+          </button>
+
+          {/* Releases */}
+          <button
+            onClick={releasesAndClose}
+            className={`w-full flex items-center gap-3 px-5 py-3.5 text-left cursor-pointer transition-colors duration-200 ${
+              showReleases
+                ? 'bg-masthead/8 text-masthead font-bold border-l-3 border-masthead'
+                : 'text-ink hover:bg-paper-dark'
+            }`}
+          >
+            <Film size={16} className={showReleases ? 'text-masthead' : 'text-ink-muted'} />
+            <span className="font-serif text-[16px]">Releases</span>
           </button>
 
           {/* Divider */}

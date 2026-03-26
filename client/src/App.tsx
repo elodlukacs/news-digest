@@ -8,6 +8,7 @@ import { LeftSidebar } from './components/LeftSidebar';
 import { MorningBriefing } from './components/MorningBriefing';
 import { LlmStatsModal } from './components/LlmStatsModal';
 import { NewspaperHome } from './components/NewspaperHome';
+import { ReleasesPage } from './components/ReleasesPage';
 import { useCategories, useFeeds, useSummary, useSummaryHistory, useChat, useBriefing, useHomepage } from './hooks/useApi';
 import { useTheme } from './hooks/useTheme';
 import { useWidgets } from './hooks/useWidgets';
@@ -18,6 +19,7 @@ function App() {
   const [activeId, setActiveId] = useState<number | null>(null);
   const [managingId, setManagingId] = useState<number | null>(null);
   const [showBriefing, setShowBriefing] = useState(false);
+  const [showReleases, setShowReleases] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
@@ -35,18 +37,28 @@ function App() {
   const handleSelectCategory = (id: number) => {
     setActiveId(id);
     setShowBriefing(false);
+    setShowReleases(false);
     setSelectedDate(null);
   };
 
   const handleHome = () => {
     setActiveId(null);
     setShowBriefing(false);
+    setShowReleases(false);
     setSelectedDate(null);
   };
 
   const handleBriefing = () => {
     setShowBriefing(true);
     setActiveId(null);
+    setShowReleases(false);
+    setSelectedDate(null);
+  };
+
+  const handleReleases = () => {
+    setShowReleases(true);
+    setActiveId(null);
+    setShowBriefing(false);
     setSelectedDate(null);
   };
 
@@ -72,8 +84,10 @@ function App() {
         categories={categories}
         activeId={activeId}
         showBriefing={showBriefing}
+        showReleases={showReleases}
         onSelect={handleSelectCategory}
         onBriefing={handleBriefing}
+        onReleases={handleReleases}
         onAdd={addCategory}
         onDelete={handleDeleteCategory}
         onManageFeeds={setManagingId}
@@ -81,7 +95,7 @@ function App() {
       />
 
       {/* Newspaper Home: full-width grid when no category selected */}
-      {!activeCategory && !showBriefing ? (
+      {!activeCategory && !showBriefing && !showReleases ? (
         <div className="max-w-[1600px] mx-auto px-4 pb-12">
           <NewspaperHome
             briefs={homepageBriefs}
@@ -94,8 +108,11 @@ function App() {
             rates={rates}
             headlines={headlines}
             hackerNews={hackerNews}
-            releases={releases || []}
           />
+        </div>
+      ) : showReleases ? (
+        <div className="max-w-[1600px] mx-auto px-4 pb-12">
+          <ReleasesPage releases={releases || []} />
         </div>
       ) : (
         <div className="max-w-7xl mx-auto px-6 pb-20 flex gap-8">
