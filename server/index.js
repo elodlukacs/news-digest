@@ -24,71 +24,52 @@ app.use(express.json());
 
 // ========== Helpers ==========
 
-function extractImage(item) {
-  let image = '';
+function extractImageFromHtml(html) {
+  const imgMatch = String(html).match(/<img[^>]+src=["']([^"'>]+)["']/);
+  return imgMatch ? imgMatch[1] : '';
+}
 
+function extractMediaUrl(obj) {
+  if (!obj) return '';
+  const arr = Array.isArray(obj) ? obj : [obj];
+  for (const item of arr) {
+    const url = item?.$?.url || item?.url || item?.href || item?.$?.href || '';
+    if (url) return url;
+  }
+  return '';
+}
+
+function extractImage(item) {
   // 1. enclosure (common in RSS 2.0)
   if (item.enclosure?.url) {
     const encType = item.enclosure?.type || '';
-    if (encType.startsWith('image/') || !encType) image = item.enclosure.url;
+    if (encType.startsWith('image/') || !encType) return item.enclosure.url;
   }
 
   // 2. media:content (array from customFields)
-  if (!image && item['media:content']) {
-    const mcArr = Array.isArray(item['media:content']) ? item['media:content'] : [item['media:content']];
-    for (const mc of mcArr) {
-      const url = mc?.$?.url || mc?.url || mc?.$ && mc.$.url || '';
-      if (url) { image = url; break; }
-    }
-  }
+  const mcUrl = extractMediaUrl(item['media:content']);
+  if (mcUrl) return mcUrl;
 
   // 3. media:thumbnail
-  if (!image && item['media:thumbnail']) {
-    const mtArr = Array.isArray(item['media:thumbnail']) ? item['media:thumbnail'] : [item['media:thumbnail']];
-    for (const mt of mtArr) {
-      const url = mt?.$?.url || mt?.url || '';
-      if (url) { image = url; break; }
-    }
-  }
+  const mtUrl = extractMediaUrl(item['media:thumbnail']);
+  if (mtUrl) return mtUrl;
 
   // 4. media:group → media:content
-  if (!image && item['media:group']) {
+  if (item['media:group']) {
     const group = item['media:group'];
-    const mc = group?.['media:content'] || group?.['media:thumbnail'];
-    if (mc) {
-      const arr = Array.isArray(mc) ? mc : [mc];
-      for (const m of arr) {
-        const url = m?.$?.url || m?.url || '';
-        if (url) { image = url; break; }
-      }
-    }
+    const groupUrl = extractMediaUrl(group?.['media:content'] || group?.['media:thumbnail']);
+    if (groupUrl) return groupUrl;
   }
 
   // 5. itunes:image
-  if (!image && item['itunes:image']) {
+  if (item['itunes:image']) {
     const itunes = Array.isArray(item['itunes:image']) ? item['itunes:image'][0] : item['itunes:image'];
-    image = itunes?.href || itunes?.$?.href || '';
+    const itunesUrl = itunes?.href || itunes?.$?.href || '';
+    if (itunesUrl) return itunesUrl;
   }
 
-  // 6. content:encoded HTML
-  if (!image && item['content:encoded']) {
-    const imgMatch = String(item['content:encoded']).match(/<img[^>]+src=["']([^"'>]+)["']/);
-    if (imgMatch) image = imgMatch[1];
-  }
-
-  // 7. content HTML (rss-parser puts it here)
-  if (!image && item.content) {
-    const imgMatch = String(item.content).match(/<img[^>]+src=["']([^"'>]+)["']/);
-    if (imgMatch) image = imgMatch[1];
-  }
-
-  // 8. description HTML fallback
-  if (!image && item.description) {
-    const imgMatch = String(item.description).match(/<img[^>]+src=["']([^"'>]+)["']/);
-    if (imgMatch) image = imgMatch[1];
-  }
-
-  return image;
+  // 6-8. HTML content fallback
+  return extractImageFromHtml(item['content:encoded']) || extractImageFromHtml(item.content) || extractImageFromHtml(item.description) || '';
 }
 
 // ========== Database Setup ==========
@@ -292,6 +273,20 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
   throw new Error(lastError || 'All AI providers failed');
 }
 
+// ========== Validation ==========
+
+function validateId(req, res, next) {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id < 1) return res.status(400).json({ error: 'Invalid ID' });
+  next();
+}
+
+function fetchWithTimeout(url, opts = {}, ms = 10000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), ms);
+  return fetch(url, { ...opts, signal: controller.signal }).finally(() => clearTimeout(id));
+}
+
 // ========== Category Routes ==========
 
 // Get all categories with feed counts
@@ -307,7 +302,7 @@ app.get('/api/categories', (req, res) => {
 });
 
 // Get category details (including prompt)
-app.get('/api/categories/:id', (req, res) => {
+app.get('/api/categories/:id', validateId, (req, res) => {
   const category = db.prepare('SELECT * FROM categories WHERE id = ?').get(req.params.id);
   if (!category) return res.status(404).json({ error: 'Category not found' });
   res.json(category);
@@ -327,37 +322,42 @@ app.post('/api/categories', (req, res) => {
 });
 
 // Update category custom prompt
-app.put('/api/categories/:id/prompt', (req, res) => {
+app.put('/api/categories/:id/prompt', validateId, (req, res) => {
   const { prompt } = req.body;
   db.prepare('UPDATE categories SET custom_prompt = ? WHERE id = ?').run(prompt || '', req.params.id);
   res.json({ ok: true });
 });
 
 // Update category language
-app.put('/api/categories/:id/language', (req, res) => {
+app.put('/api/categories/:id/language', validateId, (req, res) => {
   const { language } = req.body;
   db.prepare('UPDATE categories SET language = ? WHERE id = ?').run(language || 'English', req.params.id);
   res.json({ ok: true });
 });
 
 // Delete a category
-app.delete('/api/categories/:id', (req, res) => {
-  db.prepare('DELETE FROM summaries WHERE category_id = ?').run(req.params.id);
-  db.prepare('DELETE FROM feeds WHERE category_id = ?').run(req.params.id);
-  db.prepare('DELETE FROM categories WHERE id = ?').run(req.params.id);
+app.delete('/api/categories/:id', validateId, (req, res) => {
+  const catId = req.params.id;
+  db.prepare('DELETE FROM chat_messages WHERE summary_id IN (SELECT id FROM summary_history WHERE category_id = ?)').run(catId);
+  db.prepare('DELETE FROM llm_usage WHERE category_id = ?').run(catId);
+  db.prepare('DELETE FROM summary_history WHERE category_id = ?').run(catId);
+  db.prepare('DELETE FROM articles WHERE category_id = ?').run(catId);
+  db.prepare('DELETE FROM summaries WHERE category_id = ?').run(catId);
+  db.prepare('DELETE FROM feeds WHERE category_id = ?').run(catId);
+  db.prepare('DELETE FROM categories WHERE id = ?').run(catId);
   res.json({ ok: true });
 });
 
 // ========== Feed Routes ==========
 
 // Get feeds for a category
-app.get('/api/categories/:id/feeds', (req, res) => {
+app.get('/api/categories/:id/feeds', validateId, (req, res) => {
   const feeds = db.prepare('SELECT * FROM feeds WHERE category_id = ?').all(req.params.id);
   res.json(feeds);
 });
 
 // Add a feed to a category
-app.post('/api/categories/:id/feeds', (req, res) => {
+app.post('/api/categories/:id/feeds', validateId, (req, res) => {
   const { name, url } = req.body;
   if (!name || !url) return res.status(400).json({ error: 'Name and URL are required' });
   const result = db.prepare('INSERT INTO feeds (category_id, name, url) VALUES (?, ?, ?)').run(req.params.id, name, url);
@@ -365,7 +365,7 @@ app.post('/api/categories/:id/feeds', (req, res) => {
 });
 
 // Delete a feed
-app.delete('/api/feeds/:id', (req, res) => {
+app.delete('/api/feeds/:id', validateId, (req, res) => {
   db.prepare('DELETE FROM feeds WHERE id = ?').run(req.params.id);
   res.json({ ok: true });
 });
@@ -373,7 +373,7 @@ app.delete('/api/feeds/:id', (req, res) => {
 // ========== Summary Routes ==========
 
 // Get cached summary (with optional ?date=YYYY-MM-DD)
-app.get('/api/categories/:id/summary', (req, res) => {
+app.get('/api/categories/:id/summary', validateId, (req, res) => {
   const category = db.prepare('SELECT * FROM categories WHERE id = ?').get(req.params.id);
   if (!category) return res.status(404).json({ error: 'Category not found' });
 
@@ -430,14 +430,14 @@ app.get('/api/categories/:id/summary', (req, res) => {
 });
 
 // Get summary history for a category
-app.get('/api/categories/:id/history', (req, res) => {
+app.get('/api/categories/:id/history', validateId, (req, res) => {
   const rows = db.prepare('SELECT id, date_key, generated_at FROM summary_history WHERE category_id = ? ORDER BY date_key DESC LIMIT 30').all(req.params.id);
   res.json(rows);
 });
 
 // ========== Refresh: Fetch & Summarize ==========
 
-app.post('/api/categories/:id/refresh', async (req, res) => {
+app.post('/api/categories/:id/refresh', validateId, async (req, res) => {
   try {
     const category = db.prepare('SELECT * FROM categories WHERE id = ?').get(req.params.id);
     if (!category) return res.status(404).json({ error: 'Category not found' });
@@ -541,6 +541,14 @@ ${articleText}`;
     );
     const historyId = histResult.lastInsertRowid;
 
+    // Clean up entries older than 30 days for this category
+    const cutoff = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
+    const oldIds = db.prepare('SELECT id FROM summary_history WHERE category_id = ? AND date_key < ?').all(req.params.id, cutoff).map(r => r.id);
+    if (oldIds.length > 0) {
+      db.prepare(`DELETE FROM chat_messages WHERE summary_id IN (${oldIds.map(() => '?').join(',')})`).run(...oldIds);
+      db.prepare('DELETE FROM summary_history WHERE category_id = ? AND date_key < ?').run(req.params.id, cutoff);
+    }
+
     // Enrichment step — extract bold titles and analyze sentiment/tags
     let sentimentData = null;
     let tagsData = null;
@@ -568,7 +576,11 @@ Sentiment values: positive, negative, neutral, mixed` },
         ], { purpose: 'enrichment', categoryId: Number(req.params.id) });
 
         // Parse enrichment JSON
-        const jsonStr = enrichResult.content.trim();
+        let jsonStr = enrichResult.content.trim();
+        // Strip markdown code fences if present (LLMs often wrap JSON in ```json ... ```)
+        if (jsonStr.startsWith('```')) {
+          jsonStr = jsonStr.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '').trim();
+        }
         const parsed = JSON.parse(jsonStr);
 
         if (parsed?.sections) {
@@ -764,6 +776,10 @@ ${articleText}` },
       0, result.content, allArticles.length, feedsWithCategories.length, result.provider, dateKey, generated_at
     );
 
+    // Clean up briefings older than 30 days
+    const briefingCutoff = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
+    db.prepare('DELETE FROM summary_history WHERE category_id = 0 AND date_key < ?').run(briefingCutoff);
+
     res.json({ summary: result.content, generated_at, provider: result.provider, feed_count: feedsWithCategories.length, article_count: allArticles.length });
   } catch (err) {
     console.error('Briefing error:', err);
@@ -895,10 +911,10 @@ app.get('/api/tags/trending', (req, res) => {
 // Weather (Open-Meteo, free, no key)
 app.get('/api/widgets/weather', async (req, res) => {
   try {
-    // Default: Budapest. Override with ?lat=...&lon=...
-    const lat = req.query.lat || 47.50;
-    const lon = req.query.lon || 19.04;
-    const resp = await fetch(
+    // Default: Cluj-Napoca. Override with ?lat=...&lon=...
+    const lat = req.query.lat || 46.77;
+    const lon = req.query.lon || 23.60;
+    const resp = await fetchWithTimeout(
       `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=4&timezone=auto`
     );
     const data = await resp.json();
@@ -932,7 +948,7 @@ app.get('/api/widgets/weather', async (req, res) => {
       condition: weatherCodes[current.weather_code] || 'Unknown',
       wind: Math.round(current.wind_speed_10m),
       humidity: current.relative_humidity_2m,
-      location: data.timezone?.split('/').pop()?.replace(/_/g, ' ') || 'Unknown',
+      location: 'Cluj-Napoca',
       forecast,
     });
   } catch (err) {
@@ -944,7 +960,7 @@ app.get('/api/widgets/weather', async (req, res) => {
 // EUR exchange rates (free, no key)
 app.get('/api/widgets/rates', async (req, res) => {
   try {
-    const resp = await fetch('https://open.er-api.com/v6/latest/RON');
+    const resp = await fetchWithTimeout('https://open.er-api.com/v6/latest/RON');
     const data = await resp.json();
     const pick = ['EUR', 'USD', 'GBP', 'HUF'];
     const rates = {};
@@ -1006,7 +1022,7 @@ app.get('/api/widgets/crypto', async (req, res) => {
     return res.json(cryptoCache.data);
   }
   try {
-    const resp = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd&include_24hr_change=true');
+    const resp = await fetchWithTimeout('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd&include_24hr_change=true');
     const data = await resp.json();
     if (!data.bitcoin?.usd) {
       // Rate limited or bad response — serve cache if available
@@ -1030,13 +1046,13 @@ app.get('/api/widgets/crypto', async (req, res) => {
 // Hacker News top stories
 app.get('/api/widgets/hackernews', async (req, res) => {
   try {
-    const idsResp = await fetch('https://hacker-news.firebaseio.com/v0/topstories.json');
+    const idsResp = await fetchWithTimeout('https://hacker-news.firebaseio.com/v0/topstories.json');
     const ids = await idsResp.json();
     const top8 = ids.slice(0, 8);
 
     const stories = await Promise.all(
       top8.map(async (id) => {
-        const r = await fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`);
+        const r = await fetchWithTimeout(`https://hacker-news.firebaseio.com/v0/item/${id}.json`);
         const item = await r.json();
         return { id: item.id, title: item.title, url: item.url || `https://news.ycombinator.com/item?id=${item.id}`, score: item.score };
       })
@@ -1051,26 +1067,29 @@ app.get('/api/widgets/hackernews', async (req, res) => {
 
 // On This Day (Wikipedia)
 // Upcoming Movies & TV (TMDB)
-let releasesCache = { data: null, fetchedAt: 0 };
+const releasesCache = new Map(); // keyed by "from|to"
 app.get('/api/widgets/releases', async (req, res) => {
   const apiKey = process.env.TMDB_API_KEY;
   if (!apiKey) return res.json([]);
 
-  // Cache for 30 minutes
-  if (releasesCache.data && Date.now() - releasesCache.fetchedAt < 30 * 60_000) {
-    return res.json(releasesCache.data);
+  // Determine date range from query params or default to next 7 days
+  const today = new Date();
+  const defaultEnd = new Date(today);
+  defaultEnd.setDate(defaultEnd.getDate() + 7);
+  const from = req.query.from || today.toISOString().split('T')[0];
+  const to = req.query.to || defaultEnd.toISOString().split('T')[0];
+  const cacheKey = `${from}|${to}`;
+
+  // Cache for 30 minutes per date range
+  const cached = releasesCache.get(cacheKey);
+  if (cached && Date.now() - cached.fetchedAt < 30 * 60_000) {
+    return res.json(cached.data);
   }
 
   try {
-    const today = new Date();
-    const endDate = new Date(today);
-    endDate.setDate(endDate.getDate() + 7);
-    const from = today.toISOString().split('T')[0];
-    const to = endDate.toISOString().split('T')[0];
-
     const [moviesResp, tvResp] = await Promise.all([
-      fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&primary_release_date.gte=${from}&primary_release_date.lte=${to}&sort_by=popularity.desc&page=1`),
-      fetch(`https://api.themoviedb.org/3/discover/tv?api_key=${apiKey}&first_air_date.gte=${from}&first_air_date.lte=${to}&sort_by=popularity.desc&page=1`),
+      fetchWithTimeout(`https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&primary_release_date.gte=${from}&primary_release_date.lte=${to}&sort_by=popularity.desc&page=1`),
+      fetchWithTimeout(`https://api.themoviedb.org/3/discover/tv?api_key=${apiKey}&first_air_date.gte=${from}&first_air_date.lte=${to}&sort_by=popularity.desc&page=1`),
     ]);
 
     const moviesData = await moviesResp.json();
@@ -1097,12 +1116,17 @@ app.get('/api/widgets/releases', async (req, res) => {
     }));
 
     // Merge and sort by date
-    const releases = [...movies, ...shows].sort((a, b) => a.date.localeCompare(b.date));
-    releasesCache = { data: releases, fetchedAt: Date.now() };
+    const releases = [...movies, ...shows].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    releasesCache.set(cacheKey, { data: releases, fetchedAt: Date.now() });
+    // Keep cache bounded
+    if (releasesCache.size > 20) {
+      const oldest = releasesCache.keys().next().value;
+      releasesCache.delete(oldest);
+    }
     res.json(releases);
   } catch (err) {
     console.error('TMDB error:', err);
-    if (releasesCache.data) return res.json(releasesCache.data);
+    if (cached) return res.json(cached.data);
     res.status(500).json({ error: 'Failed to fetch releases' });
   }
 });
@@ -1116,7 +1140,7 @@ app.get('/api/widgets/releases/:type/:id', async (req, res) => {
   if (type !== 'movie' && type !== 'tv') return res.status(400).json({ error: 'Invalid type' });
 
   try {
-    const resp = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${apiKey}&append_to_response=credits,videos`);
+    const resp = await fetchWithTimeout(`https://api.themoviedb.org/3/${type}/${id}?api_key=${apiKey}&append_to_response=credits,videos`);
     const data = await resp.json();
     if (data.success === false) return res.status(404).json({ error: 'Not found' });
 
@@ -1156,61 +1180,61 @@ app.get('/api/widgets/releases/:type/:id', async (req, res) => {
 
 let homepageCache = { data: null, fetchedAt: 0 };
 
+async function fetchHomepageBriefs() {
+  const categories = db.prepare('SELECT * FROM categories ORDER BY sort_order').all();
+  if (categories.length === 0) return [];
+
+  const getFirstFeed = db.prepare('SELECT * FROM feeds WHERE category_id = ? ORDER BY id ASC LIMIT 1');
+
+  const results = await Promise.allSettled(
+    categories.map(async (cat) => {
+      const feed = getFirstFeed.get(cat.id);
+      if (!feed) return null;
+
+      try {
+        const parsed = await parser.parseURL(feed.url);
+        const articles = parsed.items.slice(0, 5).map((item) => {
+          const snippet = (item.contentSnippet || item.content || '')
+            .replace(/<[^>]*>/g, '')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .slice(0, 400);
+
+          return {
+            title: item.title || '',
+            excerpt: snippet,
+            link: item.link || '',
+            image: extractImage(item),
+            pubDate: item.pubDate || '',
+            source: feed.name,
+          };
+        });
+
+        return {
+          categoryId: cat.id,
+          categoryName: cat.name,
+          articles,
+        };
+      } catch (err) {
+        console.warn(`Homepage: failed to fetch "${feed.name}" (${feed.url}):`, err.message);
+        return { categoryId: cat.id, categoryName: cat.name, articles: [] };
+      }
+    })
+  );
+
+  return results
+    .filter((r) => r.status === 'fulfilled' && r.value)
+    .map((r) => r.value)
+    .filter((b) => b.articles.length > 0);
+}
+
 app.get('/api/homepage', async (req, res) => {
   // Cache for 5 minutes
   if (homepageCache.data && Date.now() - homepageCache.fetchedAt < 5 * 60_000) {
     return res.json(homepageCache.data);
   }
-
   try {
-    const categories = db.prepare('SELECT * FROM categories ORDER BY sort_order').all();
-    if (categories.length === 0) return res.json([]);
-
-    // Get first feed from each category
-    const getFirstFeed = db.prepare('SELECT * FROM feeds WHERE category_id = ? ORDER BY id ASC LIMIT 1');
-
-    const results = await Promise.allSettled(
-      categories.map(async (cat) => {
-        const feed = getFirstFeed.get(cat.id);
-        if (!feed) return null;
-
-        try {
-          const parsed = await parser.parseURL(feed.url);
-          // Get top 3 articles from first feed
-          const articles = parsed.items.slice(0, 5).map((item) => {
-            const snippet = (item.contentSnippet || item.content || '')
-              .replace(/<[^>]*>/g, '')
-              .replace(/\s+/g, ' ')
-              .trim()
-              .slice(0, 400);
-
-            return {
-              title: item.title || '',
-              excerpt: snippet,
-              link: item.link || '',
-              image: extractImage(item),
-              pubDate: item.pubDate || '',
-              source: feed.name,
-            };
-          });
-
-          return {
-            categoryId: cat.id,
-            categoryName: cat.name,
-            articles,
-          };
-        } catch (err) {
-          console.warn(`Homepage: failed to fetch "${feed.name}" (${feed.url}):`, err.message);
-          return { categoryId: cat.id, categoryName: cat.name, articles: [] };
-        }
-      })
-    );
-
-    const briefs = results
-      .filter((r) => r.status === 'fulfilled' && r.value)
-      .map((r) => r.value)
-      .filter((b) => b.articles.length > 0);
-
+    const briefs = await fetchHomepageBriefs();
     homepageCache = { data: briefs, fetchedAt: Date.now() };
     res.json(briefs);
   } catch (err) {
@@ -1221,51 +1245,9 @@ app.get('/api/homepage', async (req, res) => {
 
 // Force-refresh homepage (busts cache)
 app.post('/api/homepage/refresh', async (req, res) => {
-  homepageCache = { data: null, fetchedAt: 0 };
-  // Forward to GET handler
   try {
-    const categories = db.prepare('SELECT * FROM categories ORDER BY sort_order').all();
-    if (categories.length === 0) return res.json([]);
-
-    const getFirstFeed = db.prepare('SELECT * FROM feeds WHERE category_id = ? ORDER BY id ASC LIMIT 1');
-
-    const results = await Promise.allSettled(
-      categories.map(async (cat) => {
-        const feed = getFirstFeed.get(cat.id);
-        if (!feed) return null;
-
-        try {
-          const parsed = await parser.parseURL(feed.url);
-          const articles = parsed.items.slice(0, 5).map((item) => {
-            const snippet = (item.contentSnippet || item.content || '')
-              .replace(/<[^>]*>/g, '')
-              .replace(/\s+/g, ' ')
-              .trim()
-              .slice(0, 400);
-
-            return {
-              title: item.title || '',
-              excerpt: snippet,
-              link: item.link || '',
-              image: extractImage(item),
-              pubDate: item.pubDate || '',
-              source: feed.name,
-            };
-          });
-
-          return { categoryId: cat.id, categoryName: cat.name, articles };
-        } catch (err) {
-          console.warn(`Homepage refresh: failed "${feed.name}":`, err.message);
-          return { categoryId: cat.id, categoryName: cat.name, articles: [] };
-        }
-      })
-    );
-
-    const briefs = results
-      .filter((r) => r.status === 'fulfilled' && r.value)
-      .map((r) => r.value)
-      .filter((b) => b.articles.length > 0);
-
+    homepageCache = { data: null, fetchedAt: 0 };
+    const briefs = await fetchHomepageBriefs();
     homepageCache = { data: briefs, fetchedAt: Date.now() };
     res.json(briefs);
   } catch (err) {

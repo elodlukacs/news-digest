@@ -54,8 +54,9 @@ export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, 
 
   useEffect(() => {
     fetch(`${API_BASE}/categories/${categoryId}`)
-      .then((r) => r.json())
-      .then((data) => {
+      .then(async (r) => {
+        if (!r.ok) return;
+        const data = await r.json();
         setPrompt(data.custom_prompt || '');
         setLanguage(data.language || 'English');
       })
@@ -70,24 +71,32 @@ export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, 
   };
 
   const handleSavePrompt = async () => {
-    await fetch(`${API_BASE}/categories/${categoryId}/prompt`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt }),
-    });
-    setPromptSaved(true);
-    setTimeout(() => setPromptSaved(false), 2000);
+    try {
+      await fetch(`${API_BASE}/categories/${categoryId}/prompt`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+      });
+      setPromptSaved(true);
+      setTimeout(() => setPromptSaved(false), 2000);
+    } catch {
+      // silent
+    }
   };
 
   const handleSaveLanguage = async (lang: string) => {
     setLanguage(lang);
-    await fetch(`${API_BASE}/categories/${categoryId}/language`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ language: lang }),
-    });
-    setLangSaved(true);
-    setTimeout(() => setLangSaved(false), 2000);
+    try {
+      await fetch(`${API_BASE}/categories/${categoryId}/language`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: lang }),
+      });
+      setLangSaved(true);
+      setTimeout(() => setLangSaved(false), 2000);
+    } catch {
+      // silent
+    }
   };
 
   const handleDiscover = async () => {
@@ -100,9 +109,10 @@ export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: discoverUrl.trim() }),
       });
+      if (!res.ok) return;
       const data = await res.json();
       setDiscovered(data.feeds || []);
-    } catch {} finally {
+    } catch { /* ignore */ } finally {
       setDiscovering(false);
     }
   };

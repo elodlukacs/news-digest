@@ -1,3 +1,4 @@
+import { formatDate } from '../utils/date';
 import type { HistoryEntry } from '../types';
 
 interface Props {
@@ -8,17 +9,6 @@ interface Props {
 
 export function HistorySidebar({ dates, selectedDate, onSelectDate }: Props) {
   if (dates.length === 0) return null;
-
-  const formatDate = (dateKey: string) => {
-    const d = new Date(dateKey + 'T00:00:00');
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    if (dateKey === today.toISOString().split('T')[0]) return 'Today';
-    if (dateKey === yesterday.toISOString().split('T')[0]) return 'Yesterday';
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
 
   return (
     <aside className="w-44 shrink-0 hidden lg:block pt-8">

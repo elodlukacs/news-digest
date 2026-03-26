@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Header } from './components/Header';
-import { CategoryNav } from './components/CategoryNav';
+import { NavigationBar } from './components/NavigationBar';
 import { SummaryView } from './components/SummaryView';
 import { FeedManager } from './components/FeedManager';
 import { WidgetSidebar } from './components/WidgetSidebar';
@@ -24,7 +23,7 @@ function App() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const { feeds, addFeed, deleteFeed } = useFeeds(managingId);
-  const { summary, loading, refreshing, error, loadCached, refresh } = useSummary(activeId, selectedDate);
+  const { summary, loading, refreshing, error, refresh } = useSummary(activeId, selectedDate);
   const { dates, refresh: refreshHistory } = useSummaryHistory(activeId);
   const { messages: chatMessages, sending: chatSending, sendMessage: chatSend } = useChat(summary?.id || null);
   const { briefing, loading: briefingLoading, error: briefingError, generate: generateBriefing } = useBriefing();
@@ -79,8 +78,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-paper">
-      <Header theme={theme} onThemeChange={setTheme} onShowStats={() => setShowStats(true)} />
-      <CategoryNav
+      <NavigationBar
         categories={categories}
         activeId={activeId}
         showBriefing={showBriefing}
@@ -92,11 +90,14 @@ function App() {
         onDelete={handleDeleteCategory}
         onManageFeeds={setManagingId}
         onHome={handleHome}
+        theme={theme}
+        onThemeChange={setTheme}
+        onShowStats={() => setShowStats(true)}
       />
 
       {/* Newspaper Home: full-width grid when no category selected */}
       {!activeCategory && !showBriefing && !showReleases ? (
-        <div className="max-w-[1600px] mx-auto px-4 pb-12">
+        <div key="home" className="max-w-[1600px] mx-auto px-4 pb-12 view-fade">
           <NewspaperHome
             briefs={homepageBriefs}
             loading={homepageLoading}
@@ -111,15 +112,14 @@ function App() {
           />
         </div>
       ) : showReleases ? (
-        <div className="max-w-[1600px] mx-auto px-4 pb-12">
+        <div key="releases" className="max-w-[1600px] mx-auto px-4 pb-12 view-fade">
           <ReleasesPage releases={releases || []} />
         </div>
       ) : (
-        <div className="max-w-7xl mx-auto px-6 pb-20 flex gap-8">
+        <div key={showBriefing ? 'briefing' : `cat-${activeId}`} className="max-w-7xl mx-auto px-6 pb-20 flex gap-8 view-fade">
           {/* Left sidebar */}
           <LeftSidebar
             hackerNews={hackerNews}
-            releases={releases || []}
             dates={dates}
             selectedDate={selectedDate}
             onSelectDate={setSelectedDate}
@@ -143,7 +143,6 @@ function App() {
                 loading={loading}
                 refreshing={refreshing}
                 error={error}
-                onLoad={loadCached}
                 onRefresh={handleRefresh}
                 onManageFeeds={() => setManagingId(activeCategory.id)}
                 chatMessages={chatMessages}

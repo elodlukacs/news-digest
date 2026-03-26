@@ -85,33 +85,42 @@ export function useSummary(categoryId: number | null, date?: string | null) {
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  const loadCached = useCallback(async () => {
-    if (!categoryId) return;
+  // Auto-load when categoryId or date changes
+  useEffect(() => {
+    if (!categoryId) { setSummary(null); return; }
     if (abortRef.current) abortRef.current.abort();
     const controller = new AbortController();
     abortRef.current = controller;
 
-    setLoading(true);
-    setError(null);
-    try {
-      const url = date
-        ? `${BASE}/categories/${categoryId}/summary?date=${date}`
-        : `${BASE}/categories/${categoryId}/summary`;
-      const res = await fetch(url, { signal: controller.signal });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to load summary');
-      if (data.summary) {
-        setSummary(data);
-      } else {
-        setSummary(null);
-        if (!date) await doRefresh(categoryId, controller.signal);
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const url = date
+          ? `${BASE}/categories/${categoryId}/summary?date=${date}`
+          : `${BASE}/categories/${categoryId}/summary`;
+        const res = await fetch(url, { signal: controller.signal });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to load summary');
+        if (data.summary) {
+          setSummary(data);
+        } else if (!date) {
+          // No cached summary and no date — auto-refresh
+          const refreshRes = await fetch(`${BASE}/categories/${categoryId}/refresh`, { method: 'POST', signal: controller.signal });
+          const refreshData = await refreshRes.json();
+          if (!refreshRes.ok) throw new Error(refreshData.error || 'Failed to refresh summary');
+          setSummary(refreshData);
+        } else {
+          setSummary(null);
+        }
+      } catch (e: unknown) {
+        if (e instanceof DOMException && e.name === 'AbortError') return;
+        setError(e instanceof Error ? e.message : 'Unknown error');
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
       }
-    } catch (e: unknown) {
-      if (e instanceof DOMException && e.name === 'AbortError') return;
-      setError(e instanceof Error ? e.message : 'Unknown error');
-    } finally {
-      if (!controller.signal.aborted) setLoading(false);
-    }
+    };
+    load();
   }, [categoryId, date]);
 
   const refresh = useCallback(async () => {
@@ -123,7 +132,10 @@ export function useSummary(categoryId: number | null, date?: string | null) {
     setRefreshing(true);
     setError(null);
     try {
-      await doRefresh(categoryId, controller.signal);
+      const res = await fetch(`${BASE}/categories/${categoryId}/refresh`, { method: 'POST', signal: controller.signal });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to refresh summary');
+      setSummary(data);
     } catch (e: unknown) {
       if (e instanceof DOMException && e.name === 'AbortError') return;
       setError(e instanceof Error ? e.message : 'Unknown error');
@@ -132,14 +144,7 @@ export function useSummary(categoryId: number | null, date?: string | null) {
     }
   }, [categoryId]);
 
-  async function doRefresh(catId: number, signal: AbortSignal) {
-    const res = await fetch(`${BASE}/categories/${catId}/refresh`, { method: 'POST', signal });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to refresh summary');
-    setSummary(data);
-  }
-
-  return { summary, loading, refreshing, error, loadCached, refresh };
+  return { summary, loading, refreshing, error, refresh };
 }
 
 export function useSummaryHistory(categoryId: number | null) {
@@ -155,7 +160,21 @@ export function useSummaryHistory(categoryId: number | null) {
     }
   }, [categoryId]);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      if (!categoryId) { setDates([]); return; }
+      try {
+        const res = await fetch(`${BASE}/categories/${categoryId}/history`);
+        const data = await res.json();
+        if (!cancelled) setDates(data);
+      } catch {
+        if (!cancelled) setDates([]);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [categoryId]);
   return { dates, refresh };
 }
 
@@ -205,7 +224,7 @@ export function useBriefing() {
       const res = await fetch(`${BASE}/briefing/latest`);
       const data = await res.json();
       if (data.summary) setBriefing(data);
-    } catch {} finally {
+    } catch { /* silent */ } finally {
       setLoading(false);
     }
   }, []);
@@ -280,8 +299,8 @@ export function useLlmStats() {
     setLoading(true);
     try {
       const res = await fetch(`${BASE}/stats/llm?days=30`);
-      setStats(await res.json());
-    } catch {} finally {
+      if (res.ok) setStats(await res.json());
+    } catch { /* silent */ } finally {
       setLoading(false);
     }
   }, []);

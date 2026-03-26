@@ -85,7 +85,7 @@ body {
   display: grid;
   grid-template-columns: 1fr 2fr 1.2fr 1fr 1fr;
   min-height: 70vh;
-  border-top: 2px solid var(--color-ink);
+  border-top: 1px solid var(--color-rule);
   border-bottom: 1px solid var(--color-rule);
 }
 
@@ -117,6 +117,31 @@ body {
   .newspaper-grid > :nth-child(n+2):not(:nth-child(2)) {
     display: none;
   }
+}
+
+/* ─── Date picker styling ─── */
+input[type="date"] {
+  color-scheme: light;
+}
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0.4;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 0.8;
+}
+[data-theme="evening"] input[type="date"] {
+  color-scheme: dark;
+}
+
+/* ─── View transition ─── */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.view-fade {
+  animation: fade-in 0.25s ease-out both;
 }
 
 /* Theme: Morning Post (fresh, green) */

@@ -9,12 +9,16 @@ interface Props {
 
 export function LlmStatsModal({ onClose }: Props) {
   const [stats, setStats] = useState<LlmStats | null>(null);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     fetch(`${API_BASE}/stats/llm?days=30`)
-      .then((r) => r.json())
-      .then(setStats)
-      .catch(() => {});
+      .then(async (r) => {
+        if (!r.ok) { setError(true); return; }
+        const data = await r.json();
+        setStats(data);
+      })
+      .catch(() => setError(true));
   }, []);
 
   const maxDailyTokens = stats ? Math.max(...stats.daily.map((d) => d.tokens), 1) : 1;
@@ -32,9 +36,11 @@ export function LlmStatsModal({ onClose }: Props) {
           </button>
         </div>
 
-        {!stats ? (
+        {!stats && !error ? (
           <div className="p-8 text-center text-ink-muted text-sm">Loading...</div>
-        ) : (
+        ) : error ? (
+          <div className="p-8 text-center text-ink-muted text-sm">Failed to load statistics</div>
+        ) : stats ? (
           <div className="p-6 space-y-6">
             <div className="grid grid-cols-2 gap-3">
               <div className="px-4 py-3 bg-paper-dark border border-rule">
@@ -171,7 +177,7 @@ export function LlmStatsModal({ onClose }: Props) {
               </div>
             )}
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

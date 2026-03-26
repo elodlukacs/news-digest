@@ -28,7 +28,7 @@ cd client && npm run build  # outputs to client/dist/
 ### Backend (`server/index.js` — single file)
 
 - Express 5 with better-sqlite3 (WAL mode, auto-creates tables on startup)
-- `callLLM()` helper with **provider fallback**: tries Groq first, then Cerebras. Filters by configured API keys, captures rate-limit headers into in-memory `providerQuotas` object
+- `callLLM()` helper with **provider fallback**: tries Groq (llama-3.3-70b-versatile). Filters by configured API keys, captures rate-limit headers into in-memory `providerQuotas` object
 - Each summary generation triggers **two LLM calls**: main summary + enrichment (sentiment + tags)
 - Category-level `custom_prompt` and `language` fields customize LLM output
 - Widget endpoints proxy external APIs with server-side caching (crypto: 2min, TMDB: 30min)
@@ -65,7 +65,7 @@ Core: `categories`, `feeds`, `summaries`, `summary_history` (with `sentiment_dat
 ## Environment Variables
 
 **Server** (`server/.env`):
-- `GROQ_API_KEY` / `CEREBRAS_API_KEY` — at least one required
+- `GROQ_API_KEY` — required for LLM features
 - `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` — optional, for send-to-Telegram feature
 - `TMDB_API_KEY` — optional, for movie/TV releases widget
 - `PORT` — defaults to 3001

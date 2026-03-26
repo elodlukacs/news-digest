@@ -79,11 +79,6 @@ export interface HackerNewsItem {
   score: number;
 }
 
-export interface OnThisDayEvent {
-  year: number;
-  text: string;
-}
-
 export interface UpcomingRelease {
   id: number;
   title: string;
@@ -97,4 +92,25 @@ export interface UpcomingRelease {
 export interface DiscoveredFeed {
   title: string;
   url: string;
+}
+
+export interface ReleaseDetail {
+  id: number;
+  title: string;
+  tagline: string | null;
+  overview: string;
+  date: string;
+  type: 'movie' | 'tv';
+  rating: number | null;
+  votes: number;
+  runtime: number | null;
+  genres: string[];
+  cast: string[];
+  directors: string[];
+  poster: string | null;
+  backdrop: string | null;
+  trailer: string | null;
+  seasons: number | null;
+  episodes: number | null;
+  status: string | null;
 }

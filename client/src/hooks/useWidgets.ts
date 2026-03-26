@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { API_BASE } from '../config';
-import type { CryptoPrice, HackerNewsItem, OnThisDayEvent, UpcomingRelease } from '../types';
+import type { CryptoPrice, HackerNewsItem, UpcomingRelease } from '../types';
 
 interface ForecastDay {
   date: string;
@@ -33,26 +33,39 @@ interface Headline {
   pubDate: string;
 }
 
+async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T | null> {
+  try {
+    const res = await fetch(url, { signal });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
 export function useWidgets() {
   const [weather, setWeather] = useState<Weather | null>(null);
   const [rates, setRates] = useState<Rates | null>(null);
   const [headlines, setHeadlines] = useState<Headline[]>([]);
   const [crypto, setCrypto] = useState<CryptoPrice[]>([]);
   const [hackerNews, setHackerNews] = useState<HackerNewsItem[]>([]);
-  const [onThisDay, setOnThisDay] = useState<OnThisDayEvent[]>([]);
   const [releases, setReleases] = useState<UpcomingRelease[]>([]);
   const [trending, setTrending] = useState<{ tag: string; count: number }[]>([]);
 
   useEffect(() => {
-    fetch(`${API_BASE}/widgets/weather`).then((r) => r.json()).then(setWeather).catch(() => {});
-    fetch(`${API_BASE}/widgets/rates`).then((r) => r.json()).then(setRates).catch(() => {});
-    fetch(`${API_BASE}/widgets/headlines`).then((r) => r.json()).then(setHeadlines).catch(() => {});
-    fetch(`${API_BASE}/widgets/crypto`).then((r) => r.json()).then(setCrypto).catch(() => {});
-    fetch(`${API_BASE}/widgets/hackernews`).then((r) => r.json()).then(setHackerNews).catch(() => {});
-    fetch(`${API_BASE}/widgets/on-this-day`).then((r) => r.json()).then(setOnThisDay).catch(() => {});
-    fetch(`${API_BASE}/widgets/releases`).then((r) => r.json()).then(setReleases).catch(() => {});
-    fetch(`${API_BASE}/tags/trending`).then((r) => r.json()).then(setTrending).catch(() => {});
+    const controller = new AbortController();
+    const { signal } = controller;
+
+    fetchJson<Weather>(`${API_BASE}/widgets/weather`, signal).then(d => { if (d) setWeather(d); });
+    fetchJson<Rates>(`${API_BASE}/widgets/rates`, signal).then(d => { if (d) setRates(d); });
+    fetchJson<Headline[]>(`${API_BASE}/widgets/headlines`, signal).then(d => { if (d) setHeadlines(d); });
+    fetchJson<CryptoPrice[]>(`${API_BASE}/widgets/crypto`, signal).then(d => { if (d) setCrypto(d); });
+    fetchJson<HackerNewsItem[]>(`${API_BASE}/widgets/hackernews`, signal).then(d => { if (d) setHackerNews(d); });
+    fetchJson<UpcomingRelease[]>(`${API_BASE}/widgets/releases`, signal).then(d => { if (d) setReleases(d); });
+    fetchJson<{ tag: string; count: number }[]>(`${API_BASE}/tags/trending`, signal).then(d => { if (d) setTrending(d); });
+
+    return () => controller.abort();
   }, []);
 
-  return { weather, rates, headlines, crypto, hackerNews, onThisDay, releases, trending };
+  return { weather, rates, headlines, crypto, hackerNews, releases, trending };
 }

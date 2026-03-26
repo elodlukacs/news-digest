@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { RefreshCw, AlertCircle, Clock, X, Zap, Send, Settings } from 'lucide-react';
 import { API_BASE } from '../config';
@@ -97,7 +97,6 @@ interface Props {
   loading: boolean;
   refreshing: boolean;
   error: string | null;
-  onLoad: () => void;
   onRefresh: () => void;
   onManageFeeds: () => void;
   chatMessages: ChatMessage[];
@@ -112,7 +111,6 @@ export function SummaryView({
   loading,
   refreshing,
   error,
-  onLoad,
   onRefresh,
   onManageFeeds,
   chatMessages,
@@ -134,6 +132,7 @@ export function SummaryView({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ categoryId }),
       });
+      if (!resp.ok) { setTelegramError('Request failed'); return; }
       const data = await resp.json();
       if (data.success) {
         setSent(true);
@@ -147,24 +146,16 @@ export function SummaryView({
       setSending(false);
     }
   };
-  const categoryRef = React.useRef(categoryName);
-  const initialLoad = React.useRef(true);
   const sectionIndexRef = useRef(0);
 
   useEffect(() => {
     setRateLimitDismissed(false);
   }, [error]);
-  useEffect(() => {
-    if (initialLoad.current || categoryRef.current !== categoryName) {
-      categoryRef.current = categoryName;
-      initialLoad.current = false;
-      onLoad();
-    }
-  }, [categoryName]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const busy = loading || refreshing;
   // Reset section counter before each render of markdown
   sectionIndexRef.current = 0;
+  const rateLimitInfo = error ? parseRateLimitError(error) : null;
 
   return (
     <div>
@@ -216,7 +207,7 @@ export function SummaryView({
         </div>
       )}
 
-      {error && !rateLimitDismissed && parseRateLimitError(error).isRateLimit && (
+      {error && !rateLimitDismissed && rateLimitInfo?.isRateLimit && (
         <RateLimitModal error={error} onClose={() => setRateLimitDismissed(true)} />
       )}
 
@@ -245,7 +236,7 @@ export function SummaryView({
         </div>
       )}
 
-      {error && !parseRateLimitError(error).isRateLimit && (
+      {error && !rateLimitInfo?.isRateLimit && (
         <div className="mt-8 p-5 border border-accent/30 bg-red-50">
           <div className="flex items-start gap-3">
             <AlertCircle size={16} className="text-accent mt-0.5 shrink-0" />
@@ -315,13 +306,6 @@ export function SummaryView({
           >
             {summary.summary}
           </ReactMarkdown>
-
-          {/* First section sentiment badge */}
-          {summary.sentiment_data?.[0] && (
-            <div className="mt-2 -order-1" style={{ position: 'relative', top: '-2rem' }}>
-              {/* Rendered inline above via the hr component */}
-            </div>
-          )}
 
           {/* Tags */}
           {summary.tags_data && summary.tags_data.length > 0 && (

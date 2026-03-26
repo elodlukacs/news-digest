@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ExternalLink, Clock, RefreshCw } from 'lucide-react';
 import type { CryptoPrice, HackerNewsItem } from '../types';
 import type { HomepageBrief, HomepageArticle } from '../hooks/useApi';
+import { timeAgo, formatDay } from '../utils/date';
+import { WeatherIcon } from './SharedWidgets';
 
 /* ─── Types ──────────────────────────────────────────────── */
 
@@ -12,11 +14,22 @@ interface Headline {
   pubDate: string;
 }
 
+interface ForecastDay {
+  date: string;
+  code: number;
+  condition: string;
+  high: number;
+  low: number;
+}
+
 interface Weather {
   temperature: number;
   code: number;
   condition: string;
+  wind: number;
+  humidity: number;
   location: string;
+  forecast: ForecastDay[];
 }
 
 interface Rates {
@@ -39,17 +52,6 @@ interface Props {
 }
 
 /* ─── Helpers ────────────────────────────────────────────── */
-
-function timeAgo(dateStr: string) {
-  if (!dateStr) return '';
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
-}
 
 /* ─── Placeholder gradient for feeds without images ──────── */
 
@@ -248,8 +250,9 @@ function TextCard({
 
 function SectionHeader({ title }: { title: string }) {
   return (
-    <div className="border-t-2 border-ink pt-2 pb-3 mb-1">
-      <h3 className="text-[11px] uppercase tracking-[0.2em] font-bold text-ink">{title}</h3>
+    <div className="flex items-center gap-2 bg-paper-dark -mx-4 px-4 py-2 mb-3">
+      <span className="w-1 h-3 bg-masthead rounded-sm" />
+      <h3 className="text-[10px] uppercase tracking-[0.2em] font-bold text-ink">{title}</h3>
     </div>
   );
 }
@@ -290,7 +293,7 @@ export function NewspaperHome({
   headlines,
   hackerNews,
 }: Props) {
-  const allCards = flattenBriefs(briefs);
+  const allCards = useMemo(() => flattenBriefs(briefs), [briefs]);
 
   // Distribute cards across 3 content columns + hero
   // Strategy: round-robin by category so each column has variety
@@ -298,18 +301,18 @@ export function NewspaperHome({
   const remaining = allCards.slice(1);
 
   // Distribute remaining cards into 3 buckets: col1, col2sub, col3
-  const col1Cards: CardItem[] = [];
-  const col2Secondary: CardItem[] = [];
-  const col3Cards: CardItem[] = [];
-  const bottomCards: CardItem[] = [];
-
-  remaining.forEach((card, i) => {
-    const bucket = i % 3;
-    if (bucket === 0 && col1Cards.length < 5) col1Cards.push(card);
-    else if (bucket === 1 && col2Secondary.length < 4) col2Secondary.push(card);
-    else if (bucket === 2 && col3Cards.length < 5) col3Cards.push(card);
-    else bottomCards.push(card);
-  });
+  const { col1Cards, col2Secondary, col3Cards } = useMemo(() => {
+    const c1: CardItem[] = [];
+    const c2: CardItem[] = [];
+    const c3: CardItem[] = [];
+    remaining.forEach((card, i) => {
+      const bucket = i % 3;
+      if (bucket === 0 && c1.length < 5) c1.push(card);
+      else if (bucket === 1 && c2.length < 4) c2.push(card);
+      else if (bucket === 2 && c3.length < 5) c3.push(card);
+    });
+    return { col1Cards: c1, col2Secondary: c2, col3Cards: c3 };
+  }, [remaining]);
 
   if (loading) {
     return (
@@ -435,7 +438,7 @@ export function NewspaperHome({
                       {h.source}
                       <ExternalLink size={8} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                     </p>
-                    {i < Math.min(headlines.length, 8) - 1 && <div className="h-px bg-rule-light mt-3" />}
+                    {i < Math.min(headlines.length, 8) - 1 && <div className=" mt-3" />}
                   </a>
                 ))}
               </div>
@@ -450,7 +453,7 @@ export function NewspaperHome({
                       {item.title}
                     </p>
                     <p className="text-[10px] text-ink-muted mt-0.5">{item.score} pts</p>
-                    {i < Math.min(hackerNews.length, 8) - 1 && <div className="h-px bg-rule-light mt-3" />}
+                    {i < Math.min(hackerNews.length, 8) - 1 && <div className=" mt-3" />}
                   </a>
                 ))}
               </div>
@@ -463,11 +466,29 @@ export function NewspaperHome({
           {weather && (
             <div className="mb-5">
               <SectionHeader title="Weather" />
-              <div className="flex items-baseline gap-2">
-                <span className="font-serif text-3xl font-bold text-ink">{weather.temperature}&deg;</span>
-                <span className="text-[12px] text-ink-muted">{weather.condition}</span>
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2">
+                  <WeatherIcon code={weather.code} size={22} />
+                  <div>
+                    <p className="text-lg font-semibold text-ink leading-none">{weather.temperature}&deg;</p>
+                    <p className="text-[10px] text-ink-muted">{weather.condition}</p>
+                  </div>
+                </div>
+                <p className="text-[9px] text-ink-muted uppercase tracking-wider">{weather.location}</p>
               </div>
-              <p className="text-[10px] text-ink-muted mt-1 uppercase tracking-wider">{weather.location}</p>
+              {weather.forecast.length > 0 && (
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  {weather.forecast.map((day) => (
+                    <div key={day.date} className="text-center">
+                      <p className="text-[9px] uppercase tracking-wider text-ink-muted mb-1">{formatDay(day.date)}</p>
+                      <div className="flex justify-center mb-1 text-ink-muted"><WeatherIcon code={day.code} size={14} /></div>
+                      <p className="text-[11px] text-ink font-medium">
+                        {day.high}&deg;<span className="text-ink-muted font-normal ml-0.5">{day.low}&deg;</span>
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -518,7 +539,7 @@ export function NewspaperHome({
                       {item.title}
                     </p>
                     <p className="text-[10px] text-ink-muted mt-0.5">{item.score} pts</p>
-                    {i < Math.min(hackerNews.length, 6) - 1 && <div className="h-px bg-rule-light mt-2.5" />}
+                    {i < Math.min(hackerNews.length, 6) - 1 && <div className=" mt-2.5" />}
                   </a>
                 ))}
               </div>

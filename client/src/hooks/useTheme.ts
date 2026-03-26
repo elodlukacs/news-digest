@@ -17,14 +17,19 @@ export function useTheme() {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ value: theme }),
-    }).catch(() => {});
+    }).catch(() => {
+      // Server may be unreachable; localStorage is the source of truth
+    });
   }, [theme]);
 
   useEffect(() => {
     fetch(`${API_BASE}/settings`)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) return null;
+        return r.json();
+      })
       .then((data) => {
-        if (data.theme && THEMES.includes(data.theme)) {
+        if (data?.theme && THEMES.includes(data.theme)) {
           setThemeState(data.theme as Theme);
         }
       })

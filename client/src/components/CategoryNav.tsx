@@ -52,9 +52,13 @@ export function CategoryNav({
 
   const handleAdd = async () => {
     if (!newName.trim()) return;
-    await onAdd(newName.trim());
-    setNewName('');
-    setAdding(false);
+    try {
+      await onAdd(newName.trim());
+      setNewName('');
+      setAdding(false);
+    } catch {
+      // keep input open on failure
+    }
   };
 
   const handleContextMenu = (e: React.MouseEvent, id: number) => {
