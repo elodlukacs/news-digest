@@ -14,7 +14,7 @@ const COLORS = {
 export function SentimentBadge({ sentiment }: Props) {
   const c = COLORS[sentiment];
   return (
-    <Badge className={`inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-medium border-0 ${c.bg} ${c.text}`}>
+    <Badge className={`inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-medium border-0 pointer-events-none ${c.bg} ${c.text}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
       {sentiment}
     </Badge>

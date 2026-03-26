@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Plus, X, Settings, Trash2, Coffee, Menu, Home, Film, BarChart3 } from 'lucide-react';
+import { Plus, X, Settings, Trash2, Coffee, Menu, Home, Film, BarChart3, Cpu } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -30,6 +30,8 @@ interface Props {
   theme: Theme;
   onThemeChange: (t: Theme) => void;
   onShowStats: () => void;
+  selectedLlm: string;
+  onLlmChange: (llm: string) => void;
 }
 
 export function NavigationBar({
@@ -47,11 +49,19 @@ export function NavigationBar({
   theme,
   onThemeChange,
   onShowStats,
+  selectedLlm,
+  onLlmChange,
 }: Props) {
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const themeRef = useRef<HTMLDivElement>(null);
+
+  const LLM_OPTIONS = [
+    { id: 'llama', label: 'LLama', disabled: false },
+    { id: 'minimax', label: 'MiniMax2.7', disabled: false },
+    { id: 'local', label: 'Local', disabled: true },
+  ];
 
   const handleAdd = async () => {
     if (!newName.trim()) return;
@@ -92,49 +102,102 @@ export function NavigationBar({
       {/* ═══ Desktop: Unified Masthead ═══ */}
       <div className="hidden md:block">
         <div className="max-w-[1600px] mx-auto px-6">
-          {/* Top rail: edition | date | theme & stats */}
-          <div className="flex items-center justify-between pt-3 pb-2">
-            <p className="text-[9px] font-sans uppercase tracking-[0.3em] text-ink-muted">{edition}</p>
-            <div className="flex items-center gap-4">
-              <p className="text-[9px] font-sans uppercase tracking-[0.25em] text-ink-muted">{todayShort}</p>
-              <div className="flex items-center gap-1.5" ref={themeRef}>
-                {THEMES.map((t) => (
-                  <Tooltip key={t}>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onThemeChange(t)}
-                        className={`w-2.5 h-2.5 rounded-full cursor-pointer transition-all duration-200 p-0 ${
-                          theme === t ? 'ring-1 ring-ink ring-offset-1 ring-offset-paper scale-110' : 'opacity-40 hover:opacity-80 hover:scale-110'
-                        }`}
-                        style={{ backgroundColor: THEME_COLORS[t].bg }}
-                        aria-label={`Switch to ${THEME_COLORS[t].label} theme`}
-                      />
-                    </TooltipTrigger>
-                    <TooltipContent>{THEME_COLORS[t].label}</TooltipContent>
-                  </Tooltip>
-                ))}
+          {/* Masthead: title left, tools right */}
+          <div className="flex items-center justify-between pt-4 pb-3">
+            {/* Left: Title block */}
+            <div className="flex items-end gap-4">
+              <div>
+                <h1 className="font-serif text-[38px] lg:text-[42px] font-black tracking-[-0.02em] text-masthead leading-[0.9]">
+                  The Daily Brief
+                </h1>
+                <p className="mt-1 text-[9px] font-sans uppercase tracking-[0.35em] text-masthead/40 font-medium">
+                  AI-Curated News Summaries
+                </p>
               </div>
+              <p className="text-[9px] font-sans uppercase tracking-[0.25em] text-ink-muted pb-1 hidden lg:block">{edition}</p>
+            </div>
+
+            {/* Right: Tools area */}
+            <div className="flex items-center gap-5">
+              {/* LLM Selection */}
+              <div className="flex flex-col items-center gap-1.5">
+                <span className="text-[8px] font-sans uppercase tracking-[0.2em] text-ink-muted/60 font-medium">Model</span>
+                <div className="flex items-center gap-0.5 bg-paper-dark rounded-md p-0.5">
+                  {LLM_OPTIONS.map((opt) => (
+                    <Tooltip key={opt.id}>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          disabled={opt.disabled}
+                          onClick={() => !opt.disabled && onLlmChange(opt.id)}
+                          className={`px-2 py-1 text-[10px] font-sans font-medium tracking-wide rounded transition-all duration-200 ${
+                            opt.disabled
+                              ? 'text-ink-muted/30 cursor-not-allowed'
+                              : selectedLlm === opt.id
+                                ? 'bg-masthead text-white shadow-sm'
+                                : 'text-ink-muted hover:text-ink hover:bg-paper cursor-pointer'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>{opt.disabled ? 'Coming soon' : opt.label}</TooltipContent>
+                    </Tooltip>
+                  ))}
+                </div>
+              </div>
+
+              <div className="w-px h-8 bg-rule" />
+
+              {/* Date */}
+              <div className="flex flex-col items-center gap-0.5">
+                <span className="text-[8px] font-sans uppercase tracking-[0.2em] text-ink-muted/60 font-medium">Date</span>
+                <span className="text-[11px] font-sans tracking-wide text-ink-light font-medium">{todayShort}</span>
+              </div>
+
+              <div className="w-px h-8 bg-rule" />
+
+              {/* Theme */}
+              <div className="flex flex-col items-center gap-1.5">
+                <span className="text-[8px] font-sans uppercase tracking-[0.2em] text-ink-muted/60 font-medium">Theme</span>
+                <div className="flex items-center gap-2" ref={themeRef}>
+                  {THEMES.map((t) => (
+                    <Tooltip key={t}>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onThemeChange(t)}
+                          className={`w-3 h-3 rounded-full cursor-pointer transition-all duration-200 p-0 ${
+                            theme === t ? 'ring-1.5 ring-ink ring-offset-1 ring-offset-paper scale-125' : 'opacity-40 hover:opacity-90 hover:scale-110'
+                          }`}
+                          style={{ backgroundColor: THEME_COLORS[t].bg }}
+                          aria-label={`Switch to ${THEME_COLORS[t].label} theme`}
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent>{THEME_COLORS[t].label}</TooltipContent>
+                    </Tooltip>
+                  ))}
+                </div>
+              </div>
+
+              <div className="w-px h-8 bg-rule" />
+
+              {/* Stats */}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" onClick={onShowStats} className="h-6 w-6">
-                    <BarChart3 size={12} />
-                  </Button>
+                  <button
+                    type="button"
+                    onClick={onShowStats}
+                    className="flex flex-col items-center gap-0.5 cursor-pointer hover:opacity-70 transition-opacity"
+                  >
+                    <span className="text-[8px] font-sans uppercase tracking-[0.2em] text-ink-muted/60 font-medium">Stats</span>
+                    <BarChart3 size={16} className="text-ink-light" />
+                  </button>
                 </TooltipTrigger>
                 <TooltipContent>LLM Statistics</TooltipContent>
               </Tooltip>
             </div>
-          </div>
-
-          {/* Masthead */}
-          <div className="text-center pt-1 pb-3">
-            <h1 className="font-serif text-[42px] font-black tracking-[-0.02em] text-masthead leading-[0.95]">
-              The Daily Brief
-            </h1>
-            <p className="mt-1 text-[9px] font-sans uppercase tracking-[0.35em] text-masthead/40 font-medium">
-              AI-Curated News Summaries
-            </p>
           </div>
 
         </div>

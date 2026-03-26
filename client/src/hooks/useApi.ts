@@ -78,7 +78,7 @@ export function useFeeds(categoryId: number | null) {
   return { feeds, loading, refresh, addFeed, deleteFeed };
 }
 
-export function useSummary(categoryId: number | null, snapshotId?: number | null) {
+export function useSummary(categoryId: number | null, snapshotId?: number | null, providerId: string = 'llama') {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -106,7 +106,12 @@ export function useSummary(categoryId: number | null, snapshotId?: number | null
           setSummary(data);
         } else if (!snapshotId) {
           // No cached summary and no snapshotId — auto-refresh
-          const refreshRes = await fetch(`${BASE}/categories/${categoryId}/refresh`, { method: 'POST', signal: controller.signal });
+          const refreshRes = await fetch(`${BASE}/categories/${categoryId}/refresh`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider: providerId }),
+            signal: controller.signal,
+          });
           const refreshData = await refreshRes.json();
           if (!refreshRes.ok) throw new Error(refreshData.error || 'Failed to refresh summary');
           setSummary(refreshData);
@@ -132,7 +137,12 @@ export function useSummary(categoryId: number | null, snapshotId?: number | null
     setRefreshing(true);
     setError(null);
     try {
-      const res = await fetch(`${BASE}/categories/${categoryId}/refresh`, { method: 'POST', signal: controller.signal });
+      const res = await fetch(`${BASE}/categories/${categoryId}/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: providerId }),
+        signal: controller.signal,
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to refresh summary');
       setSummary(data);
@@ -142,7 +152,7 @@ export function useSummary(categoryId: number | null, snapshotId?: number | null
     } finally {
       if (!controller.signal.aborted) setRefreshing(false);
     }
-  }, [categoryId]);
+  }, [categoryId, providerId]);
 
   return { summary, loading, refreshing, error, refresh };
 }
@@ -178,7 +188,7 @@ export function useSummaryHistory(categoryId: number | null) {
   return { dates, refresh };
 }
 
-export function useChat(summaryId: number | null) {
+export function useChat(summaryId: number | null, providerId: string = 'llama') {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sending, setSending] = useState(false);
 
@@ -199,7 +209,7 @@ export function useChat(summaryId: number | null) {
       const res = await fetch(`${BASE}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ summary_id: summaryId, message: text }),
+        body: JSON.stringify({ summary_id: summaryId, message: text, provider: providerId }),
       });
       const reply = await res.json();
       if (reply.content) setMessages((prev) => [...prev, reply]);

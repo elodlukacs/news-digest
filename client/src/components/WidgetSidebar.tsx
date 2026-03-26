@@ -47,12 +47,12 @@ export function WidgetSidebar({ weather, rates, headlines, crypto, trending }: P
 
   return (
     <aside className="w-72 shrink-0 hidden lg:block pt-8 font-widget">
-      <div className="sticky top-8 space-y-8">
+      <div className="sticky top-8 space-y-5">
         {/* Weather */}
         {weather && (
           <section>
             <WidgetHeader title="Weather" />
-            <div className="pt-4 pb-5">
+            <div>
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
                   <WeatherIcon code={weather.code} size={28} />
@@ -63,7 +63,7 @@ export function WidgetSidebar({ weather, rates, headlines, crypto, trending }: P
                 </div>
                 <p className="text-[10px] text-ink-muted uppercase tracking-wider">{weather.location}</p>
               </div>
-              <div className="mt-4 flex gap-5 text-[11px] text-ink-muted">
+              <div className="mt-2 flex gap-4 text-[10px] text-ink-muted">
                 <span className="flex items-center gap-1.5">
                   <Wind size={11} /> {weather.wind} km/h
                 </span>
@@ -73,7 +73,7 @@ export function WidgetSidebar({ weather, rates, headlines, crypto, trending }: P
               </div>
             </div>
             {weather.forecast.length > 0 && (
-              <div className="pt-4 grid grid-cols-3 gap-3">
+              <div className="pt-3 grid grid-cols-3 gap-2">
                 {weather.forecast.map((day) => (
                   <div key={day.date} className="text-center">
                     <p className="text-[10px] uppercase tracking-wider text-ink-muted mb-2">{formatDay(day.date)}</p>
@@ -95,7 +95,7 @@ export function WidgetSidebar({ weather, rates, headlines, crypto, trending }: P
         {crypto.length > 0 && (
           <section>
             <WidgetHeader title="Crypto" />
-            <div className="pt-4 space-y-2.5">
+            <div className="space-y-1.5">
               {crypto.map((coin) => (
                 <div key={coin.id} className="flex items-center justify-between">
                   <span className="text-[12px] font-medium text-ink tracking-wider">{coin.symbol}</span>
@@ -122,7 +122,7 @@ export function WidgetSidebar({ weather, rates, headlines, crypto, trending }: P
         {rates && (
           <section>
             <WidgetHeader title="RON Exchange" />
-            <div className="pt-4 space-y-2.5">
+            <div className="space-y-1.5">
               {Object.entries(rates.rates).map(([currency, rate]) => {
                 const ronValue = 1 / rate;
                 return (
@@ -143,7 +143,7 @@ export function WidgetSidebar({ weather, rates, headlines, crypto, trending }: P
         {trending.length > 0 && (
           <section>
             <WidgetHeader title="Trending Topics" />
-            <div className="pt-4 flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-1.5">
               {trending.slice(0, 12).map((t) => (
                 <Badge
                   key={t.tag}
@@ -162,7 +162,7 @@ export function WidgetSidebar({ weather, rates, headlines, crypto, trending }: P
         {headlines.length > 0 && (
           <section>
             <WidgetHeader title="Headlines" />
-            <div className="pt-4 space-y-3.5">
+            <div className="space-y-2.5">
               {headlines.map((h, i) => (
                 <a key={i} href={h.link} target="_blank" rel="noopener noreferrer" className="block group cursor-pointer">
                   <p className="text-[13px] leading-snug text-ink group-hover:text-ink-muted transition-colors">

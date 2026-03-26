@@ -200,15 +200,25 @@ if (count.c === 0) {
 // ========== LLM Helper ==========
 
 const AI_PROVIDERS = [
-  { name: 'Groq', url: 'https://api.groq.com/openai/v1/chat/completions', key: () => process.env.GROQ_API_KEY, model: 'llama-3.3-70b-versatile' },
+  { id: 'llama', name: 'Groq', url: 'https://api.groq.com/openai/v1/chat/completions', key: () => process.env.GROQ_API_KEY, model: 'llama-3.3-70b-versatile' },
+  { id: 'minimax', name: 'OpenRouter', url: 'https://openrouter.ai/api/v1/chat/completions', key: () => process.env.OPENROUTER_API_KEY, model: 'minimax/minimax-m2.7' },
 ];
 
 // In-memory store for latest rate limit info per provider
 const providerQuotas = {};
 
-async function callLLM(messages, { purpose = 'unknown', categoryId = null, temperature = 0.3 } = {}) {
-  const providers = AI_PROVIDERS.filter(p => p.key());
+async function callLLM(messages, { purpose = 'unknown', categoryId = null, temperature = 0.3, providerId = null } = {}) {
+  let providers = AI_PROVIDERS.filter(p => p.key());
   if (providers.length === 0) throw new Error('No AI API keys configured. Set GROQ_API_KEY in .env');
+
+  // If a specific provider is requested, try it first then fall back to others
+  if (providerId) {
+    const target = providers.find(p => p.id === providerId);
+    if (target) {
+      const rest = providers.filter(p => p.id !== providerId);
+      providers = [target, ...rest];
+    }
+  }
 
   let lastError = null;
   for (const provider of providers) {
@@ -219,7 +229,7 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
       const response = await fetch(provider.url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${provider.key()}` },
-        body: JSON.stringify({ model: provider.model, messages, temperature }),
+        body: JSON.stringify({ model: provider.model, messages, temperature, max_tokens: 8192 }),
       });
 
       // Capture rate limit headers from ALL responses (even failed ones)
@@ -476,7 +486,7 @@ app.post('/api/categories/:id/refresh', validateId, async (req, res) => {
       feeds.map(async (feed) => {
         try {
           const parsed = await parser.parseURL(feed.url);
-          return parsed.items.slice(0, 15).map((item) => ({
+          return parsed.items.slice(0, 10).map((item) => ({
             title: item.title || '',
             description: (item.contentSnippet || item.content || '').slice(0, 500),
             link: item.link || '',
@@ -495,7 +505,7 @@ app.post('/api/categories/:id/refresh', validateId, async (req, res) => {
       .filter((r) => r.status === 'fulfilled')
       .flatMap((r) => r.value)
       .sort((a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime())
-      .slice(0, 50);
+      .slice(0, 30);
 
     if (allArticles.length === 0) {
       return res.status(400).json({ error: 'Could not fetch any articles from the feeds' });
@@ -527,41 +537,105 @@ app.post('/api/categories/:id/refresh', validateId, async (req, res) => {
 
 IMPORTANT: Write your response in ${lang} ONLY.
 
-STRICT OUTPUT FORMAT - follow this EXACTLY, no exceptions:
-
-## [Article Title](https://example.com/article)
-Write 1-3 sentences about this topic here. Be direct and factual.
-
----
-
-## [Another Article Title](https://example.com/another)
-Write 1-3 sentences about this topic here. Be direct and factual.
-
----
-
-Repeat the above pattern for 6-10 different articles.
+Respond ONLY with valid JSON (no markdown fences, no extra text). The root object MUST have an "articles" key. Use this exact structure:
+{"articles":[{"title":"Article Title","url":"https://example.com/article","summary":"2-3 sentences about this topic. Be direct and factual.","sentiment":"positive","tags":["tag1","tag2"]}]}
 
 Rules:
-- Each section MUST start with "## [Title](url)" on its own line
-- Each section MUST be separated by a line containing exactly "---" (3 dashes)
-- Write 1-3 sentences per section
-- Never repeat information across sections
-- No intro, no conclusion, no "Sources" or "References" sections
-- No "impact" or "significance" commentary
+- Include 6-8 articles (no more than 8)
+- "title": the article's original title
+- "url": the article's original URL
+- "summary": 2-3 factual sentences in ${lang}
+- "sentiment": one of "positive", "negative", "neutral", or "mixed" — classify the overall tone of the news (good news = positive, bad news = negative, both = mixed, purely informational = neutral)
+- "tags": 2-3 short topic keywords in English (e.g. "climate", "AI", "economy")
+- Never repeat information across articles
+- No intro, no conclusion, no commentary
 ${customPrompt ? `\nAdditional instructions:\n${customPrompt}\n` : ''}
 Articles to summarize:
 ${articleText}`;
 
     const messages = [
-      { role: 'system', content: 'You are a professional news analyst. Provide thorough, well-structured summaries with depth and context.' },
+      { role: 'system', content: 'You are a professional news analyst. Provide thorough, well-structured summaries with depth and context. Always respond with valid JSON only.' },
       { role: 'user', content: prompt },
     ];
 
-    // Call LLM for summary
-    const result = await callLLM(messages, { purpose: 'summary', categoryId: Number(req.params.id) });
-    const summary = result.content || 'No summary generated.';
+    // Call LLM for summary + sentiment in a single call
+    const { provider: selectedProvider } = req.body || {};
+    const result = await callLLM(messages, { purpose: 'summary', categoryId: Number(req.params.id), providerId: selectedProvider || null });
     const generated_at = new Date().toISOString();
     const dateKey = generated_at.split('T')[0];
+
+    // Parse the JSON response with repair for common LLM issues
+    let rawContent = (result.content || '').trim();
+    if (rawContent.startsWith('```')) {
+      rawContent = rawContent.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '').trim();
+    }
+
+    function repairAndParseJSON(str) {
+      // First try as-is
+      try { return JSON.parse(str); } catch {}
+
+      let fixed = str;
+      // Fix trailing commas before ] or }
+      fixed = fixed.replace(/,\s*([}\]])/g, '$1');
+
+      // If truncated, try to recover complete articles
+      try { return JSON.parse(fixed); } catch {}
+
+      // Truncated JSON: find the last complete article object and close the structure
+      const lastCompleteObj = fixed.lastIndexOf('}');
+      if (lastCompleteObj > 0) {
+        let truncated = fixed.slice(0, lastCompleteObj + 1);
+        // Remove any trailing comma
+        truncated = truncated.replace(/,\s*$/, '');
+        // Close any open arrays and objects
+        const openBrackets = (truncated.match(/\[/g) || []).length - (truncated.match(/\]/g) || []).length;
+        const openBraces = (truncated.match(/\{/g) || []).length - (truncated.match(/\}/g) || []).length;
+        truncated += ']'.repeat(Math.max(0, openBrackets)) + '}'.repeat(Math.max(0, openBraces));
+        try { return JSON.parse(truncated); } catch {}
+      }
+
+      return null;
+    }
+
+    let parsedArticles;
+    const parsed = repairAndParseJSON(rawContent);
+    if (parsed) {
+      if (Array.isArray(parsed)) {
+        parsedArticles = parsed;
+      } else if (parsed.articles) {
+        parsedArticles = parsed.articles;
+      } else if (parsed.groups && Array.isArray(parsed.groups)) {
+        parsedArticles = parsed.groups.flatMap(g => g.articles || []);
+      } else {
+        parsedArticles = parsed.items || parsed.data || [];
+      }
+      if (parsedArticles.length === 0) {
+        console.warn('[Summary] Parsed JSON has no articles. Keys:', Object.keys(parsed || {}));
+        console.warn('[Summary] Raw content (first 1000 chars):', rawContent.slice(0, 1000));
+      }
+    } else {
+      console.error('[Summary] Could not parse or repair LLM JSON response');
+      console.error('[Summary] Raw content (first 1000 chars):', rawContent.slice(0, 1000));
+      return res.status(500).json({ error: 'LLM returned invalid response format. Please try again.' });
+    }
+
+    // Build markdown from parsed articles
+    const summary = parsedArticles.map(a =>
+      `## [${a.title}](${a.url})\n${a.summary}`
+    ).join('\n\n---\n\n');
+
+    // Extract sentiment and tags data
+    const sentimentData = parsedArticles.map(a => ({
+      title: a.title,
+      sentiment: ['positive', 'negative', 'neutral', 'mixed'].includes(a.sentiment) ? a.sentiment : 'neutral',
+      tags: Array.isArray(a.tags) ? a.tags : [],
+    }));
+
+    const tagSet = new Set();
+    for (const s of sentimentData) {
+      for (const tag of s.tags) tagSet.add(tag);
+    }
+    const tagsData = [...tagSet];
 
     // Upsert into summaries table for backward compat
     db.prepare(`
@@ -574,9 +648,9 @@ ${articleText}`;
         generated_at = excluded.generated_at
     `).run(req.params.id, summary, allArticles.length, feeds.length, generated_at);
 
-    // Insert into summary_history
+    // Insert into summary_history with sentiment data included
     const histResult = db.prepare('INSERT INTO summary_history (category_id, summary, article_count, feed_count, provider, sentiment_data, tags_data, date_key, generated_at) VALUES (?,?,?,?,?,?,?,?,?)').run(
-      req.params.id, summary, allArticles.length, feeds.length, result.provider, null, null, dateKey, generated_at
+      req.params.id, summary, allArticles.length, feeds.length, result.provider, JSON.stringify(sentimentData), JSON.stringify(tagsData), dateKey, generated_at
     );
     const historyId = histResult.lastInsertRowid;
 
@@ -586,71 +660,6 @@ ${articleText}`;
     if (oldIds.length > 0) {
       db.prepare(`DELETE FROM chat_messages WHERE summary_id IN (${oldIds.map(() => '?').join(',')})`).run(...oldIds);
       db.prepare('DELETE FROM summary_history WHERE category_id = ? AND date_key < ?').run(req.params.id, cutoff);
-    }
-
-    // Enrichment step — extract titles and analyze sentiment/tags
-    let sentimentData = null;
-    let tagsData = null;
-    try {
-      const titleRegex = /##\s+\[([^\]]+)\]\(([^)]+)\)/g;
-      const titles = [];
-      let m;
-      while ((m = titleRegex.exec(summary)) !== null) {
-        titles.push(m[1]);
-      }
-
-      if (titles.length > 0) {
-        const numberedTitles = titles.map((t, i) => `${i + 1}. ${t}`).join('\n');
-        const enrichResult = await callLLM([
-          { role: 'system', content: 'You are a news sentiment analyst. Analyze the overall tone and impact of each news headline — not just the words, but what the news means for the reader. Consider: is this good news, bad news, a mix, or purely informational?' },
-          { role: 'user', content: `Classify the sentiment and extract 2-3 topic tags for each headline below.
-
-Headlines:
-${numberedTitles}
-
-Rules:
-- "positive": good news, progress, achievements, breakthroughs
-- "negative": bad news, threats, losses, conflicts, crises
-- "mixed": contains both positive and negative aspects
-- "neutral": factual/informational with no clear positive or negative tone
-- Tags should be short topic keywords (e.g. "climate", "AI", "economy")
-
-Respond ONLY with valid JSON, no markdown:
-{"sections":[{"sentiment":"positive","tags":["tag1","tag2"]}]}` },
-        ], { purpose: 'enrichment', categoryId: Number(req.params.id) });
-
-        // Parse enrichment JSON
-        let jsonStr = enrichResult.content.trim();
-        // Strip markdown code fences if present (LLMs often wrap JSON in ```json ... ```)
-        if (jsonStr.startsWith('```')) {
-          jsonStr = jsonStr.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '').trim();
-        }
-        const parsed = JSON.parse(jsonStr);
-
-        if (parsed?.sections) {
-          sentimentData = parsed.sections.map((s, i) => ({
-            title: titles[i] || '',
-            sentiment: s.sentiment || 'neutral',
-            tags: s.tags || [],
-          }));
-
-          // Build flat unique tags array
-          const tagSet = new Set();
-          for (const s of sentimentData) {
-            for (const tag of s.tags) {
-              tagSet.add(tag);
-            }
-          }
-          tagsData = [...tagSet];
-
-          // Update summary_history row with enrichment data
-          db.prepare('UPDATE summary_history SET sentiment_data = ?, tags_data = ? WHERE id = ?').run(
-            JSON.stringify(sentimentData), JSON.stringify(tagsData), historyId
-          );
-        }
-      }
-    } catch (enrichErr) {
-      console.warn('[Enrichment] Failed, continuing without enrichment:', enrichErr.message);
     }
 
     res.json({
@@ -840,7 +849,7 @@ app.get('/api/briefing/latest', (req, res) => {
 // ========== Chat ==========
 
 app.post('/api/chat', async (req, res) => {
-  const { summary_id, message } = req.body;
+  const { summary_id, message, provider: selectedProvider } = req.body;
   if (!summary_id || !message) return res.status(400).json({ error: 'summary_id and message required' });
 
   try {
@@ -862,7 +871,7 @@ app.post('/api/chat', async (req, res) => {
       { role: 'user', content: message },
     ];
 
-    const result = await callLLM(messages, { purpose: 'chat', categoryId: summary.category_id });
+    const result = await callLLM(messages, { purpose: 'chat', categoryId: summary.category_id, providerId: selectedProvider || null });
 
     // Save assistant response
     const replyTime = new Date().toISOString();

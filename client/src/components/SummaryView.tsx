@@ -23,17 +23,27 @@ function parseSummaryMarkdown(markdown: string, sentimentData: Summary['sentimen
   const sections: ParsedSection[] = [];
   const parts = markdown.split(/\n---\n/);
 
-  for (let i = 0; i < parts.length; i++) {
-    const part = parts[i].trim();
-    if (!part) continue;
+  // Build a title→sentiment lookup for reliable matching
+  const sentimentByTitle = new Map<string, 'positive' | 'negative' | 'neutral' | 'mixed'>();
+  if (sentimentData) {
+    for (const entry of sentimentData) {
+      if (entry.title && entry.sentiment) {
+        sentimentByTitle.set(entry.title.toLowerCase(), entry.sentiment);
+      }
+    }
+  }
+
+  for (const part of parts) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
 
     // Extract title and URL from ## [Title](url) pattern
-    const linkMatch = part.match(/^##\s+\[([^\]]+)\]\(([^)]+)\)/);
-    const title = linkMatch ? linkMatch[1] : part.split('\n')[0].replace(/^#+\s*/, '').replace(/\*\*/g, '');
+    const linkMatch = trimmed.match(/^##\s+\[([^\]]+)\]\(([^)]+)\)/);
+    const title = linkMatch ? linkMatch[1] : trimmed.split('\n')[0].replace(/^#+\s*/, '').replace(/\*\*/g, '');
     const url = linkMatch ? linkMatch[2] : '';
 
     // Remove the title line and clean up
-    let content = part
+    let content = trimmed
       .replace(/^##\s+\[[^\]]+\]\([^)]+\)/, '')
       .replace(/^#+\s*/, '')
       .trim();
@@ -50,7 +60,7 @@ function parseSummaryMarkdown(markdown: string, sentimentData: Summary['sentimen
       title,
       url,
       content,
-      sentiment: sentimentData?.[i]?.sentiment || null,
+      sentiment: sentimentByTitle.get(title.toLowerCase()) || null,
     });
   }
 

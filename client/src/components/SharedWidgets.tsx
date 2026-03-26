@@ -18,7 +18,7 @@ export function WeatherIcon({ code, size = 16 }: { code: number; size?: number }
 
 export function WidgetHeader({ title }: { title: string }) {
   return (
-    <div className="flex items-center gap-2 mb-3 bg-paper-dark -mx-4 px-4 py-2">
+    <div className="flex items-center gap-2 mb-2 bg-paper-dark -mx-4 px-4 py-1.5">
       <span className="w-1 h-3 bg-masthead rounded-sm" />
       <h3 className="text-[10px] uppercase tracking-[0.2em] font-bold text-ink">{title}</h3>
     </div>

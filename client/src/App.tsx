@@ -23,11 +23,12 @@ function App() {
   const [showReleases, setShowReleases] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [selectedSnapshotId, setSelectedSnapshotId] = useState<number | null>(null);
+  const [selectedLlm, setSelectedLlm] = useState('llama');
 
   const { feeds, addFeed, deleteFeed } = useFeeds(managingId);
-  const { summary, loading, refreshing, error, refresh } = useSummary(activeId, selectedSnapshotId);
+  const { summary, loading, refreshing, error, refresh } = useSummary(activeId, selectedSnapshotId, selectedLlm);
   const { dates, refresh: refreshHistory } = useSummaryHistory(activeId);
-  const { messages: chatMessages, sending: chatSending, sendMessage: chatSend } = useChat(summary?.id || null);
+  const { messages: chatMessages, sending: chatSending, sendMessage: chatSend } = useChat(summary?.id || null, selectedLlm);
   const { briefing, loading: briefingLoading, error: briefingError, generate: generateBriefing } = useBriefing();
   const { weather, rates, headlines, crypto, hackerNews, releases, trending } = useWidgets();
   const { briefs: homepageBriefs, loading: homepageLoading, refreshing: homepageRefreshing, refresh: homepageRefresh } = useHomepage();
@@ -114,6 +115,8 @@ function App() {
         theme={theme}
         onThemeChange={setTheme}
         onShowStats={() => setShowStats(true)}
+        selectedLlm={selectedLlm}
+        onLlmChange={setSelectedLlm}
       />
 
       {/* Newspaper Home: full-width grid when no category selected */}
