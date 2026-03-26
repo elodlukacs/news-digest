@@ -35,7 +35,6 @@ interface Props {
   crypto: CryptoPrice[];
   rates: Rates | null;
   headlines: Headline[];
-  trending: { tag: string; count: number }[];
   hackerNews: HackerNewsItem[];
   releases: UpcomingRelease[];
 }
@@ -417,7 +416,6 @@ export function NewspaperHome({
   crypto,
   rates,
   headlines,
-  trending,
   hackerNews,
   releases,
 }: Props) {

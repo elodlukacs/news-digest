@@ -16,13 +16,6 @@ interface Props {
 }
 
 export function Header({ theme, onThemeChange, onShowStats }: Props) {
-  const today = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-
   const todayShort = new Date().toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',

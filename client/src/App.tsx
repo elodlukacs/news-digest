@@ -93,7 +93,6 @@ function App() {
             crypto={crypto}
             rates={rates}
             headlines={headlines}
-            trending={trending}
             hackerNews={hackerNews}
             releases={releases || []}
           />
