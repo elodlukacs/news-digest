@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { MessageCircle, Send, X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
 import type { ChatMessage } from '../types';
 
 interface Props {
@@ -26,12 +28,9 @@ export function ChatPanel({ messages, sending, onSend }: Props) {
 
   if (!open) {
     return (
-      <button
-        onClick={() => setOpen(true)}
-        className="mt-8 flex items-center gap-2 px-4 py-2.5 text-xs uppercase tracking-[0.15em] font-medium cursor-pointer transition-all border border-rule text-ink-muted hover:text-ink hover:border-ink"
-      >
+      <Button variant="outline" onClick={() => setOpen(true)} className="mt-8 text-xs uppercase tracking-[0.15em]">
         <MessageCircle size={13} /> Ask about this news
-      </button>
+      </Button>
     );
   }
 
@@ -42,9 +41,9 @@ export function ChatPanel({ messages, sending, onSend }: Props) {
           <MessageCircle size={14} className="text-masthead" />
           <h4 className="text-[13px] font-serif font-bold text-ink">Ask about this news</h4>
         </div>
-        <button onClick={() => setOpen(false)} className="p-1 text-ink-muted hover:text-ink cursor-pointer">
+        <Button variant="ghost" size="icon" onClick={() => setOpen(false)} className="h-7 w-7">
           <X size={14} />
-        </button>
+        </Button>
       </div>
 
       <div ref={scrollRef} className="max-h-80 overflow-y-auto p-4 space-y-4">
@@ -85,20 +84,16 @@ export function ChatPanel({ messages, sending, onSend }: Props) {
       </div>
 
       <div className="flex gap-2 p-3 border-t border-rule">
-        <input
+        <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
           placeholder="Ask a question..."
-          className="flex-1 px-3 py-2 text-sm bg-transparent border border-rule text-ink placeholder-ink-muted focus:outline-none focus:border-ink"
+          className="flex-1"
         />
-        <button
-          onClick={handleSend}
-          disabled={!input.trim() || sending}
-          className="px-3 py-2 border border-ink text-ink hover:bg-ink hover:text-paper cursor-pointer transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-        >
+        <Button variant="outline" size="icon" onClick={handleSend} disabled={!input.trim() || sending}>
           <Send size={14} />
-        </button>
+        </Button>
       </div>
     </div>
   );

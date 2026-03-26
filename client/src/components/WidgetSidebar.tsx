@@ -2,6 +2,7 @@ import { Wind, Droplets, ExternalLink } from 'lucide-react';
 import type { CryptoPrice } from '../types';
 import { formatDay } from '../utils/date';
 import { WeatherIcon, WidgetHeader } from './SharedWidgets';
+import { Badge } from './ui/badge';
 
 interface ForecastDay {
   date: string;
@@ -144,13 +145,14 @@ export function WidgetSidebar({ weather, rates, headlines, crypto, trending }: P
             <WidgetHeader title="Trending Topics" />
             <div className="pt-4 flex flex-wrap gap-1.5">
               {trending.slice(0, 12).map((t) => (
-                <span
+                <Badge
                   key={t.tag}
+                  variant="secondary"
                   className="px-2 py-0.5 text-[10px] font-medium bg-paper-dark text-ink-muted"
                 >
                   {t.tag}{' '}
                   <span className="text-ink-muted/50">({t.count})</span>
-                </span>
+                </Badge>
               ))}
             </div>
           </section>

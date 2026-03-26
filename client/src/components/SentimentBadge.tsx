@@ -1,3 +1,5 @@
+import { Badge } from './ui/badge';
+
 interface Props {
   sentiment: 'positive' | 'negative' | 'neutral' | 'mixed';
 }
@@ -12,9 +14,9 @@ const COLORS = {
 export function SentimentBadge({ sentiment }: Props) {
   const c = COLORS[sentiment];
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] uppercase tracking-wider font-medium ${c.bg} ${c.text}`}>
+    <Badge className={`inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-medium border-0 ${c.bg} ${c.text}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
       {sentiment}
-    </span>
+    </Badge>
   );
 }

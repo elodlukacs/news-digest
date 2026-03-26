@@ -78,14 +78,14 @@ export function useFeeds(categoryId: number | null) {
   return { feeds, loading, refresh, addFeed, deleteFeed };
 }
 
-export function useSummary(categoryId: number | null, date?: string | null) {
+export function useSummary(categoryId: number | null, snapshotId?: number | null) {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  // Auto-load when categoryId or date changes
+  // Auto-load when categoryId or snapshotId changes
   useEffect(() => {
     if (!categoryId) { setSummary(null); return; }
     if (abortRef.current) abortRef.current.abort();
@@ -96,16 +96,16 @@ export function useSummary(categoryId: number | null, date?: string | null) {
       setLoading(true);
       setError(null);
       try {
-        const url = date
-          ? `${BASE}/categories/${categoryId}/summary?date=${date}`
+        const url = snapshotId
+          ? `${BASE}/categories/${categoryId}/summary?summary_id=${snapshotId}`
           : `${BASE}/categories/${categoryId}/summary`;
         const res = await fetch(url, { signal: controller.signal });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to load summary');
         if (data.summary) {
           setSummary(data);
-        } else if (!date) {
-          // No cached summary and no date — auto-refresh
+        } else if (!snapshotId) {
+          // No cached summary and no snapshotId — auto-refresh
           const refreshRes = await fetch(`${BASE}/categories/${categoryId}/refresh`, { method: 'POST', signal: controller.signal });
           const refreshData = await refreshRes.json();
           if (!refreshRes.ok) throw new Error(refreshData.error || 'Failed to refresh summary');
@@ -121,7 +121,7 @@ export function useSummary(categoryId: number | null, date?: string | null) {
       }
     };
     load();
-  }, [categoryId, date]);
+  }, [categoryId, snapshotId]);
 
   const refresh = useCallback(async () => {
     if (!categoryId) return;

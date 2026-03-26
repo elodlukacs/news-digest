@@ -5,6 +5,8 @@ import { API_BASE } from '../config';
 import { formatDate } from '../utils/date';
 import { WeatherIcon, WidgetHeader } from './SharedWidgets';
 import type { CryptoPrice, HistoryEntry } from '../types';
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
 
 interface ForecastDay {
   date: string;
@@ -33,15 +35,14 @@ interface Rates {
 interface Props {
   briefing: { summary: string; generated_at: string; provider?: string } | null;
   briefingLoading: boolean;
-  briefingError: string | null;
   onGenerateBriefing: () => void;
   weather: Weather | null;
   crypto: CryptoPrice[];
   rates: Rates | null;
   trending: { tag: string; count: number }[];
   dates: HistoryEntry[];
-  selectedDate: string | null;
-  onSelectDate: (date: string | null) => void;
+  selectedSnapshotId: number | null;
+  onSelectSnapshot: (id: number | null) => void;
   showArchive: boolean;
 }
 
@@ -57,8 +58,8 @@ export function RightSidebar({
   rates,
   trending,
   dates,
-  selectedDate,
-  onSelectDate,
+  selectedSnapshotId,
+  onSelectSnapshot,
   showArchive,
 }: Props) {
   const [sending, setSending] = useState(false);
@@ -117,36 +118,22 @@ export function RightSidebar({
                   {briefing.provider && <> &middot; {briefing.provider}</>}
                 </span>
                 <div className="flex-1" />
-                <button
-                  onClick={sendBriefingToTelegram}
-                  disabled={sending}
-                  className="p-1 text-ink-muted hover:text-masthead cursor-pointer transition-colors disabled:opacity-40"
-                  title="Send to Telegram"
-                >
+                <Button variant="ghost" size="icon" onClick={sendBriefingToTelegram} disabled={sending} className="h-6 w-6" title="Send to Telegram">
                   <Send size={10} />
-                </button>
-                <button
-                  onClick={onGenerateBriefing}
-                  disabled={briefingLoading}
-                  className="p-1 text-ink-muted hover:text-masthead cursor-pointer transition-colors disabled:opacity-40"
-                  title="Regenerate"
-                >
+                </Button>
+                <Button variant="ghost" size="icon" onClick={onGenerateBriefing} disabled={briefingLoading} className="h-6 w-6" title="Regenerate">
                   <RefreshCw size={10} className={briefingLoading ? 'animate-spin' : ''} />
-                </button>
+                </Button>
               </div>
               {sent && <p className="text-[9px] text-masthead mt-1">Sent to Telegram!</p>}
             </div>
           ) : (
             <div className="text-center py-4">
               <p className="text-[11px] text-ink-muted italic mb-2">No briefing yet</p>
-              <button
-                onClick={onGenerateBriefing}
-                disabled={briefingLoading}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[9px] uppercase tracking-[0.2em] font-bold bg-masthead text-white hover:bg-masthead/80 cursor-pointer transition-all disabled:opacity-40"
-              >
+              <Button onClick={onGenerateBriefing} disabled={briefingLoading} className="text-[9px] uppercase tracking-[0.2em] font-bold">
                 <RefreshCw size={9} className={briefingLoading ? 'animate-spin' : ''} />
                 Generate
-              </button>
+              </Button>
             </div>
           )}
         </section>
@@ -157,20 +144,27 @@ export function RightSidebar({
             <WidgetHeader title="Archive" />
             <div className="space-y-0.5">
               <button
-                onClick={() => onSelectDate(null)}
-                className={`w-full text-left px-2 py-1.5 text-[12px] cursor-pointer transition-colors
-                  ${selectedDate === null ? 'text-masthead font-bold bg-masthead/5' : 'text-ink-muted hover:text-ink'}`}
+                onClick={() => onSelectSnapshot(null)}
+                className={`w-full flex items-center px-2 py-1.5 cursor-pointer transition-colors ${
+                  selectedSnapshotId === null ? 'text-masthead font-bold' : 'text-ink-muted hover:text-ink hover:bg-paper-dark'
+                }`}
               >
                 Latest
               </button>
               {dates.map((entry) => (
                 <button
-                  key={entry.date_key}
-                  onClick={() => onSelectDate(entry.date_key)}
-                  className={`w-full text-left px-2 py-1.5 text-[12px] cursor-pointer transition-colors
-                    ${selectedDate === entry.date_key ? 'text-masthead font-bold bg-masthead/5' : 'text-ink-muted hover:text-ink'}`}
+                  key={entry.id}
+                  onClick={() => onSelectSnapshot(entry.id)}
+                  className={`w-full flex items-center px-2 py-1.5 cursor-pointer transition-colors ${
+                    selectedSnapshotId === entry.id ? 'text-masthead font-bold' : 'text-ink-muted hover:text-ink hover:bg-paper-dark'
+                  }`}
                 >
-                  {formatDate(entry.date_key)}
+                  <span className="text-[12px]">{formatDate(entry.date_key)}</span>
+                  {entry.generated_at && (
+                    <span className="text-[10px] ml-1.5 opacity-60">
+                      {new Date(entry.generated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -258,12 +252,13 @@ export function RightSidebar({
             <WidgetHeader title="Trending" />
             <div className="flex flex-wrap gap-1.5">
               {trending.slice(0, 10).map((t) => (
-                <span
+                <Badge
                   key={t.tag}
+                  variant="secondary"
                   className="px-2 py-0.5 text-[10px] font-medium bg-paper-dark text-ink-muted"
                 >
                   {t.tag} <span className="text-ink-muted/50">({t.count})</span>
-                </span>
+                </Badge>
               ))}
             </div>
           </section>

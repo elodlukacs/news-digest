@@ -1,9 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { ExternalLink, Clock, RefreshCw } from 'lucide-react';
 import type { CryptoPrice, HackerNewsItem } from '../types';
 import type { HomepageBrief, HomepageArticle } from '../hooks/useApi';
 import { timeAgo, formatDay } from '../utils/date';
 import { WeatherIcon } from './SharedWidgets';
+import { Button } from './ui/button';
+import { Skeleton } from './ui/skeleton';
+import { Badge } from './ui/badge';
 
 /* ─── Types ──────────────────────────────────────────────── */
 
@@ -53,58 +56,20 @@ interface Props {
 
 /* ─── Helpers ────────────────────────────────────────────── */
 
-/* ─── Placeholder gradient for feeds without images ──────── */
-
-const GRADIENTS = [
-  'from-stone-200 to-stone-300',
-  'from-zinc-200 to-zinc-300',
-  'from-neutral-200 to-neutral-300',
-  'from-stone-200 to-zinc-300',
-  'from-neutral-200 to-stone-300',
-  'from-zinc-200 to-neutral-300',
-  'from-stone-300 to-neutral-200',
-  'from-zinc-300 to-stone-200',
-];
-
-function getGradient(name: string) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return GRADIENTS[Math.abs(hash) % GRADIENTS.length];
-}
-
-function Placeholder({ categoryName, className }: { categoryName: string; className?: string }) {
-  return (
-    <div className={`bg-gradient-to-br ${getGradient(categoryName)} flex items-end justify-start p-4 ${className || ''}`}>
-      <span className="font-serif text-lg font-bold text-ink/15 select-none uppercase tracking-wider">
-        {categoryName}
-      </span>
-    </div>
-  );
-}
-
 function ArticleImage({
   src,
   alt,
-  categoryName,
   className,
 }: {
   src: string;
   alt: string;
-  categoryName: string;
   className: string;
 }) {
-  const [imgError, setImgError] = useState(false);
-
-  if (!src || imgError) {
-    return <Placeholder categoryName={categoryName} className={className} />;
-  }
-
   return (
     <img
       src={src}
       alt={alt}
       loading="lazy"
-      onError={() => setImgError(true)}
       className={className}
     />
   );
@@ -125,13 +90,12 @@ function HeroCard({
         <ArticleImage
           src={article.image}
           alt={article.title}
-          categoryName={categoryName}
           className="w-full h-56 xl:h-72 object-cover transition-transform duration-700 group-hover:scale-[1.03]"
         />
         <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent pt-16 pb-4 px-5">
-          <span className="inline-block text-[9px] uppercase tracking-[0.2em] font-bold text-white/90 bg-accent px-2 py-0.5">
+          <Badge variant="default" className="inline-block text-[9px] uppercase tracking-[0.2em] font-bold text-white/90 bg-accent px-2 py-0.5">
             {categoryName}
-          </span>
+          </Badge>
         </div>
       </a>
       <a href={article.link} target="_blank" rel="noopener noreferrer" className="block cursor-pointer">
@@ -168,14 +132,13 @@ function ImageCard({
           <ArticleImage
             src={article.image}
             alt={article.title}
-            categoryName={categoryName}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         </a>
         <div className="flex-1 min-w-0">
-          <button onClick={onCategoryClick} className="cursor-pointer">
+          <Button variant="ghost" onClick={onCategoryClick} className="cursor-pointer h-auto p-0">
             <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-masthead">{categoryName}</span>
-          </button>
+          </Button>
           <a href={article.link} target="_blank" rel="noopener noreferrer" className="block cursor-pointer">
             <h3 className="font-serif text-sm font-bold text-ink leading-snug mt-0.5 hover:text-masthead transition-colors line-clamp-2">
               {article.title}
@@ -193,13 +156,12 @@ function ImageCard({
         <ArticleImage
           src={article.image}
           alt={article.title}
-          categoryName={categoryName}
           className="w-full h-36 object-cover transition-transform duration-500 group-hover:scale-105"
         />
       </a>
-      <button onClick={onCategoryClick} className="cursor-pointer">
+      <Button variant="ghost" onClick={onCategoryClick} className="cursor-pointer h-auto p-0">
         <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-masthead">{categoryName}</span>
-      </button>
+      </Button>
       <a href={article.link} target="_blank" rel="noopener noreferrer" className="block cursor-pointer">
         <h3 className="font-serif text-base font-bold text-ink leading-snug mt-0.5 hover:text-masthead transition-colors">
           {article.title}
@@ -227,9 +189,9 @@ function TextCard({
 }) {
   return (
     <article className="group">
-      <button onClick={onCategoryClick} className="cursor-pointer">
+      <Button variant="ghost" onClick={onCategoryClick} className="cursor-pointer h-auto p-0">
         <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-masthead">{categoryName}</span>
-      </button>
+      </Button>
       <a href={article.link} target="_blank" rel="noopener noreferrer" className="block cursor-pointer">
         <h3 className="font-serif text-[15px] font-bold text-ink leading-snug mt-0.5 hover:text-masthead transition-colors">
           {article.title}
@@ -316,9 +278,27 @@ export function NewspaperHome({
 
   if (loading) {
     return (
-      <div className="py-32 text-center">
-        <div className="inline-block w-6 h-6 border border-ink border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-sm text-ink-muted font-light">Loading front page...</p>
+      <div className="py-32 space-y-4">
+        <Skeleton className="w-64 h-8 mx-auto" />
+        <Skeleton className="w-48 h-4 mx-auto" />
+        <div className="mt-12 grid grid-cols-5 gap-6">
+          <div className="space-y-4">
+            {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 w-full" />)}
+          </div>
+          <div className="col-span-2 space-y-4">
+            <Skeleton className="h-72 w-full" />
+            <div className="grid grid-cols-2 gap-4">
+              <Skeleton className="h-36 w-full" />
+              <Skeleton className="h-36 w-full" />
+            </div>
+          </div>
+          <div className="space-y-4">
+            {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 w-full" />)}
+          </div>
+          <div className="space-y-4">
+            {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 w-full" />)}
+          </div>
+        </div>
       </div>
     );
   }
@@ -330,14 +310,10 @@ export function NewspaperHome({
         <p className="text-sm text-ink-muted max-w-md mx-auto leading-relaxed mb-6">
           Add categories and feeds, then your latest news will appear here.
         </p>
-        <button
-          onClick={onRefresh}
-          disabled={refreshing}
-          className="inline-flex items-center gap-2 px-5 py-2.5 text-xs uppercase tracking-[0.15em] font-medium cursor-pointer transition-all duration-200 border border-ink text-ink hover:bg-ink hover:text-paper disabled:opacity-40"
-        >
+        <Button variant="outline" onClick={onRefresh} disabled={refreshing}>
           <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
           Load Headlines
-        </button>
+        </Button>
       </div>
     );
   }
@@ -349,14 +325,10 @@ export function NewspaperHome({
         <p className="text-[10px] text-ink-muted uppercase tracking-wider">
           Latest from {briefs.length} {briefs.length === 1 ? 'category' : 'categories'}
         </p>
-        <button
-          onClick={onRefresh}
-          disabled={refreshing}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] uppercase tracking-[0.15em] font-semibold text-ink-muted hover:text-masthead cursor-pointer transition-colors disabled:opacity-40"
-        >
+        <Button variant="ghost" size="sm" onClick={onRefresh} disabled={refreshing}>
           <RefreshCw size={11} className={refreshing ? 'animate-spin' : ''} />
           {refreshing ? 'Refreshing' : 'Refresh'}
-        </button>
+        </Button>
       </div>
 
       {/* ─── Above the Fold: 5-Column Grid ─── */}
@@ -429,16 +401,16 @@ export function NewspaperHome({
             <div>
               <SectionHeader title="Headlines" />
               <div className="space-y-3">
-                {headlines.slice(0, 8).map((h, i) => (
+                {headlines.slice(0, 15).map((h, i) => (
                   <a key={i} href={h.link} target="_blank" rel="noopener noreferrer" className="block group cursor-pointer">
-                    <p className="text-[13px] leading-snug text-ink font-medium group-hover:text-masthead transition-colors">
+                    <p className="text-[14px] leading-snug text-ink font-serif font-bold group-hover:text-masthead transition-colors">
                       {h.title}
                     </p>
                     <p className="text-[10px] text-ink-muted mt-0.5 flex items-center gap-1">
                       {h.source}
                       <ExternalLink size={8} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                     </p>
-                    {i < Math.min(headlines.length, 8) - 1 && <div className=" mt-3" />}
+                    {i < Math.min(headlines.length, 15) - 1 && <div className=" mt-3" />}
                   </a>
                 ))}
               </div>
@@ -447,13 +419,13 @@ export function NewspaperHome({
             <div>
               <SectionHeader title="Hacker News" />
               <div className="space-y-3">
-                {hackerNews.slice(0, 8).map((item, i) => (
+                {hackerNews.slice(0, 15).map((item, i) => (
                   <a key={item.id} href={item.url} target="_blank" rel="noopener noreferrer" className="block group cursor-pointer">
-                    <p className="text-[13px] leading-snug text-ink group-hover:text-masthead transition-colors">
+                    <p className="text-[14px] leading-snug text-ink font-serif font-bold group-hover:text-masthead transition-colors">
                       {item.title}
                     </p>
                     <p className="text-[10px] text-ink-muted mt-0.5">{item.score} pts</p>
-                    {i < Math.min(hackerNews.length, 8) - 1 && <div className=" mt-3" />}
+                    {i < Math.min(hackerNews.length, 15) - 1 && <div className=" mt-3" />}
                   </a>
                 ))}
               </div>

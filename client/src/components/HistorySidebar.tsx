@@ -3,11 +3,11 @@ import type { HistoryEntry } from '../types';
 
 interface Props {
   dates: HistoryEntry[];
-  selectedDate: string | null;
-  onSelectDate: (date: string | null) => void;
+  selectedSnapshotId: number | null;
+  onSelectSnapshot: (id: number | null) => void;
 }
 
-export function HistorySidebar({ dates, selectedDate, onSelectDate }: Props) {
+export function HistorySidebar({ dates, selectedSnapshotId, onSelectSnapshot }: Props) {
   if (dates.length === 0) return null;
 
   return (
@@ -18,18 +18,20 @@ export function HistorySidebar({ dates, selectedDate, onSelectDate }: Props) {
         </div>
         <div className="space-y-0.5">
           <button
-            onClick={() => onSelectDate(null)}
-            className={`w-full text-left px-3 py-2 text-[13px] font-serif cursor-pointer transition-colors
-              ${selectedDate === null ? 'text-masthead font-bold bg-masthead/5' : 'text-ink-muted hover:text-ink'}`}
+            onClick={() => onSelectSnapshot(null)}
+            className={`w-full flex items-center px-3 py-2 text-[13px] font-serif cursor-pointer transition-colors ${
+              selectedSnapshotId === null ? 'text-masthead font-bold' : 'text-ink-muted hover:text-ink hover:bg-paper-dark'
+            }`}
           >
             Latest
           </button>
           {dates.map((entry) => (
             <button
-              key={entry.date_key}
-              onClick={() => onSelectDate(entry.date_key)}
-              className={`w-full text-left px-3 py-2 text-[13px] font-serif cursor-pointer transition-colors
-                ${selectedDate === entry.date_key ? 'text-masthead font-bold bg-masthead/5' : 'text-ink-muted hover:text-ink'}`}
+              key={entry.id}
+              onClick={() => onSelectSnapshot(entry.id)}
+              className={`w-full flex items-center px-3 py-2 text-[13px] font-serif cursor-pointer transition-colors ${
+                selectedSnapshotId === entry.id ? 'text-masthead font-bold' : 'text-ink-muted hover:text-ink hover:bg-paper-dark'
+              }`}
             >
               {formatDate(entry.date_key)}
             </button>

@@ -1,12 +1,6 @@
 export function formatDate(dateKey: string) {
   const d = new Date(dateKey + 'T00:00:00');
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-
-  if (dateKey === today.toISOString().split('T')[0]) return 'Today';
-  if (dateKey === yesterday.toISOString().split('T')[0]) return 'Yesterday';
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 export function formatReleaseDate(dateStr: string) {

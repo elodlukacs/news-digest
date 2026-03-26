@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { NavigationBar } from './components/NavigationBar';
 import { SummaryView } from './components/SummaryView';
 import { FeedManager } from './components/FeedManager';
@@ -8,9 +8,11 @@ import { MorningBriefing } from './components/MorningBriefing';
 import { LlmStatsModal } from './components/LlmStatsModal';
 import { NewspaperHome } from './components/NewspaperHome';
 import { ReleasesPage } from './components/ReleasesPage';
+import { PullToRefreshIndicator } from './components/PullToRefresh';
 import { useCategories, useFeeds, useSummary, useSummaryHistory, useChat, useBriefing, useHomepage } from './hooks/useApi';
 import { useTheme } from './hooks/useTheme';
 import { useWidgets } from './hooks/useWidgets';
+import { usePullToRefresh } from './hooks/usePullToRefresh';
 
 function App() {
   const { theme, setTheme } = useTheme();
@@ -20,10 +22,10 @@ function App() {
   const [showBriefing, setShowBriefing] = useState(false);
   const [showReleases, setShowReleases] = useState(false);
   const [showStats, setShowStats] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedSnapshotId, setSelectedSnapshotId] = useState<number | null>(null);
 
   const { feeds, addFeed, deleteFeed } = useFeeds(managingId);
-  const { summary, loading, refreshing, error, refresh } = useSummary(activeId, selectedDate);
+  const { summary, loading, refreshing, error, refresh } = useSummary(activeId, selectedSnapshotId);
   const { dates, refresh: refreshHistory } = useSummaryHistory(activeId);
   const { messages: chatMessages, sending: chatSending, sendMessage: chatSend } = useChat(summary?.id || null);
   const { briefing, loading: briefingLoading, error: briefingError, generate: generateBriefing } = useBriefing();
@@ -37,28 +39,28 @@ function App() {
     setActiveId(id);
     setShowBriefing(false);
     setShowReleases(false);
-    setSelectedDate(null);
+    setSelectedSnapshotId(null);
   };
 
   const handleHome = () => {
     setActiveId(null);
     setShowBriefing(false);
     setShowReleases(false);
-    setSelectedDate(null);
+    setSelectedSnapshotId(null);
   };
 
   const handleBriefing = () => {
     setShowBriefing(true);
     setActiveId(null);
     setShowReleases(false);
-    setSelectedDate(null);
+    setSelectedSnapshotId(null);
   };
 
   const handleReleases = () => {
     setShowReleases(true);
     setActiveId(null);
     setShowBriefing(false);
-    setSelectedDate(null);
+    setSelectedSnapshotId(null);
   };
 
   const handleDeleteCategory = async (id: number) => {
@@ -76,8 +78,27 @@ function App() {
     refreshCategories();
   };
 
+  const getRefreshHandler = useCallback(() => {
+    if (!activeCategory && !showBriefing && !showReleases) {
+      return homepageRefresh;
+    }
+    if (showBriefing) {
+      return generateBriefing;
+    }
+    if (activeCategory) {
+      return handleRefresh;
+    }
+    return () => {};
+  }, [activeCategory, showBriefing, showReleases, homepageRefresh, generateBriefing, handleRefresh]);
+
+  const { pulling, pullProgress, handlers } = usePullToRefresh({
+    onRefresh: getRefreshHandler(),
+    threshold: 80,
+  });
+
   return (
-    <div className="min-h-screen bg-paper">
+    <div className="min-h-screen bg-paper" {...handlers}>
+      <PullToRefreshIndicator pulling={pulling} pullProgress={pullProgress} />
       <NavigationBar
         categories={categories}
         activeId={activeId}
@@ -121,8 +142,8 @@ function App() {
           <LeftSidebar
             hackerNews={hackerNews}
             dates={dates}
-            selectedDate={selectedDate}
-            onSelectDate={setSelectedDate}
+            selectedSnapshotId={selectedSnapshotId}
+            onSelectSnapshot={setSelectedSnapshotId}
             showHistory={!!activeCategory && !showBriefing}
           />
 
@@ -145,6 +166,7 @@ function App() {
                 error={error}
                 onRefresh={handleRefresh}
                 onManageFeeds={() => setManagingId(activeCategory.id)}
+                onDelete={() => handleDeleteCategory(activeCategory.id)}
                 chatMessages={chatMessages}
                 chatSending={chatSending}
                 onChatSend={chatSend}
@@ -168,7 +190,7 @@ function App() {
         />
       )}
 
-      {showStats && <LlmStatsModal onClose={() => setShowStats(false)} />}
+      <LlmStatsModal open={showStats} onClose={() => setShowStats(false)} />
     </div>
   );
 }

@@ -43,33 +43,39 @@ function extractImage(item) {
   // 1. enclosure (common in RSS 2.0)
   if (item.enclosure?.url) {
     const encType = item.enclosure?.type || '';
-    if (encType.startsWith('image/') || !encType) return item.enclosure.url;
+    if (encType.startsWith('image/') || !encType) {
+      const url = item.enclosure.url;
+      if (url && /\.(jpg|jpeg|png|gif|webp|avif)($|\?)/i.test(url)) return url;
+    }
   }
 
   // 2. media:content (array from customFields)
   const mcUrl = extractMediaUrl(item['media:content']);
-  if (mcUrl) return mcUrl;
+  if (mcUrl && /\.(jpg|jpeg|png|gif|webp|avif)($|\?)/i.test(mcUrl)) return mcUrl;
 
   // 3. media:thumbnail
   const mtUrl = extractMediaUrl(item['media:thumbnail']);
-  if (mtUrl) return mtUrl;
+  if (mtUrl && /\.(jpg|jpeg|png|gif|webp|avif)($|\?)/i.test(mtUrl)) return mtUrl;
 
   // 4. media:group → media:content
   if (item['media:group']) {
     const group = item['media:group'];
     const groupUrl = extractMediaUrl(group?.['media:content'] || group?.['media:thumbnail']);
-    if (groupUrl) return groupUrl;
+    if (groupUrl && /\.(jpg|jpeg|png|gif|webp|avif)($|\?)/i.test(groupUrl)) return groupUrl;
   }
 
   // 5. itunes:image
   if (item['itunes:image']) {
     const itunes = Array.isArray(item['itunes:image']) ? item['itunes:image'][0] : item['itunes:image'];
     const itunesUrl = itunes?.href || itunes?.$?.href || '';
-    if (itunesUrl) return itunesUrl;
+    if (itunesUrl && /\.(jpg|jpeg|png|gif|webp|avif)($|\?)/i.test(itunesUrl)) return itunesUrl;
   }
 
   // 6-8. HTML content fallback
-  return extractImageFromHtml(item['content:encoded']) || extractImageFromHtml(item.content) || extractImageFromHtml(item.description) || '';
+  const htmlImage = extractImageFromHtml(item['content:encoded']) || extractImageFromHtml(item.content) || extractImageFromHtml(item.description) || '';
+  if (htmlImage && /\.(jpg|jpeg|png|gif|webp|avif)($|\?)/i.test(htmlImage)) return htmlImage;
+  
+  return '';
 }
 
 // ========== Database Setup ==========
@@ -373,12 +379,31 @@ app.delete('/api/feeds/:id', validateId, (req, res) => {
 
 // ========== Summary Routes ==========
 
-// Get cached summary (with optional ?date=YYYY-MM-DD)
+// Get cached summary (with optional ?date=YYYY-MM-DD or ?summary_id=X)
 app.get('/api/categories/:id/summary', validateId, (req, res) => {
   const category = db.prepare('SELECT * FROM categories WHERE id = ?').get(req.params.id);
   if (!category) return res.status(404).json({ error: 'Category not found' });
 
-  const { date } = req.query;
+  const { date, summary_id } = req.query;
+
+  if (summary_id) {
+    // Look up specific snapshot by ID
+    const hist = db.prepare('SELECT * FROM summary_history WHERE id = ? AND category_id = ?').get(summary_id, req.params.id);
+    if (hist) {
+      return res.json({
+        id: hist.id,
+        category: category.name,
+        summary: hist.summary,
+        article_count: hist.article_count,
+        feed_count: hist.feed_count,
+        generated_at: hist.generated_at,
+        provider: hist.provider,
+        sentiment_data: hist.sentiment_data ? JSON.parse(hist.sentiment_data) : null,
+        tags_data: hist.tags_data ? JSON.parse(hist.tags_data) : null,
+      });
+    }
+    return res.json({ category: category.name, summary: null });
+  }
 
   if (date) {
     // Look in summary_history for specific date
@@ -498,20 +523,33 @@ app.post('/api/categories/:id/refresh', validateId, async (req, res) => {
 
     const customPrompt = category.custom_prompt?.trim();
     const lang = category.language || 'English';
-    const prompt = `You are a concise news analyst. Summarize the most important news from the "${category.name}" category below.
-IMPORTANT: Write your entire response in ${lang}.
+    const prompt = `You are a news analyst. Summarize the most important news from the "${category.name}" category.
+
+IMPORTANT: Write your response in ${lang} ONLY.
+
+STRICT OUTPUT FORMAT - follow this EXACTLY, no exceptions:
+
+## [Article Title](https://example.com/article)
+Write 1-3 sentences about this topic here. Be direct and factual.
+
+---
+
+## [Another Article Title](https://example.com/another)
+Write 1-3 sentences about this topic here. Be direct and factual.
+
+---
+
+Repeat the above pattern for 6-10 different articles.
 
 Rules:
-- Provide 6-10 sections, each starting with a **bold title** that links to the most relevant article URL using markdown link syntax: [**Title**](url)
-- Each section: 2-4 short paragraphs. Be direct and factual, no filler
-- Separate each section with a --- (horizontal rule)
-- Group related articles into one section
+- Each section MUST start with "## [Title](url)" on its own line
+- Each section MUST be separated by a line containing exactly "---" (3 dashes)
+- Write 1-3 sentences per section
 - Never repeat information across sections
-- No "Sources", "Links", or "References" section
-- No intro or outro text — start directly with the first section
-- No "impact" or "significance" commentary between sections
-${customPrompt ? `\nAdditional instructions from the user:\n${customPrompt}\n` : ''}
-Articles:
+- No intro, no conclusion, no "Sources" or "References" sections
+- No "impact" or "significance" commentary
+${customPrompt ? `\nAdditional instructions:\n${customPrompt}\n` : ''}
+Articles to summarize:
 ${articleText}`;
 
     const messages = [
@@ -550,30 +588,35 @@ ${articleText}`;
       db.prepare('DELETE FROM summary_history WHERE category_id = ? AND date_key < ?').run(req.params.id, cutoff);
     }
 
-    // Enrichment step — extract bold titles and analyze sentiment/tags
+    // Enrichment step — extract titles and analyze sentiment/tags
     let sentimentData = null;
     let tagsData = null;
     try {
-      const boldTitleRegex = /\*\*([^*]+)\*\*/g;
+      const titleRegex = /##\s+\[([^\]]+)\]\(([^)]+)\)/g;
       const titles = [];
       let m;
-      while ((m = boldTitleRegex.exec(summary)) !== null) {
+      while ((m = titleRegex.exec(summary)) !== null) {
         titles.push(m[1]);
       }
 
       if (titles.length > 0) {
         const numberedTitles = titles.map((t, i) => `${i + 1}. ${t}`).join('\n');
         const enrichResult = await callLLM([
-          { role: 'system', content: 'You are a news analysis assistant.' },
-          { role: 'user', content: `Analyze these news section titles. For each, provide sentiment and 2-3 topic tags.
+          { role: 'system', content: 'You are a news sentiment analyst. Analyze the overall tone and impact of each news headline — not just the words, but what the news means for the reader. Consider: is this good news, bad news, a mix, or purely informational?' },
+          { role: 'user', content: `Classify the sentiment and extract 2-3 topic tags for each headline below.
 
-Sections:
+Headlines:
 ${numberedTitles}
 
-Respond ONLY with valid JSON, no markdown or explanation:
-{"sections":[{"sentiment":"positive","tags":["tag1","tag2"]}]}
+Rules:
+- "positive": good news, progress, achievements, breakthroughs
+- "negative": bad news, threats, losses, conflicts, crises
+- "mixed": contains both positive and negative aspects
+- "neutral": factual/informational with no clear positive or negative tone
+- Tags should be short topic keywords (e.g. "climate", "AI", "economy")
 
-Sentiment values: positive, negative, neutral, mixed` },
+Respond ONLY with valid JSON, no markdown:
+{"sections":[{"sentiment":"positive","tags":["tag1","tag2"]}]}` },
         ], { purpose: 'enrichment', categoryId: Number(req.params.id) });
 
         // Parse enrichment JSON
@@ -982,31 +1025,23 @@ app.get('/api/widgets/rates', async (req, res) => {
 // Top headlines (raw RSS titles, no AI)
 app.get('/api/widgets/headlines', async (req, res) => {
   try {
-    // Grab titles from all feeds across all categories
-    const feeds = db.prepare('SELECT f.*, c.name as category_name FROM feeds f JOIN categories c ON c.id = f.category_id').all();
-
-    // Use only telex feed for consistent images
-    const telexFeed = feeds.find(f => f.name.toLowerCase() === 'telex');
-    const targetFeeds = telexFeed ? [telexFeed] : feeds.slice(0, 1);
+    const pbsFeed = { name: 'PBS', url: 'https://www.pbs.org/newshour/feeds/rss/headlines' };
 
     const results = await Promise.allSettled(
-      targetFeeds.map(async (feed) => {
+      [pbsFeed].map(async (feed) => {
         const parsed = await parser.parseURL(feed.url);
-        return parsed.items.slice(0, 5).map((item) => ({
+        return parsed.items.slice(0, 10).map((item) => ({
           title: item.title || '',
           link: item.link || '',
           source: feed.name,
           pubDate: item.pubDate || '',
-          image: extractImage(item),
         }));
       })
     );
 
     const headlines = results
       .filter((r) => r.status === 'fulfilled')
-      .flatMap((r) => r.value)
-      .sort((a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime())
-      .slice(0, 10);
+      .flatMap((r) => r.value);
 
     res.json(headlines);
   } catch (err) {
@@ -1194,7 +1229,7 @@ async function fetchHomepageBriefs() {
 
       try {
         const parsed = await parser.parseURL(feed.url);
-        const articles = parsed.items.slice(0, 5).map((item) => {
+        const articles = parsed.items.slice(0, 10).map((item) => {
           const snippet = (item.contentSnippet || item.content || '')
             .replace(/<[^>]*>/g, '')
             .replace(/\s+/g, ' ')
@@ -1209,7 +1244,7 @@ async function fetchHomepageBriefs() {
             pubDate: item.pubDate || '',
             source: feed.name,
           };
-        });
+        }).filter(a => a.image); // Only keep articles with images
 
         return {
           categoryId: cat.id,
