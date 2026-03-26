@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Plus, X, Settings, Trash2, Coffee, Menu, Home, Film, BarChart3, Cpu } from 'lucide-react';
+import { Plus, X, Settings, Trash2, Coffee, Menu, Home, Film, BarChart3 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
