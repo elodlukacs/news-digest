@@ -68,6 +68,7 @@ Core: `categories`, `feeds`, `summaries`, `summary_history` (with `sentiment_dat
 - `GROQ_API_KEY` — required for LLM features
 - `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` — optional, for send-to-Telegram feature
 - `TMDB_API_KEY` — optional, for movie/TV releases widget
+- `DB_PATH` — path to SQLite file (default: `./newsreader.db`). Set to a Railway volume path for persistence.
 - `PORT` — defaults to 3001
 
 **Client** (build-time only):
@@ -77,5 +78,6 @@ Core: `categories`, `feeds`, `summaries`, `summary_history` (with `sentiment_dat
 
 - **Frontend**: Vercel (build command: `cd client && npm install && npm run build`, output: `client/dist`)
 - **Backend**: Railway (root directory: `server`, start: `node index.js`, needs `PORT` env var)
+- **Database persistence**: Attach a Railway volume (e.g. mounted at `/data`), then set `DB_PATH=/data/newsreader.db`
 - `vercel.json` and `server/nixpacks.toml` configure deployment
 - After deploying backend, set `VITE_API_URL` in Vercel env vars and redeploy

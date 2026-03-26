@@ -74,7 +74,8 @@ function extractImage(item) {
 
 // ========== Database Setup ==========
 
-const db = new Database(path.join(__dirname, 'newsreader.db'));
+const dbPath = process.env.DB_PATH || path.join(__dirname, 'newsreader.db');
+const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 
 db.exec(`
