@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { X, Plus, Trash2, Rss, FileText, Globe, Search } from 'lucide-react';
 import { API_BASE } from '../config';
 import type { Feed } from '../types';
@@ -31,6 +31,26 @@ export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, 
   const [discoverUrl, setDiscoverUrl] = useState('');
   const [discovering, setDiscovering] = useState(false);
   const [discovered, setDiscovered] = useState<{ title: string; url: string }[]>([]);
+  const [visible, setVisible] = useState(false);
+
+  // Slide-in animation + body scroll lock
+  useEffect(() => {
+    requestAnimationFrame(() => setVisible(true));
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
+  const handleClose = useCallback(() => {
+    setVisible(false);
+    setTimeout(onClose, 250);
+  }, [onClose]);
+
+  // Escape key
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') handleClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [handleClose]);
 
   useEffect(() => {
     fetch(`${API_BASE}/categories/${categoryId}`)
@@ -93,19 +113,33 @@ export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/30 backdrop-blur-sm">
-      <div className="w-full max-w-lg mx-4 bg-paper border border-rule shadow-xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-rule">
+    <div className="fixed inset-0 z-50 flex md:items-center md:justify-center">
+      {/* Backdrop */}
+      <div
+        className={`absolute inset-0 bg-ink/30 backdrop-blur-sm transition-opacity duration-250 ${visible ? 'opacity-100' : 'opacity-0'}`}
+        onClick={handleClose}
+      />
+
+      {/* Panel: full-screen slide-up on mobile, centered modal on desktop */}
+      <div
+        className={`
+          relative z-10 bg-paper flex flex-col
+          w-full h-full md:h-auto md:w-full md:max-w-lg md:mx-4 md:border md:border-rule md:shadow-xl
+          transition-transform duration-250 ease-out
+          ${visible ? 'translate-y-0 md:translate-y-0' : 'translate-y-full md:translate-y-8'}
+        `}
+      >
+        <div className="flex items-center justify-between px-6 py-4 border-b border-rule shrink-0">
           <div>
             <h3 className="font-serif text-lg font-bold text-ink">Settings</h3>
             <p className="text-xs text-ink-muted mt-0.5">{categoryName}</p>
           </div>
-          <button onClick={onClose} className="p-1 text-ink-muted hover:text-ink cursor-pointer transition-colors">
+          <button onClick={handleClose} className="p-1 text-ink-muted hover:text-ink cursor-pointer transition-colors">
             <X size={18} />
           </button>
         </div>
 
-        <div className="flex border-b border-rule">
+        <div className="flex border-b border-rule shrink-0">
           {(
             [
               { key: 'sources', label: 'Sources', icon: Rss },
@@ -125,9 +159,10 @@ export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, 
           ))}
         </div>
 
+        <div className="flex-1 overflow-y-auto min-h-0">
         {tab === 'sources' && (
           <>
-            <div className="max-h-64 overflow-y-auto p-4 space-y-1">
+            <div className="md:max-h-64 overflow-y-auto p-4 space-y-1">
               {feeds.length === 0 && (
                 <div className="text-center py-8 text-ink-muted">
                   <Rss size={24} className="mx-auto mb-2 opacity-40" />
@@ -260,7 +295,7 @@ export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, 
             <p className="text-xs text-ink-muted leading-relaxed">
               Choose the language for AI-generated summaries in this category.
             </p>
-            <div className="grid grid-cols-2 gap-1.5 max-h-72 overflow-y-auto">
+            <div className="grid grid-cols-2 gap-1.5">
               {LANGUAGES.map((lang) => (
                 <button
                   key={lang}
@@ -283,6 +318,7 @@ export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, 
             )}
           </div>
         )}
+        </div>
       </div>
     </div>
   );

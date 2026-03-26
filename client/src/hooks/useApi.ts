@@ -230,6 +230,48 @@ export function useBriefing() {
   return { briefing, loading, error, generate };
 }
 
+export interface HomepageArticle {
+  title: string;
+  excerpt: string;
+  link: string;
+  image: string;
+  pubDate: string;
+  source: string;
+}
+
+export interface HomepageBrief {
+  categoryId: number;
+  categoryName: string;
+  articles: HomepageArticle[];
+}
+
+export function useHomepage() {
+  const [briefs, setBriefs] = useState<HomepageBrief[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${BASE}/homepage`)
+      .then(r => r.json())
+      .then(data => { if (!cancelled) { setBriefs(data); setLoading(false); } })
+      .catch(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const refresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const res = await fetch(`${BASE}/homepage/refresh`, { method: 'POST' });
+      const data = await res.json();
+      if (Array.isArray(data)) setBriefs(data);
+    } catch { /* silent */ }
+    setRefreshing(false);
+  }, []);
+
+  return { briefs, loading, refreshing, refresh };
+}
+
 export function useLlmStats() {
   const [stats, setStats] = useState<LlmStats | null>(null);
   const [loading, setLoading] = useState(false);

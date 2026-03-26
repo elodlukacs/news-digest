@@ -35,6 +35,14 @@ body {
   color: #FAFAF9;
 }
 
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 ::-webkit-scrollbar {
   width: 4px;
 }
@@ -70,6 +78,45 @@ body {
   --color-rule-light: #2D2D4A;
   --color-accent: #E07B5F;
   --color-masthead: #C9A04E;
+}
+
+/* ─── Newspaper Grid Layout ─── */
+.newspaper-grid {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1.2fr 1fr 1fr;
+  min-height: 70vh;
+  border-top: 2px solid var(--color-ink);
+  border-bottom: 1px solid var(--color-rule);
+}
+
+@media (max-width: 1279px) {
+  .newspaper-grid {
+    grid-template-columns: 1fr 1.5fr 1fr;
+  }
+  .newspaper-grid > :nth-child(4),
+  .newspaper-grid > :nth-child(5) {
+    display: none;
+  }
+}
+
+@media (max-width: 1023px) {
+  .newspaper-grid {
+    grid-template-columns: 1fr 1.5fr;
+  }
+  .newspaper-grid > :nth-child(3),
+  .newspaper-grid > :nth-child(4),
+  .newspaper-grid > :nth-child(5) {
+    display: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .newspaper-grid {
+    grid-template-columns: 1fr;
+  }
+  .newspaper-grid > :nth-child(n+2):not(:nth-child(2)) {
+    display: none;
+  }
 }
 
 /* Theme: Morning Post (fresh, green) */

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { RefreshCw, AlertCircle, Clock, X, Zap, Send } from 'lucide-react';
+import { RefreshCw, AlertCircle, Clock, X, Zap, Send, Settings } from 'lucide-react';
 import { API_BASE } from '../config';
 import { SentimentBadge } from './SentimentBadge';
 import { ChatPanel } from './ChatPanel';
@@ -99,6 +99,7 @@ interface Props {
   error: string | null;
   onLoad: () => void;
   onRefresh: () => void;
+  onManageFeeds: () => void;
   chatMessages: ChatMessage[];
   chatSending: boolean;
   onChatSend: (text: string) => void;
@@ -113,6 +114,7 @@ export function SummaryView({
   error,
   onLoad,
   onRefresh,
+  onManageFeeds,
   chatMessages,
   chatSending,
   onChatSend,
@@ -166,39 +168,45 @@ export function SummaryView({
 
   return (
     <div>
-      <div className="flex items-end justify-between pt-8 pb-4 border-b border-rule">
-        <div>
+      <div className="pt-8 pb-4 border-b border-rule">
+        <div className="flex items-center gap-3">
           <h2 className="font-serif text-4xl font-bold text-masthead tracking-tight">{categoryName}</h2>
-          {summary && (
-            <p className="text-xs text-ink-muted mt-1.5 font-light">
-              {summary.article_count} articles from {summary.feed_count} sources
-              &nbsp;&middot;&nbsp;
-              {new Date(summary.generated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              {summary.provider && <>&nbsp;&middot;&nbsp;{summary.provider}</>}
-            </p>
-          )}
-        </div>
-        <div className="flex items-center gap-2.5">
-          {summary && (
+          <div className="flex items-center gap-2">
             <button
-              onClick={sendToTelegram}
-              disabled={sending}
-              title="Send to Telegram"
-              className="flex items-center gap-2 px-4 py-2 text-xs uppercase tracking-[0.15em] font-medium cursor-pointer transition-all duration-200 border border-rule text-ink-muted hover:border-masthead hover:text-masthead disabled:opacity-40 disabled:cursor-not-allowed"
+              onClick={onManageFeeds}
+              title="Manage feeds & settings"
+              className="w-9 h-9 flex items-center justify-center cursor-pointer transition-all duration-200 border border-rule text-ink-muted hover:border-masthead hover:text-masthead rounded"
             >
-              <Send size={13} className={sending ? 'animate-pulse' : ''} />
-              {sent ? 'Sent!' : 'Telegram'}
+              <Settings size={18} />
             </button>
-          )}
-          <button
-            onClick={onRefresh}
-            disabled={busy}
-            className="flex items-center gap-2 px-4 py-2 text-xs uppercase tracking-[0.15em] font-medium cursor-pointer transition-all duration-200 border border-ink text-ink hover:bg-ink hover:text-paper disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <RefreshCw size={12} className={busy ? 'animate-spin' : ''} />
-            {refreshing ? 'Refreshing' : 'Refresh'}
-          </button>
+            {summary && (
+              <button
+                onClick={sendToTelegram}
+                disabled={sending}
+                title={sent ? 'Sent!' : 'Send to Telegram'}
+                className="w-9 h-9 flex items-center justify-center cursor-pointer transition-all duration-200 border border-rule text-ink-muted hover:border-masthead hover:text-masthead disabled:opacity-40 disabled:cursor-not-allowed rounded"
+              >
+                <Send size={18} className={sending ? 'animate-pulse' : ''} />
+              </button>
+            )}
+            <button
+              onClick={onRefresh}
+              disabled={busy}
+              title={refreshing ? 'Refreshing...' : 'Refresh'}
+              className="w-9 h-9 flex items-center justify-center cursor-pointer transition-all duration-200 border border-ink text-ink hover:bg-ink hover:text-paper disabled:opacity-40 disabled:cursor-not-allowed rounded"
+            >
+              <RefreshCw size={18} className={busy ? 'animate-spin' : ''} />
+            </button>
+          </div>
         </div>
+        {summary && (
+          <p className="text-xs text-ink-muted mt-1.5 font-light">
+            {summary.article_count} articles from {summary.feed_count} sources
+            &nbsp;&middot;&nbsp;
+            {new Date(summary.generated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            {summary.provider && <>&nbsp;&middot;&nbsp;{summary.provider}</>}
+          </p>
+        )}
       </div>
 
       {(loading || refreshing) && !summary && (

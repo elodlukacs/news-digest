@@ -7,7 +7,8 @@ import { WidgetSidebar } from './components/WidgetSidebar';
 import { LeftSidebar } from './components/LeftSidebar';
 import { MorningBriefing } from './components/MorningBriefing';
 import { LlmStatsModal } from './components/LlmStatsModal';
-import { useCategories, useFeeds, useSummary, useSummaryHistory, useChat, useBriefing } from './hooks/useApi';
+import { NewspaperHome } from './components/NewspaperHome';
+import { useCategories, useFeeds, useSummary, useSummaryHistory, useChat, useBriefing, useHomepage } from './hooks/useApi';
 import { useTheme } from './hooks/useTheme';
 import { useWidgets } from './hooks/useWidgets';
 
@@ -26,12 +27,19 @@ function App() {
   const { messages: chatMessages, sending: chatSending, sendMessage: chatSend } = useChat(summary?.id || null);
   const { briefing, loading: briefingLoading, error: briefingError, generate: generateBriefing } = useBriefing();
   const { weather, rates, headlines, crypto, hackerNews, releases, trending } = useWidgets();
+  const { briefs: homepageBriefs, loading: homepageLoading, refreshing: homepageRefreshing, refresh: homepageRefresh } = useHomepage();
 
   const activeCategory = categories.find((c) => c.id === activeId);
   const managingCategory = categories.find((c) => c.id === managingId);
 
   const handleSelectCategory = (id: number) => {
     setActiveId(id);
+    setShowBriefing(false);
+    setSelectedDate(null);
+  };
+
+  const handleHome = () => {
+    setActiveId(null);
     setShowBriefing(false);
     setSelectedDate(null);
   };
@@ -69,52 +77,70 @@ function App() {
         onAdd={addCategory}
         onDelete={handleDeleteCategory}
         onManageFeeds={setManagingId}
+        onHome={handleHome}
       />
 
-      <div className="max-w-7xl mx-auto px-6 pb-20 flex gap-8">
-        {/* Left sidebar */}
-        <LeftSidebar
-          hackerNews={hackerNews}
-          releases={releases}
-          dates={dates}
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          showHistory={!!activeCategory && !showBriefing}
-        />
+      {/* Newspaper Home: full-width grid when no category selected */}
+      {!activeCategory && !showBriefing ? (
+        <div className="max-w-[1600px] mx-auto px-4 pb-12">
+          <NewspaperHome
+            briefs={homepageBriefs}
+            loading={homepageLoading}
+            refreshing={homepageRefreshing}
+            onRefresh={homepageRefresh}
+            onSelectCategory={handleSelectCategory}
+            weather={weather}
+            crypto={crypto}
+            rates={rates}
+            headlines={headlines}
+            trending={trending}
+            hackerNews={hackerNews}
+            releases={releases || []}
+          />
+        </div>
+      ) : (
+        <div className="max-w-7xl mx-auto px-6 pb-20 flex gap-8">
+          {/* Left sidebar */}
+          <LeftSidebar
+            hackerNews={hackerNews}
+            releases={releases || []}
+            dates={dates}
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            showHistory={!!activeCategory && !showBriefing}
+          />
 
-        {/* Main content */}
-        <main className="flex-1 min-w-0">
-          {showBriefing ? (
-            <MorningBriefing
-              briefing={briefing}
-              loading={briefingLoading}
-              error={briefingError}
-              onGenerate={generateBriefing}
-            />
-          ) : activeCategory ? (
-            <SummaryView
-              categoryId={activeCategory.id}
-              categoryName={activeCategory.name}
-              summary={summary}
-              loading={loading}
-              refreshing={refreshing}
-              error={error}
-              onLoad={loadCached}
-              onRefresh={handleRefresh}
-              chatMessages={chatMessages}
-              chatSending={chatSending}
-              onChatSend={chatSend}
-            />
-          ) : (
-            <div className="py-32 text-center">
-              <p className="font-serif text-3xl text-ink-muted italic">Select a category to read</p>
-            </div>
-          )}
-        </main>
+          {/* Main content */}
+          <main className="flex-1 min-w-0">
+            {showBriefing ? (
+              <MorningBriefing
+                briefing={briefing}
+                loading={briefingLoading}
+                error={briefingError}
+                onGenerate={generateBriefing}
+              />
+            ) : activeCategory ? (
+              <SummaryView
+                categoryId={activeCategory.id}
+                categoryName={activeCategory.name}
+                summary={summary}
+                loading={loading}
+                refreshing={refreshing}
+                error={error}
+                onLoad={loadCached}
+                onRefresh={handleRefresh}
+                onManageFeeds={() => setManagingId(activeCategory.id)}
+                chatMessages={chatMessages}
+                chatSending={chatSending}
+                onChatSend={chatSend}
+              />
+            ) : null}
+          </main>
 
-        {/* Right sidebar: Widgets */}
-        <WidgetSidebar weather={weather} rates={rates} headlines={headlines} crypto={crypto} trending={trending} />
-      </div>
+          {/* Right sidebar: Widgets */}
+          <WidgetSidebar weather={weather} rates={rates} headlines={headlines} crypto={crypto} trending={trending} />
+        </div>
+      )}
 
       {managingId && managingCategory && (
         <FeedManager

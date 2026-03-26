@@ -7,10 +7,89 @@ const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const parser = new RSSParser();
+const parser = new RSSParser({
+  customFields: {
+    item: [
+      ['media:content', 'media:content', { keepArray: true }],
+      ['media:thumbnail', 'media:thumbnail', { keepArray: true }],
+      ['media:group', 'media:group'],
+      ['enclosure', 'enclosure'],
+      ['content:encoded', 'content:encoded'],
+    ],
+  },
+});
 
 app.use(cors());
 app.use(express.json());
+
+// ========== Helpers ==========
+
+function extractImage(item) {
+  let image = '';
+
+  // 1. enclosure (common in RSS 2.0)
+  if (item.enclosure?.url) {
+    const encType = item.enclosure?.type || '';
+    if (encType.startsWith('image/') || !encType) image = item.enclosure.url;
+  }
+
+  // 2. media:content (array from customFields)
+  if (!image && item['media:content']) {
+    const mcArr = Array.isArray(item['media:content']) ? item['media:content'] : [item['media:content']];
+    for (const mc of mcArr) {
+      const url = mc?.$?.url || mc?.url || mc?.$ && mc.$.url || '';
+      if (url) { image = url; break; }
+    }
+  }
+
+  // 3. media:thumbnail
+  if (!image && item['media:thumbnail']) {
+    const mtArr = Array.isArray(item['media:thumbnail']) ? item['media:thumbnail'] : [item['media:thumbnail']];
+    for (const mt of mtArr) {
+      const url = mt?.$?.url || mt?.url || '';
+      if (url) { image = url; break; }
+    }
+  }
+
+  // 4. media:group → media:content
+  if (!image && item['media:group']) {
+    const group = item['media:group'];
+    const mc = group?.['media:content'] || group?.['media:thumbnail'];
+    if (mc) {
+      const arr = Array.isArray(mc) ? mc : [mc];
+      for (const m of arr) {
+        const url = m?.$?.url || m?.url || '';
+        if (url) { image = url; break; }
+      }
+    }
+  }
+
+  // 5. itunes:image
+  if (!image && item['itunes:image']) {
+    const itunes = Array.isArray(item['itunes:image']) ? item['itunes:image'][0] : item['itunes:image'];
+    image = itunes?.href || itunes?.$?.href || '';
+  }
+
+  // 6. content:encoded HTML
+  if (!image && item['content:encoded']) {
+    const imgMatch = String(item['content:encoded']).match(/<img[^>]+src=["']([^"'>]+)["']/);
+    if (imgMatch) image = imgMatch[1];
+  }
+
+  // 7. content HTML (rss-parser puts it here)
+  if (!image && item.content) {
+    const imgMatch = String(item.content).match(/<img[^>]+src=["']([^"'>]+)["']/);
+    if (imgMatch) image = imgMatch[1];
+  }
+
+  // 8. description HTML fallback
+  if (!image && item.description) {
+    const imgMatch = String(item.description).match(/<img[^>]+src=["']([^"'>]+)["']/);
+    if (imgMatch) image = imgMatch[1];
+  }
+
+  return image;
+}
 
 // ========== Database Setup ==========
 
@@ -134,7 +213,6 @@ if (count.c === 0) {
 
 const AI_PROVIDERS = [
   { name: 'Groq', url: 'https://api.groq.com/openai/v1/chat/completions', key: () => process.env.GROQ_API_KEY, model: 'llama-3.3-70b-versatile' },
-  { name: 'Cerebras', url: 'https://api.cerebras.ai/v1/chat/completions', key: () => process.env.CEREBRAS_API_KEY, model: 'llama3.1-8b' },
 ];
 
 // In-memory store for latest rate limit info per provider
@@ -142,13 +220,14 @@ const providerQuotas = {};
 
 async function callLLM(messages, { purpose = 'unknown', categoryId = null, temperature = 0.3 } = {}) {
   const providers = AI_PROVIDERS.filter(p => p.key());
-  if (providers.length === 0) throw new Error('No AI API keys configured. Set GROQ_API_KEY or CEREBRAS_API_KEY in .env');
+  if (providers.length === 0) throw new Error('No AI API keys configured. Set GROQ_API_KEY in .env');
 
   let lastError = null;
   for (const provider of providers) {
     try {
       const start = Date.now();
       console.log(`[LLM] Trying ${provider.name} (${provider.model}) for ${purpose}...`);
+      
       const response = await fetch(provider.url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${provider.key()}` },
@@ -614,28 +693,67 @@ app.post('/api/briefing/generate', async (req, res) => {
     const categories = db.prepare('SELECT * FROM categories ORDER BY sort_order').all();
     if (categories.length === 0) return res.status(400).json({ error: 'No categories' });
 
-    const sections = [];
-    for (const cat of categories) {
-      const latest = db.prepare('SELECT summary FROM summary_history WHERE category_id = ? ORDER BY generated_at DESC LIMIT 1').get(cat.id);
-      if (latest) sections.push(`## ${cat.name}\n${latest.summary}`);
-    }
+    // Get first RSS feed from each category
+    const getFirstFeed = db.prepare('SELECT * FROM feeds WHERE category_id = ? ORDER BY id ASC LIMIT 1');
+    const feedsWithCategories = categories
+      .map(cat => ({ ...getFirstFeed.get(cat.id), categoryName: cat.name, language: cat.language }))
+      .filter(f => f && f.url);
 
-    if (sections.length === 0) return res.status(400).json({ error: 'No summaries available. Refresh some categories first.' });
+    if (feedsWithCategories.length === 0) return res.status(400).json({ error: 'No feeds available' });
+
+    // Fetch recent articles from each feed
+    const feedResults = await Promise.allSettled(
+      feedsWithCategories.map(async (feed) => {
+        try {
+          const parsed = await parser.parseURL(feed.url);
+          return {
+            category: feed.categoryName,
+            source: feed.name,
+            articles: parsed.items.slice(0, 5).map(item => ({
+              title: item.title || '',
+              description: (item.contentSnippet || item.content || '').slice(0, 500),
+              link: item.link || '',
+              pubDate: item.pubDate || ''
+            }))
+          };
+        } catch (err) {
+          console.warn(`Failed to fetch feed "${feed.name}" (${feed.url}):`, err.message);
+          return { category: feed.categoryName, source: feed.name, articles: [] };
+        }
+      })
+    );
+
+    // Merge all articles from first feed of each category
+    const allArticles = feedResults
+      .filter(r => r.status === 'fulfilled')
+      .flatMap(r => r.value.articles)
+      .sort((a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime())
+      .slice(0, 30);
+
+    if (allArticles.length === 0) return res.status(400).json({ error: 'Could not fetch any articles from feeds' });
 
     const lang = categories[0]?.language || 'English';
+
+    // Build article text for LLM
+    const articleText = allArticles
+      .map((a, i) => `[${i + 1}] ${a.title} (${a.source})\n${a.description}\nLink: ${a.link}`)
+      .join('\n\n');
+
     const result = await callLLM([
-      { role: 'system', content: 'You are an editor-in-chief writing a morning news briefing.' },
-      { role: 'user', content: `Create a concise morning briefing from these category summaries. Write in ${lang}.
+      { role: 'system', content: 'You are an editor-in-chief writing a brief morning news briefing.' },
+      { role: 'user', content: `Create a very concise morning briefing from the following news articles. Write in ${lang}.
 
 Rules:
-- Start with the 3-5 most important stories across ALL categories
-- Then provide a brief roundup of other notable stories
-- Use **bold titles** for each story
-- Separate stories with --- (horizontal rule)
-- Be concise but informative
-- No intro text like "Good morning" — start directly with the top story
+- Create a bullet-point list with **bold titles** for each story
+- Each bullet point: 1-2 sentences maximum
+- Include the source name in parentheses after each bullet
+- Highlight the most important 3-5 stories first, then other notable stories
+- Be extremely concise — this is a brief aggregation, not a detailed summary
+- No intro text like "Good morning" — start directly with the first story
+- No horizontal rules or section headers needed
 
-${sections.join('\n\n---\n\n')}` },
+Articles:
+${articleText}` },
     ], { purpose: 'briefing' });
 
     const generated_at = new Date().toISOString();
@@ -643,10 +761,10 @@ ${sections.join('\n\n---\n\n')}` },
 
     // Store as category_id = 0 (special briefing marker)
     db.prepare('INSERT INTO summary_history (category_id, summary, article_count, feed_count, provider, date_key, generated_at) VALUES (?,?,?,?,?,?,?)').run(
-      0, result.content, 0, categories.length, result.provider, dateKey, generated_at
+      0, result.content, allArticles.length, feedsWithCategories.length, result.provider, dateKey, generated_at
     );
 
-    res.json({ summary: result.content, generated_at, provider: result.provider, feed_count: categories.length });
+    res.json({ summary: result.content, generated_at, provider: result.provider, feed_count: feedsWithCategories.length, article_count: allArticles.length });
   } catch (err) {
     console.error('Briefing error:', err);
     res.status(500).json({ error: err.message || 'Failed to generate briefing' });
@@ -850,17 +968,19 @@ app.get('/api/widgets/headlines', async (req, res) => {
     // Grab titles from all feeds across all categories
     const feeds = db.prepare('SELECT f.*, c.name as category_name FROM feeds f JOIN categories c ON c.id = f.category_id').all();
 
-    // Pick up to 3 random feeds to keep it fast
-    const shuffled = feeds.sort(() => Math.random() - 0.5).slice(0, 3);
+    // Use only telex feed for consistent images
+    const telexFeed = feeds.find(f => f.name.toLowerCase() === 'telex');
+    const targetFeeds = telexFeed ? [telexFeed] : feeds.slice(0, 1);
 
     const results = await Promise.allSettled(
-      shuffled.map(async (feed) => {
+      targetFeeds.map(async (feed) => {
         const parsed = await parser.parseURL(feed.url);
         return parsed.items.slice(0, 5).map((item) => ({
           title: item.title || '',
           link: item.link || '',
           source: feed.name,
           pubDate: item.pubDate || '',
+          image: extractImage(item),
         }));
       })
     );
@@ -1032,24 +1152,157 @@ app.get('/api/widgets/releases/:type/:id', async (req, res) => {
   }
 });
 
+// ========== Homepage Briefs ==========
+
+let homepageCache = { data: null, fetchedAt: 0 };
+
+app.get('/api/homepage', async (req, res) => {
+  // Cache for 5 minutes
+  if (homepageCache.data && Date.now() - homepageCache.fetchedAt < 5 * 60_000) {
+    return res.json(homepageCache.data);
+  }
+
+  try {
+    const categories = db.prepare('SELECT * FROM categories ORDER BY sort_order').all();
+    if (categories.length === 0) return res.json([]);
+
+    // Get first feed from each category
+    const getFirstFeed = db.prepare('SELECT * FROM feeds WHERE category_id = ? ORDER BY id ASC LIMIT 1');
+
+    const results = await Promise.allSettled(
+      categories.map(async (cat) => {
+        const feed = getFirstFeed.get(cat.id);
+        if (!feed) return null;
+
+        try {
+          const parsed = await parser.parseURL(feed.url);
+          // Get top 3 articles from first feed
+          const articles = parsed.items.slice(0, 5).map((item) => {
+            const snippet = (item.contentSnippet || item.content || '')
+              .replace(/<[^>]*>/g, '')
+              .replace(/\s+/g, ' ')
+              .trim()
+              .slice(0, 400);
+
+            return {
+              title: item.title || '',
+              excerpt: snippet,
+              link: item.link || '',
+              image: extractImage(item),
+              pubDate: item.pubDate || '',
+              source: feed.name,
+            };
+          });
+
+          return {
+            categoryId: cat.id,
+            categoryName: cat.name,
+            articles,
+          };
+        } catch (err) {
+          console.warn(`Homepage: failed to fetch "${feed.name}" (${feed.url}):`, err.message);
+          return { categoryId: cat.id, categoryName: cat.name, articles: [] };
+        }
+      })
+    );
+
+    const briefs = results
+      .filter((r) => r.status === 'fulfilled' && r.value)
+      .map((r) => r.value)
+      .filter((b) => b.articles.length > 0);
+
+    homepageCache = { data: briefs, fetchedAt: Date.now() };
+    res.json(briefs);
+  } catch (err) {
+    console.error('Homepage error:', err);
+    res.status(500).json({ error: 'Failed to fetch homepage data' });
+  }
+});
+
+// Force-refresh homepage (busts cache)
+app.post('/api/homepage/refresh', async (req, res) => {
+  homepageCache = { data: null, fetchedAt: 0 };
+  // Forward to GET handler
+  try {
+    const categories = db.prepare('SELECT * FROM categories ORDER BY sort_order').all();
+    if (categories.length === 0) return res.json([]);
+
+    const getFirstFeed = db.prepare('SELECT * FROM feeds WHERE category_id = ? ORDER BY id ASC LIMIT 1');
+
+    const results = await Promise.allSettled(
+      categories.map(async (cat) => {
+        const feed = getFirstFeed.get(cat.id);
+        if (!feed) return null;
+
+        try {
+          const parsed = await parser.parseURL(feed.url);
+          const articles = parsed.items.slice(0, 5).map((item) => {
+            const snippet = (item.contentSnippet || item.content || '')
+              .replace(/<[^>]*>/g, '')
+              .replace(/\s+/g, ' ')
+              .trim()
+              .slice(0, 400);
+
+            return {
+              title: item.title || '',
+              excerpt: snippet,
+              link: item.link || '',
+              image: extractImage(item),
+              pubDate: item.pubDate || '',
+              source: feed.name,
+            };
+          });
+
+          return { categoryId: cat.id, categoryName: cat.name, articles };
+        } catch (err) {
+          console.warn(`Homepage refresh: failed "${feed.name}":`, err.message);
+          return { categoryId: cat.id, categoryName: cat.name, articles: [] };
+        }
+      })
+    );
+
+    const briefs = results
+      .filter((r) => r.status === 'fulfilled' && r.value)
+      .map((r) => r.value)
+      .filter((b) => b.articles.length > 0);
+
+    homepageCache = { data: briefs, fetchedAt: Date.now() };
+    res.json(briefs);
+  } catch (err) {
+    console.error('Homepage refresh error:', err);
+    res.status(500).json({ error: 'Failed to refresh homepage' });
+  }
+});
+
 // ========== Telegram ==========
 
 app.post('/api/telegram/send', async (req, res) => {
   const { categoryId } = req.body;
-  if (!categoryId) return res.status(400).json({ error: 'categoryId required' });
+  if (!categoryId && categoryId !== 0) return res.status(400).json({ error: 'categoryId required' });
 
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
   if (!botToken || !chatId) return res.status(500).json({ error: 'Telegram not configured' });
 
-  // Get category name
-  const cat = db.prepare('SELECT name FROM categories WHERE id = ?').get(categoryId);
-  if (!cat) return res.status(404).json({ error: 'Category not found' });
+  let cat, row;
 
-  // Get latest summary
-  const row = db.prepare(
-    "SELECT summary, article_count, feed_count, generated_at FROM summary_history WHERE category_id = ? ORDER BY generated_at DESC LIMIT 1"
-  ).get(categoryId);
+  if (categoryId === 0) {
+    // Briefing (stored with category_id = 0)
+    row = db.prepare(
+      "SELECT summary, article_count, feed_count, generated_at FROM summary_history WHERE category_id = 0 ORDER BY generated_at DESC LIMIT 1"
+    ).get();
+    if (!row) return res.status(404).json({ error: 'No briefing found' });
+    cat = { name: 'Morning Briefing' };
+  } else {
+    // Get category name
+    cat = db.prepare('SELECT name FROM categories WHERE id = ?').get(categoryId);
+    if (!cat) return res.status(404).json({ error: 'Category not found' });
+
+    // Get latest summary
+    row = db.prepare(
+      "SELECT summary, article_count, feed_count, generated_at FROM summary_history WHERE category_id = ? ORDER BY generated_at DESC LIMIT 1"
+    ).get(categoryId);
+  }
   if (!row) return res.status(404).json({ error: 'No summary found for this category' });
 
   // Format message for Telegram (MarkdownV2)
