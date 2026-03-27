@@ -25,6 +25,11 @@ interface Props {
 
 /* ─── Helpers ────────────────────────────────────────────── */
 
+function truncateSource(source: string, max = 20): string {
+  if (source.length <= max) return source;
+  return source.slice(0, max) + '…';
+}
+
 function ArticleImage({
   src,
   alt,
@@ -76,7 +81,7 @@ function HeroCard({
         {article.excerpt}
       </p>
       <div className="mt-2 flex items-center gap-3 text-[10px] text-ink-muted uppercase tracking-wider">
-        <span>{article.source}</span>
+        <span className="truncate max-w-[120px]">{truncateSource(article.source)}</span>
         {article.pubDate && <span className="flex items-center gap-1"><Clock size={9} /> {timeAgo(article.pubDate)}</span>}
       </div>
     </article>
@@ -140,7 +145,7 @@ function ImageCard({
         {article.excerpt}
       </p>
       <div className="mt-1.5 flex items-center gap-2 text-[10px] text-ink-muted">
-        <span>{article.source}</span>
+        <span className="truncate max-w-[100px]">{truncateSource(article.source)}</span>
         {article.pubDate && <span>{timeAgo(article.pubDate)}</span>}
       </div>
     </article>
@@ -170,7 +175,7 @@ function TextCard({
         {article.excerpt}
       </p>
       <div className="mt-1.5 flex items-center gap-2 text-[10px] text-ink-muted">
-        <span>{article.source}</span>
+        <span className="truncate max-w-[100px]">{truncateSource(article.source)}</span>
         {article.pubDate && <span>{timeAgo(article.pubDate)}</span>}
       </div>
     </article>
