@@ -1,11 +1,12 @@
 import { RefreshCw, AlertCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import type { Briefing } from '../types';
 import { Button } from './ui/button';
 import { Alert, AlertDescription } from './ui/alert';
 import { Skeleton } from './ui/skeleton';
 
 interface Props {
-  briefing: { summary: string; generated_at: string; provider?: string } | null;
+  briefing: Briefing | null;
   loading: boolean;
   error: string | null;
   onGenerate: () => void;

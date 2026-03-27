@@ -192,10 +192,11 @@ export function ReleasesPage({ releases: defaultReleases }: Props) {
       ) : (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-4">
           {filtered.map(r => (
-            <div
+            <button
+              type="button"
               key={`${r.type}-${r.id}`}
               onClick={() => handleCardClick(r)}
-              className="group flex flex-col bg-paper-dark hover:bg-paper-dark/80 cursor-pointer transition-all duration-200 overflow-hidden"
+              className="group flex flex-col bg-paper-dark hover:bg-paper-dark/80 cursor-pointer transition-all duration-200 overflow-hidden text-left"
             >
               <div className="w-full aspect-[2/3] bg-paper-dark shrink-0 overflow-hidden">
                 {r.poster ? (
@@ -232,7 +233,7 @@ export function ReleasesPage({ releases: defaultReleases }: Props) {
                   )}
                 </div>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}

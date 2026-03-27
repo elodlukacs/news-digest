@@ -15,13 +15,26 @@ export function ChatPanel({ messages, sending, onSend }: Props) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
+  const userScrolledRef = useRef(false);
 
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    const el = scrollRef.current;
+    if (!el) return;
+    if (!userScrolledRef.current) {
+      el.scrollTop = el.scrollHeight;
+    }
   }, [messages]);
+
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    userScrolledRef.current = distFromBottom > 50;
+  };
 
   const handleSend = () => {
     if (!input.trim() || sending) return;
+    userScrolledRef.current = false;
     onSend(input.trim());
     setInput('');
   };
@@ -46,7 +59,7 @@ export function ChatPanel({ messages, sending, onSend }: Props) {
         </Button>
       </div>
 
-      <div ref={scrollRef} className="max-h-80 overflow-y-auto p-4 space-y-4">
+      <div ref={scrollRef} onScroll={handleScroll} className="max-h-80 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 && (
           <p className="text-[13px] text-ink-muted italic text-center py-4">
             Ask a question about the news summary above...

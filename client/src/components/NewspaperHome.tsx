@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { ExternalLink, Clock, RefreshCw } from 'lucide-react';
-import type { CryptoPrice, HackerNewsItem } from '../types';
+import type { CryptoPrice, HackerNewsItem, Weather, Rates, Headline } from '../types';
 import type { HomepageBrief, HomepageArticle } from '../hooks/useApi';
 import { timeAgo, formatDay } from '../utils/date';
 import { WeatherIcon } from './SharedWidgets';
@@ -9,37 +9,6 @@ import { Skeleton } from './ui/skeleton';
 import { Badge } from './ui/badge';
 
 /* ─── Types ──────────────────────────────────────────────── */
-
-interface Headline {
-  title: string;
-  link: string;
-  source: string;
-  pubDate: string;
-}
-
-interface ForecastDay {
-  date: string;
-  code: number;
-  condition: string;
-  high: number;
-  low: number;
-}
-
-interface Weather {
-  temperature: number;
-  code: number;
-  condition: string;
-  wind: number;
-  humidity: number;
-  location: string;
-  forecast: ForecastDay[];
-}
-
-interface Rates {
-  base: string;
-  date: string;
-  rates: Record<string, number>;
-}
 
 interface Props {
   briefs: HomepageBrief[];
@@ -410,7 +379,7 @@ export function NewspaperHome({
                       {h.source}
                       <ExternalLink size={8} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                     </p>
-                    {i < Math.min(headlines.length, 15) - 1 && <div className=" mt-3" />}
+                    {i < Math.min(headlines.length, 15) - 1 && <div className="mt-3" />}
                   </a>
                 ))}
               </div>
@@ -425,7 +394,7 @@ export function NewspaperHome({
                       {item.title}
                     </p>
                     <p className="text-[10px] text-ink-muted mt-0.5">{item.score} pts</p>
-                    {i < Math.min(hackerNews.length, 15) - 1 && <div className=" mt-3" />}
+                    {i < Math.min(hackerNews.length, 15) - 1 && <div className="mt-3" />}
                   </a>
                 ))}
               </div>
@@ -496,23 +465,6 @@ export function NewspaperHome({
                       {(1 / rate).toFixed(currency === 'HUF' ? 4 : 2)} RON
                     </span>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {headlines.length > 0 && hackerNews.length > 0 && (
-            <div>
-              <SectionHeader title="Hacker News" />
-              <div className="space-y-2.5">
-                {hackerNews.slice(0, 6).map((item, i) => (
-                  <a key={item.id} href={item.url} target="_blank" rel="noopener noreferrer" className="block group cursor-pointer">
-                    <p className="text-[12px] leading-snug text-ink group-hover:text-masthead transition-colors">
-                      {item.title}
-                    </p>
-                    <p className="text-[10px] text-ink-muted mt-0.5">{item.score} pts</p>
-                    {i < Math.min(hackerNews.length, 6) - 1 && <div className=" mt-2.5" />}
-                  </a>
                 ))}
               </div>
             </div>

@@ -1,11 +1,9 @@
-import { useState, useRef } from 'react';
-import { Plus, X, Coffee, AlignJustify, Home, Film, BarChart3 } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, X, Coffee, AlignJustify, Home, Film, BarChart3, Briefcase } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './ui/tooltip';
-import type { Category } from '../types';
-import type { Theme } from '../hooks/useTheme';
 import { THEMES } from '../hooks/useTheme';
 
 const THEME_COLORS: Record<string, { bg: string; label: string }> = {
@@ -15,31 +13,22 @@ const THEME_COLORS: Record<string, { bg: string; label: string }> = {
   morning: { bg: '#2D6A4F', label: 'Morning' },
 };
 
-interface Props {
-  categories: Category[];
-  activeId: number | null;
-  showBriefing: boolean;
-  showReleases: boolean;
-  onSelect: (id: number) => void;
-  onBriefing: () => void;
-  onReleases: () => void;
-  onAdd: (name: string) => Promise<void>;
-  onHome: () => void;
-  theme: Theme;
-  onThemeChange: (t: Theme) => void;
-  onShowStats: () => void;
-  selectedLlm: string;
-  onLlmChange: (llm: string) => void;
-}
+const LLM_OPTIONS = [
+  { id: 'llama', label: 'LLama', disabled: false },
+  { id: 'minimax', label: 'MiniMax2.7', disabled: false },
+  { id: 'local', label: 'Local', disabled: true },
+] as const;
 
 export function NavigationBar({
   categories,
   activeId,
   showBriefing,
   showReleases,
+  showJobs,
   onSelect,
   onBriefing,
   onReleases,
+  onJobs,
   onAdd,
   onHome,
   theme,
@@ -51,13 +40,6 @@ export function NavigationBar({
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const themeRef = useRef<HTMLDivElement>(null);
-
-  const LLM_OPTIONS = [
-    { id: 'llama', label: 'LLama', disabled: false },
-    { id: 'minimax', label: 'MiniMax2.7', disabled: false },
-    { id: 'local', label: 'Local', disabled: true },
-  ];
 
   const handleAdd = async () => {
     if (!newName.trim()) return;
@@ -77,21 +59,18 @@ export function NavigationBar({
 
   const briefingAndClose = () => { onBriefing(); setDrawerOpen(false); };
   const releasesAndClose = () => { onReleases(); setDrawerOpen(false); };
+  const jobsAndClose = () => { onJobs(); setDrawerOpen(false); };
   const homeAndClose = () => { onHome(); setDrawerOpen(false); };
 
-  const isHome = !activeId && !showBriefing && !showReleases;
+  const isHome = !activeId && !showBriefing && !showReleases && !showJobs;
 
   const todayShort = new Date().toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
   });
-  const now = new Date();
-  const startOfYear = new Date(now.getFullYear(), 0, 1);
-  const dayOfYear = Math.ceil((now.getTime() - startOfYear.getTime()) / 86400000);
-  const edition = `Vol. ${now.getFullYear() - 2024 + 1}, No. ${dayOfYear}`;
 
-  const currentLabel = showReleases ? 'Releases' : showBriefing ? 'Briefing' : activeId ? categories.find(c => c.id === activeId)?.name : 'Home';
+  const currentLabel = showJobs ? 'Jobs' : showReleases ? 'Releases' : showBriefing ? 'Briefing' : activeId ? categories.find(c => c.id === activeId)?.name : 'Home';
 
   return (
     <TooltipProvider>
@@ -106,11 +85,10 @@ export function NavigationBar({
                 <h1 className="font-serif text-[38px] lg:text-[42px] font-black tracking-[-0.02em] text-masthead leading-[0.9]">
                   The Daily Brief
                 </h1>
-                <p className="mt-1 text-[9px] font-sans uppercase tracking-[0.35em] text-masthead/40 font-medium">
+                <p className="mt-1 text-[9px] font-sans uppercase tracking-[0.35em] text-masthead/40 font-medium text-center">
                   AI-Curated News Summaries
                 </p>
               </div>
-              <p className="text-[9px] font-sans uppercase tracking-[0.25em] text-ink-muted pb-1 hidden lg:block">{edition}</p>
             </div>
 
             {/* Right: Tools area */}
@@ -156,7 +134,7 @@ export function NavigationBar({
               {/* Theme */}
               <div className="flex flex-col items-center gap-1.5">
                 <span className="text-[8px] font-sans uppercase tracking-[0.2em] text-ink-muted/60 font-medium">Theme</span>
-                <div className="flex items-center gap-2" ref={themeRef}>
+                <div className="flex items-center gap-2">
                   {THEMES.map((t) => (
                     <Tooltip key={t}>
                       <TooltipTrigger asChild>
@@ -206,6 +184,8 @@ export function NavigationBar({
             <NavBox label="Briefing" icon={<Coffee size={15} />} active={showBriefing} onClick={onBriefing} />
             <NavDivider />
             <NavBox label="Releases" icon={<Film size={15} />} active={showReleases} onClick={onReleases} />
+            <NavDivider />
+            <NavBox label="Jobs" icon={<Briefcase size={15} />} active={showJobs} onClick={onJobs} />
 
             {categories.length > 0 && <NavDivider />}
 
@@ -284,6 +264,7 @@ export function NavigationBar({
               <DrawerItem label="Home" icon={<Home size={14} />} active={isHome} onClick={homeAndClose} />
               <DrawerItem label="Morning Briefing" icon={<Coffee size={14} />} active={showBriefing} onClick={briefingAndClose} />
               <DrawerItem label="Releases" icon={<Film size={14} />} active={showReleases} onClick={releasesAndClose} />
+              <DrawerItem label="Jobs" icon={<Briefcase size={14} />} active={showJobs} onClick={jobsAndClose} />
             </div>
 
             {categories.length > 0 && (

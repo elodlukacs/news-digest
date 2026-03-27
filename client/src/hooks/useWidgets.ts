@@ -1,37 +1,6 @@
 import { useState, useEffect } from 'react';
 import { API_BASE } from '../config';
-import type { CryptoPrice, HackerNewsItem, UpcomingRelease } from '../types';
-
-interface ForecastDay {
-  date: string;
-  code: number;
-  condition: string;
-  high: number;
-  low: number;
-}
-
-interface Weather {
-  temperature: number;
-  code: number;
-  condition: string;
-  wind: number;
-  humidity: number;
-  location: string;
-  forecast: ForecastDay[];
-}
-
-interface Rates {
-  base: string;
-  date: string;
-  rates: Record<string, number>;
-}
-
-interface Headline {
-  title: string;
-  link: string;
-  source: string;
-  pubDate: string;
-}
+import type { CryptoPrice, HackerNewsItem, UpcomingRelease, Weather, Rates, Headline } from '../types';
 
 export function useWidgets() {
   const [weather, setWeather] = useState<Weather | null>(null);

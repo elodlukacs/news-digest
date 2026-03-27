@@ -15,7 +15,9 @@ export function usePullToRefresh({ onRefresh, threshold = 80 }: UsePullToRefresh
   const pullingRef = useRef(false);
   const pullDistanceRef = useRef(0);
 
-  onRefreshRef.current = onRefresh;
+  useEffect(() => {
+    onRefreshRef.current = onRefresh;
+  }, [onRefresh]);
 
   const setRef = useCallback((node: HTMLDivElement | null) => {
     containerRef.current = node;

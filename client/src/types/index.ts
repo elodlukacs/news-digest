@@ -89,9 +89,39 @@ export interface UpcomingRelease {
   poster: string | null;
 }
 
-export interface DiscoveredFeed {
+export type JobStatus = 'new' | 'applied' | 'ignored';
+export type JobSource = 'remoteok' | 'weworkremotely' | 'himalayas' | 'remotive' | 'arbeitnow' | 'linkedin' | 'indeed' | 'hackernews';
+export type RemoteAssessment = 'yes' | 'no' | 'possible';
+
+export interface Job {
+  id: string;
   title: string;
+  company: string;
   url: string;
+  source: JobSource;
+  datePosted: string;
+  status: JobStatus;
+  country: string;
+  workType: string;
+  description?: string;
+  aiRemote?: RemoteAssessment;
+}
+
+export interface JobFilters {
+  status: string;
+  source: string;
+  workType: string;
+  search: string;
+  country: string;
+  aiOnly: boolean;
+}
+
+export interface JobCounts {
+  total: number;
+  new: number;
+  applied: number;
+  ignored: number;
+  aiFiltered: number;
 }
 
 export interface ReleaseDetail {
@@ -114,3 +144,5 @@ export interface ReleaseDetail {
   episodes: number | null;
   status: string | null;
 }
+
+export type { ForecastDay, Weather, Rates, Headline, Briefing } from './widgets';

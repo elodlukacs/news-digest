@@ -1,39 +1,8 @@
 import { Wind, Droplets, ExternalLink } from 'lucide-react';
-import type { CryptoPrice } from '../types';
+import type { CryptoPrice, Weather, Rates, Headline } from '../types';
 import { formatDay } from '../utils/date';
 import { WeatherIcon, WidgetHeader } from './SharedWidgets';
 import { Badge } from './ui/badge';
-
-interface ForecastDay {
-  date: string;
-  code: number;
-  condition: string;
-  high: number;
-  low: number;
-}
-
-interface Weather {
-  temperature: number;
-  code: number;
-  condition: string;
-  wind: number;
-  humidity: number;
-  location: string;
-  forecast: ForecastDay[];
-}
-
-interface Rates {
-  base: string;
-  date: string;
-  rates: Record<string, number>;
-}
-
-interface Headline {
-  title: string;
-  link: string;
-  source: string;
-  pubDate: string;
-}
 
 interface Props {
   weather: Weather | null;

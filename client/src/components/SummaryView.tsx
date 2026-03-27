@@ -343,7 +343,6 @@ export function SummaryView({
       {error && !rateLimitDismissed && rateLimitInfo?.isRateLimit && (
         <RateLimitDialog
           error={error}
-          open={true}
           onClose={() => setRateLimitDismissed(true)}
         />
       )}

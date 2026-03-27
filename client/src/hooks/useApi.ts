@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { Category, Feed, Summary, HistoryEntry, ChatMessage, LlmStats } from '../types';
+import type { Category, Feed, Summary, HistoryEntry, ChatMessage, Job, JobFilters, JobCounts, Briefing } from '../types';
 
 import { API_BASE as BASE } from '../config';
 
@@ -126,7 +126,7 @@ export function useSummary(categoryId: number | null, snapshotId?: number | null
       }
     };
     load();
-  }, [categoryId, snapshotId]);
+  }, [categoryId, snapshotId, providerId]);
 
   const refresh = useCallback(async () => {
     if (!categoryId) return;
@@ -172,16 +172,11 @@ export function useSummary(categoryId: number | null, snapshotId?: number | null
 
 export function useSummaryHistory(categoryId: number | null) {
   const [dates, setDates] = useState<HistoryEntry[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  const refresh = useCallback(async () => {
-    if (!categoryId) { setDates([]); return; }
-    try {
-      const res = await fetch(`${BASE}/categories/${categoryId}/history`);
-      setDates(await res.json());
-    } catch {
-      setDates([]);
-    }
-  }, [categoryId]);
+  const refresh = useCallback(() => {
+    setRefreshKey(k => k + 1);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -197,7 +192,7 @@ export function useSummaryHistory(categoryId: number | null) {
     }
     load();
     return () => { cancelled = true; };
-  }, [categoryId]);
+  }, [categoryId, refreshKey]);
   return { dates, refresh };
 }
 
@@ -237,7 +232,7 @@ export function useChat(summaryId: number | null, providerId: string = 'llama') 
 }
 
 export function useBriefing() {
-  const [briefing, setBriefing] = useState<{ summary: string; generated_at: string; provider?: string } | null>(null);
+  const [briefing, setBriefing] = useState<Briefing | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -314,19 +309,110 @@ export function useHomepage() {
   return { briefs, loading, refreshing, refresh };
 }
 
-export function useLlmStats() {
-  const [stats, setStats] = useState<LlmStats | null>(null);
-  const [loading, setLoading] = useState(false);
+const DEFAULT_FILTERS: JobFilters = { status: '', source: '', workType: '', search: '', country: '', aiOnly: false };
 
-  const refresh = useCallback(async () => {
+export function useJobs() {
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [total, setTotal] = useState(0);
+  const [counts, setCounts] = useState<JobCounts>({ total: 0, new: 0, applied: 0, ignored: 0, aiFiltered: 0 });
+  const [sources, setSources] = useState<string[]>([]);
+  const [countries, setCountries] = useState<string[]>([]);
+  const [filters, setFilters] = useState<JobFilters>(DEFAULT_FILTERS);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [fetching, setFetching] = useState(false);
+  const [aiFiltering, setAiFiltering] = useState(false);
+
+  const fetchList = useCallback(async (f: JobFilters, p: number) => {
     setLoading(true);
     try {
-      const res = await fetch(`${BASE}/stats/llm?days=30`);
-      if (res.ok) setStats(await res.json());
+      const params = new URLSearchParams();
+      if (f.status) params.set('status', f.status);
+      if (f.source) params.set('source', f.source);
+      if (f.workType) params.set('workType', f.workType);
+      if (f.search) params.set('search', f.search);
+      if (f.country) params.set('country', f.country);
+      if (f.aiOnly) params.set('aiOnly', 'true');
+      params.set('page', String(p));
+      params.set('limit', '100');
+
+      const res = await fetch(`${BASE}/jobs?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        setJobs(data.jobs);
+        setTotal(data.total);
+        setCounts(data.counts);
+        setSources(data.sources);
+        setCountries(data.countries);
+      }
     } catch { /* silent */ } finally {
       setLoading(false);
     }
   }, []);
 
-  return { stats, loading, refresh };
+  useEffect(() => { fetchList(filters, page); }, [filters, page, fetchList]);
+
+  const updateFilters = useCallback((partial: Partial<JobFilters>) => {
+    setFilters(prev => ({ ...prev, ...partial }));
+    setPage(1);
+  }, []);
+
+  const fetchJobs = useCallback(async () => {
+    setFetching(true);
+    try {
+      await fetch(`${BASE}/jobs/fetch`, { method: 'POST' });
+      await fetchList(filters, 1);
+      setPage(1);
+    } catch { /* silent */ } finally {
+      setFetching(false);
+    }
+  }, [filters, fetchList]);
+
+  const updateStatus = useCallback(async (id: string, status: string) => {
+    const previousJobs = jobs;
+    const previousCounts = { ...counts };
+    setJobs(prev => prev.map(j => j.id === id ? { ...j, status: status as Job['status'] } : j));
+    setCounts(prev => {
+      const updated = { ...prev };
+      const job = previousJobs.find(j => j.id === id);
+      if (job) {
+        updated[job.status as keyof Pick<JobCounts, 'new' | 'applied' | 'ignored'>]--;
+        updated[status as keyof Pick<JobCounts, 'new' | 'applied' | 'ignored'>]++;
+      }
+      return updated;
+    });
+    try {
+      const res = await fetch(`${BASE}/jobs/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) throw new Error('Failed to update status');
+    } catch {
+      setJobs(previousJobs);
+      setCounts(previousCounts);
+    }
+  }, [jobs, counts]);
+
+  const aiFilter = useCallback(async (providerId?: string) => {
+    setAiFiltering(true);
+    try {
+      await fetch(`${BASE}/jobs/ai-filter`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: providerId }),
+      });
+      await fetchList(filters, page);
+    } catch { /* silent */ } finally {
+      setAiFiltering(false);
+    }
+  }, [filters, page, fetchList]);
+
+  return {
+    jobs, total, counts, sources, countries,
+    filters, updateFilters, page, setPage,
+    loading, fetching, aiFiltering,
+    fetchJobs, updateStatus, aiFilter,
+    refresh: () => fetchList(filters, page),
+  };
 }

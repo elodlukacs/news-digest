@@ -8,8 +8,9 @@ import { MorningBriefing } from './components/MorningBriefing';
 import { LlmStatsModal } from './components/LlmStatsModal';
 import { NewspaperHome } from './components/NewspaperHome';
 import { ReleasesPage } from './components/ReleasesPage';
+import { JobsPage } from './components/JobsPage';
 import { PullToRefreshIndicator } from './components/PullToRefresh';
-import { useCategories, useFeeds, useSummary, useSummaryHistory, useChat, useBriefing, useHomepage } from './hooks/useApi';
+import { useCategories, useFeeds, useSummary, useSummaryHistory, useChat, useBriefing, useHomepage, useJobs } from './hooks/useApi';
 import { useTheme } from './hooks/useTheme';
 import { useWidgets } from './hooks/useWidgets';
 import { usePullToRefresh } from './hooks/usePullToRefresh';
@@ -21,6 +22,7 @@ function App() {
   const [managingId, setManagingId] = useState<number | null>(null);
   const [showBriefing, setShowBriefing] = useState(false);
   const [showReleases, setShowReleases] = useState(false);
+  const [showJobs, setShowJobs] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [selectedSnapshotId, setSelectedSnapshotId] = useState<number | null>(null);
   const [selectedLlm, setSelectedLlm] = useState('llama');
@@ -32,6 +34,7 @@ function App() {
   const { briefing, loading: briefingLoading, error: briefingError, generate: generateBriefing } = useBriefing();
   const { weather, rates, headlines, crypto, hackerNews, releases, trending } = useWidgets();
   const { briefs: homepageBriefs, loading: homepageLoading, refreshing: homepageRefreshing, refresh: homepageRefresh } = useHomepage();
+  const jobsHook = useJobs();
 
   const activeCategory = categories.find((c) => c.id === activeId);
   const managingCategory = categories.find((c) => c.id === managingId);
@@ -40,6 +43,7 @@ function App() {
     setActiveId(id);
     setShowBriefing(false);
     setShowReleases(false);
+    setShowJobs(false);
     setSelectedSnapshotId(null);
   };
 
@@ -47,6 +51,7 @@ function App() {
     setActiveId(null);
     setShowBriefing(false);
     setShowReleases(false);
+    setShowJobs(false);
     setSelectedSnapshotId(null);
   };
 
@@ -54,6 +59,7 @@ function App() {
     setShowBriefing(true);
     setActiveId(null);
     setShowReleases(false);
+    setShowJobs(false);
     setSelectedSnapshotId(null);
   };
 
@@ -61,6 +67,15 @@ function App() {
     setShowReleases(true);
     setActiveId(null);
     setShowBriefing(false);
+    setShowJobs(false);
+    setSelectedSnapshotId(null);
+  };
+
+  const handleJobs = () => {
+    setShowJobs(true);
+    setActiveId(null);
+    setShowBriefing(false);
+    setShowReleases(false);
     setSelectedSnapshotId(null);
   };
 
@@ -69,10 +84,10 @@ function App() {
     if (activeId === id) setActiveId(null);
   };
 
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     await refresh();
     refreshHistory();
-  };
+  }, [refresh, refreshHistory]);
 
   const handleCloseFeedManager = () => {
     setManagingId(null);
@@ -80,8 +95,11 @@ function App() {
   };
 
   const getRefreshHandler = useCallback(() => {
-    if (!activeCategory && !showBriefing && !showReleases) {
+    if (!activeCategory && !showBriefing && !showReleases && !showJobs) {
       return homepageRefresh;
+    }
+    if (showJobs) {
+      return jobsHook.fetchJobs;
     }
     if (showBriefing) {
       return generateBriefing;
@@ -90,7 +108,7 @@ function App() {
       return handleRefresh;
     }
     return () => {};
-  }, [activeCategory, showBriefing, showReleases, homepageRefresh, generateBriefing, handleRefresh]);
+  }, [activeCategory, showBriefing, showReleases, showJobs, homepageRefresh, generateBriefing, handleRefresh, jobsHook.fetchJobs]);
 
   const { pulling, pullProgress, containerRef } = usePullToRefresh({
     onRefresh: getRefreshHandler(),
@@ -105,9 +123,11 @@ function App() {
         activeId={activeId}
         showBriefing={showBriefing}
         showReleases={showReleases}
+        showJobs={showJobs}
         onSelect={handleSelectCategory}
         onBriefing={handleBriefing}
         onReleases={handleReleases}
+        onJobs={handleJobs}
         onAdd={addCategory}
         onHome={handleHome}
         theme={theme}
@@ -118,7 +138,7 @@ function App() {
       />
 
       {/* Newspaper Home: full-width grid when no category selected */}
-      {!activeCategory && !showBriefing && !showReleases ? (
+      {!activeCategory && !showBriefing && !showReleases && !showJobs ? (
         <div key="home" className="max-w-[1600px] mx-auto px-4 pb-12 view-fade">
           <NewspaperHome
             briefs={homepageBriefs}
@@ -132,6 +152,10 @@ function App() {
             headlines={headlines}
             hackerNews={hackerNews}
           />
+        </div>
+      ) : showJobs ? (
+        <div key="jobs" className="max-w-[1600px] mx-auto px-4 pb-12 view-fade">
+          <JobsPage {...jobsHook} selectedLlm={selectedLlm} />
         </div>
       ) : showReleases ? (
         <div key="releases" className="max-w-[1600px] mx-auto px-4 pb-12 view-fade">

@@ -25,19 +25,12 @@ export function Header({ theme, onThemeChange, onShowStats }: Props) {
     year: 'numeric',
   });
 
-  const startOfYear = new Date(today.getFullYear(), 0, 1);
-  const dayOfYear = Math.ceil((today.getTime() - startOfYear.getTime()) / 86400000);
-  const edition = `${today.getFullYear() - 2024 + 1}.${dayOfYear}`;
-
   return (
     <TooltipProvider>
     <header className="max-w-[1600px] mx-auto px-4 md:px-6 pt-4 pb-3">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div className="flex flex-col sm:flex-row sm:items-end sm:gap-6">
           <div className="text-center sm:text-left">
-            <p className="text-[10px] font-sans uppercase tracking-[0.3em] text-masthead mb-1 opacity-70">
-              Vol. {edition}
-            </p>
             <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-masthead leading-[0.85]">
               The Daily Brief
             </h1>
