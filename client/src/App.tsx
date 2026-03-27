@@ -109,8 +109,6 @@ function App() {
         onBriefing={handleBriefing}
         onReleases={handleReleases}
         onAdd={addCategory}
-        onDelete={handleDeleteCategory}
-        onManageFeeds={setManagingId}
         onHome={handleHome}
         theme={theme}
         onThemeChange={setTheme}

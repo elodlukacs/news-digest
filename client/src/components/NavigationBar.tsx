@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Plus, X, Settings, Trash2, Coffee, AlignJustify, Home, Film, BarChart3 } from 'lucide-react';
+import { Plus, X, Coffee, AlignJustify, Home, Film, BarChart3 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -24,8 +24,6 @@ interface Props {
   onBriefing: () => void;
   onReleases: () => void;
   onAdd: (name: string) => Promise<void>;
-  onDelete: (id: number) => Promise<void>;
-  onManageFeeds: (id: number) => void;
   onHome: () => void;
   theme: Theme;
   onThemeChange: (t: Theme) => void;
@@ -43,8 +41,6 @@ export function NavigationBar({
   onBriefing,
   onReleases,
   onAdd,
-  onDelete,
-  onManageFeeds,
   onHome,
   theme,
   onThemeChange,
