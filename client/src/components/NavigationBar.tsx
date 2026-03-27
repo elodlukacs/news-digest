@@ -34,7 +34,7 @@ const THEME_COLORS: Record<string, { bg: string; label: string }> = {
 };
 
 const LLM_OPTIONS = [
-  { id: 'llama', label: 'LLama', disabled: false },
+  { id: 'llama', label: 'GPT-OSS-20B', disabled: false },
   { id: 'minimax', label: 'MiniMax2.7', disabled: false },
   { id: 'local', label: 'Local', disabled: true },
 ] as const;
