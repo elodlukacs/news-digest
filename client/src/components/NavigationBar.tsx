@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, X, Coffee, AlignJustify, Home, Film, BarChart3, Briefcase } from 'lucide-react';
+import { Plus, X, Coffee, AlignJustify, Home, Film, BarChart3, Briefcase, RefreshCw } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -403,6 +403,19 @@ export function NavigationBar({
               >
                 <BarChart3 size={14} />
                 <span>LLM Usage</span>
+              </button>
+            </div>
+
+            {/* Reload App */}
+            <div className="flex items-center justify-between pt-2 border-t border-rule/50">
+              <p className="text-[8px] uppercase tracking-[0.2em] font-bold text-ink-muted">App</p>
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="flex items-center gap-1.5 text-[11px] font-medium text-ink-light hover:text-masthead transition-colors"
+              >
+                <RefreshCw size={14} />
+                <span>Reload</span>
               </button>
             </div>
           </div>
