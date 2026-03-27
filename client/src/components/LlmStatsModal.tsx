@@ -17,13 +17,18 @@ export function LlmStatsModal({ open, onClose }: Props) {
 
   useEffect(() => {
     if (!open) return;
-    fetch(`${API_BASE}/stats/llm?days=30`)
+    const controller = new AbortController();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setError(false);
+    setStats(null);
+    fetch(`${API_BASE}/stats/llm?days=30`, { signal: controller.signal })
       .then(async (r) => {
         if (!r.ok) { setError(true); return; }
         const data = await r.json();
-        setStats(data);
+        if (!controller.signal.aborted) setStats(data);
       })
-      .catch(() => setError(true));
+      .catch(() => { if (!controller.signal.aborted) setError(true); });
+    return () => controller.abort();
   }, [open]);
 
   const maxDailyTokens = stats ? Math.max(...stats.daily.map((d) => d.tokens), 1) : 1;

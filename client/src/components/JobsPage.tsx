@@ -3,14 +3,16 @@ import {
   Briefcase, ExternalLink, Search, X, RefreshCw, Sparkles,
   ChevronLeft, ChevronRight, Check, EyeOff, MapPin, Globe,
 } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from './ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Skeleton } from './ui/skeleton';
 import type { Job, JobFilters, JobCounts } from '../types';
+import { timeAgoDays } from '../utils/date';
 
 interface Props {
   jobs: Job[];
@@ -58,17 +60,6 @@ const WORK_TYPE_LABELS: Record<string, string> = {
   hybrid: 'Hybrid',
   onsite: 'On-site',
 };
-
-function timeAgo(dateStr: string) {
-  const d = new Date(dateStr + 'T00:00:00');
-  const now = new Date();
-  const days = Math.floor((now.getTime() - d.getTime()) / 86400000);
-  if (days === 0) return 'Today';
-  if (days === 1) return 'Yesterday';
-  if (days < 7) return `${days}d ago`;
-  if (days < 30) return `${Math.floor(days / 7)}w ago`;
-  return `${Math.floor(days / 30)}mo ago`;
-}
 
 export function JobsPage({
   jobs, total, counts, sources, filters, updateFilters,
@@ -260,7 +251,7 @@ export function JobsPage({
                   <Badge className={`text-[10px] ${SOURCE_COLORS[selectedJob.source] || ''}`}>
                     {SOURCE_LABELS[selectedJob.source] || selectedJob.source}
                   </Badge>
-                  <span className="text-xs text-ink-muted">{timeAgo(selectedJob.datePosted)}</span>
+                  <span className="text-xs text-ink-muted">{timeAgoDays(selectedJob.datePosted)}</span>
                   {selectedJob.aiRemote && (
                     <Badge variant="outline" className="text-[10px] gap-1">
                       <Globe size={10} />
@@ -295,7 +286,7 @@ export function JobsPage({
                     <p className="text-xs uppercase tracking-wider text-ink-muted mb-2 font-semibold">Description</p>
                     <div
                       className="text-sm leading-relaxed text-ink-light font-[family-name:var(--font-body)] prose prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{ __html: selectedJob.description }}
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(selectedJob.description) }}
                     />
                   </div>
                 )}
@@ -350,7 +341,6 @@ function JobCard({ job, onClick }: { job: Job; onClick: () => void }) {
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <TooltipProvider delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <h3 className="font-sans text-[13px] font-semibold leading-tight text-ink group-hover:text-masthead transition-colors line-clamp-1">
@@ -361,7 +351,6 @@ function JobCard({ job, onClick }: { job: Job; onClick: () => void }) {
                 {job.title}
               </TooltipContent>
             </Tooltip>
-          </TooltipProvider>
           <p className="text-[11px] text-ink-light mt-0.5 truncate">{job.company}</p>
         </div>
         <span className={`text-[8px] font-semibold uppercase tracking-wider shrink-0 mt-0.5 ${
@@ -384,7 +373,7 @@ function JobCard({ job, onClick }: { job: Job; onClick: () => void }) {
             {WORK_TYPE_LABELS[job.workType] || job.workType}
           </span>
         )}
-        <span className="ml-auto text-[9px]">{timeAgo(job.datePosted)}</span>
+        <span className="ml-auto text-[9px]">{timeAgoDays(job.datePosted)}</span>
         {job.status === 'applied' && <Check size={11} className="text-emerald-600" />}
       </div>
     </article>

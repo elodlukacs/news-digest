@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { NavigationBar } from './components/NavigationBar';
 import { SummaryView } from './components/SummaryView';
 import { FeedManager } from './components/FeedManager';
@@ -12,12 +12,14 @@ import { JobsPage } from './components/JobsPage';
 import { PullToRefreshIndicator } from './components/PullToRefresh';
 import { useCategories, useFeeds, useSummary, useSummaryHistory, useChat, useBriefing, useHomepage, useJobs } from './hooks/useApi';
 import { useTheme } from './hooks/useTheme';
+import type { Theme } from './hooks/useTheme';
 import { useWidgets } from './hooks/useWidgets';
 import { usePullToRefresh } from './hooks/usePullToRefresh';
+import { TooltipProvider } from './components/ui/tooltip';
 
 function App() {
   const { theme, setTheme } = useTheme();
-  const { categories, addCategory, deleteCategory, refresh: refreshCategories } = useCategories();
+  const { categories, addCategory, deleteCategory } = useCategories();
   const [activeId, setActiveId] = useState<number | null>(null);
   const [managingId, setManagingId] = useState<number | null>(null);
   const [showBriefing, setShowBriefing] = useState(false);
@@ -34,72 +36,69 @@ function App() {
   const { briefing, loading: briefingLoading, error: briefingError, generate: generateBriefing } = useBriefing();
   const { weather, rates, headlines, crypto, hackerNews, releases, trending } = useWidgets();
   const { briefs: homepageBriefs, loading: homepageLoading, refreshing: homepageRefreshing, refresh: homepageRefresh } = useHomepage();
-  const jobsHook = useJobs();
+  const { fetchJobs, ...jobsHook } = useJobs();
 
   const activeCategory = categories.find((c) => c.id === activeId);
   const managingCategory = categories.find((c) => c.id === managingId);
 
-  const handleSelectCategory = (id: number) => {
+  const handleSelectCategory = useCallback((id: number) => {
     setActiveId(id);
     setShowBriefing(false);
     setShowReleases(false);
     setShowJobs(false);
     setSelectedSnapshotId(null);
-  };
+  }, []);
 
-  const handleHome = () => {
+  const handleHome = useCallback(() => {
     setActiveId(null);
     setShowBriefing(false);
     setShowReleases(false);
     setShowJobs(false);
     setSelectedSnapshotId(null);
-  };
+  }, []);
 
-  const handleBriefing = () => {
+  const handleBriefing = useCallback(() => {
     setShowBriefing(true);
     setActiveId(null);
     setShowReleases(false);
     setShowJobs(false);
     setSelectedSnapshotId(null);
-  };
+  }, []);
 
-  const handleReleases = () => {
+  const handleReleases = useCallback(() => {
     setShowReleases(true);
     setActiveId(null);
     setShowBriefing(false);
     setShowJobs(false);
     setSelectedSnapshotId(null);
-  };
+  }, []);
 
-  const handleJobs = () => {
+  const handleJobs = useCallback(() => {
     setShowJobs(true);
     setActiveId(null);
     setShowBriefing(false);
     setShowReleases(false);
     setSelectedSnapshotId(null);
-  };
+  }, []);
 
-  const handleDeleteCategory = async (id: number) => {
+  const handleDeleteCategory = useCallback(async (id: number) => {
     await deleteCategory(id);
     if (activeId === id) setActiveId(null);
-  };
+  }, [deleteCategory, activeId]);
 
   const handleRefresh = useCallback(async () => {
     await refresh();
     refreshHistory();
   }, [refresh, refreshHistory]);
 
-  const handleCloseFeedManager = () => {
-    setManagingId(null);
-    refreshCategories();
-  };
+  const getRefreshHandlerRef = useRef<() => void>(() => {});
 
-  const getRefreshHandler = useCallback(() => {
+  const getRefreshHandler = useCallback((): (() => void) => {
     if (!activeCategory && !showBriefing && !showReleases && !showJobs) {
       return homepageRefresh;
     }
     if (showJobs) {
-      return jobsHook.fetchJobs;
+      return fetchJobs;
     }
     if (showBriefing) {
       return generateBriefing;
@@ -108,14 +107,19 @@ function App() {
       return handleRefresh;
     }
     return () => {};
-  }, [activeCategory, showBriefing, showReleases, showJobs, homepageRefresh, generateBriefing, handleRefresh, jobsHook.fetchJobs]);
+  }, [activeCategory, showBriefing, showReleases, showJobs, homepageRefresh, generateBriefing, handleRefresh, fetchJobs]);
+
+  useEffect(() => {
+    getRefreshHandlerRef.current = getRefreshHandler();
+  }, [getRefreshHandler]);
 
   const { pulling, pullProgress, containerRef } = usePullToRefresh({
-    onRefresh: getRefreshHandler(),
+    onRefresh: () => getRefreshHandlerRef.current(),
     threshold: 80,
   });
 
   return (
+    <TooltipProvider>
     <div className="min-h-screen bg-paper" ref={containerRef}>
       <PullToRefreshIndicator pulling={pulling} pullProgress={pullProgress} />
       <NavigationBar
@@ -131,7 +135,7 @@ function App() {
         onAdd={addCategory}
         onHome={handleHome}
         theme={theme}
-        onThemeChange={setTheme}
+        onThemeChange={(t) => setTheme(t as Theme)}
         onShowStats={() => setShowStats(true)}
         selectedLlm={selectedLlm}
         onLlmChange={setSelectedLlm}
@@ -155,7 +159,7 @@ function App() {
         </div>
       ) : showJobs ? (
         <div key="jobs" className="max-w-[1600px] mx-auto px-4 pb-12 view-fade">
-          <JobsPage {...jobsHook} selectedLlm={selectedLlm} />
+          <JobsPage {...jobsHook} fetchJobs={fetchJobs} selectedLlm={selectedLlm} />
         </div>
       ) : showReleases ? (
         <div key="releases" className="max-w-[1600px] mx-auto px-4 pb-12 view-fade">
@@ -211,12 +215,13 @@ function App() {
           feeds={feeds}
           onAdd={addFeed}
           onDelete={deleteFeed}
-          onClose={handleCloseFeedManager}
+          onClose={() => setManagingId(null)}
         />
       )}
 
       <LlmStatsModal open={showStats} onClose={() => setShowStats(false)} />
     </div>
+    </TooltipProvider>
   );
 }
 

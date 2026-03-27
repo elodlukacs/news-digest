@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, Trash2, Rss, FileText, Globe, Search } from 'lucide-react';
 import { API_BASE } from '../config';
 import { useMediaQuery } from '../hooks/useMediaQuery';
@@ -39,16 +39,32 @@ export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, 
   const [discoverUrl, setDiscoverUrl] = useState('');
   const [discovering, setDiscovering] = useState(false);
   const [discovered, setDiscovered] = useState<{ title: string; url: string }[]>([]);
+  const [hasSearched, setHasSearched] = useState(false);
   const [open, setOpen] = useState(true);
   const isDesktop = useMediaQuery('(min-width: 768px)');
 
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const promptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const langTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const discoverAbortRef = useRef<AbortController | null>(null);
   const handleClose = useCallback(() => {
     setOpen(false);
-    setTimeout(onClose, 200);
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    closeTimerRef.current = setTimeout(onClose, 200);
   }, [onClose]);
 
   useEffect(() => {
-    fetch(`${API_BASE}/categories/${categoryId}`)
+    return () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+      if (promptTimerRef.current) clearTimeout(promptTimerRef.current);
+      if (langTimerRef.current) clearTimeout(langTimerRef.current);
+      if (discoverAbortRef.current) discoverAbortRef.current.abort();
+    };
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(`${API_BASE}/categories/${categoryId}`, { signal: controller.signal })
       .then(async (r) => {
         if (!r.ok) return;
         const data = await r.json();
@@ -56,6 +72,7 @@ export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, 
         setLanguage(data.language || 'English');
       })
       .catch(() => {});
+    return () => controller.abort();
   }, [categoryId]);
 
   const handleAdd = async () => {
@@ -73,7 +90,8 @@ export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, 
         body: JSON.stringify({ prompt }),
       });
       setPromptSaved(true);
-      setTimeout(() => setPromptSaved(false), 2000);
+      if (promptTimerRef.current) clearTimeout(promptTimerRef.current);
+      promptTimerRef.current = setTimeout(() => setPromptSaved(false), 2000);
     } catch {
       // silent
     }
@@ -88,7 +106,8 @@ export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, 
         body: JSON.stringify({ language: lang }),
       });
       setLangSaved(true);
-      setTimeout(() => setLangSaved(false), 2000);
+      if (langTimerRef.current) clearTimeout(langTimerRef.current);
+      langTimerRef.current = setTimeout(() => setLangSaved(false), 2000);
     } catch {
       // silent
     }
@@ -96,25 +115,39 @@ export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, 
 
   const handleDiscover = async () => {
     if (!discoverUrl.trim()) return;
+    if (discoverAbortRef.current) discoverAbortRef.current.abort();
+    const controller = new AbortController();
+    discoverAbortRef.current = controller;
     setDiscovering(true);
-    setDiscovered([]);
+    setHasSearched(false);
     try {
       const res = await fetch(`${API_BASE}/discover-feed`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: discoverUrl.trim() }),
+        signal: controller.signal,
       });
+      if (controller.signal.aborted) return;
       if (!res.ok) return;
       const data = await res.json();
       setDiscovered(data.feeds || []);
-    } catch { /* ignore */ } finally {
-      setDiscovering(false);
+    } catch {
+      if (discoverAbortRef.current?.signal.aborted) return;
+    } finally {
+      if (!controller.signal.aborted) {
+        setDiscovering(false);
+        setHasSearched(true);
+      }
     }
   };
 
   const handleAddDiscovered = async (feed: { title: string; url: string }) => {
-    await onAdd(feed.title, feed.url);
-    setDiscovered((prev) => prev.filter((f) => f.url !== feed.url));
+    try {
+      await onAdd(feed.title, feed.url);
+      setDiscovered((prev) => prev.filter((f) => f.url !== feed.url));
+    } catch {
+      // keep feed in discovered list on failure
+    }
   };
 
   const tabContent = (
@@ -158,7 +191,8 @@ export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, 
                     variant="ghost"
                     size="icon"
                     onClick={() => onDelete(feed.id)}
-                    className="h-7 w-7 text-ink-muted hover:text-accent opacity-0 group-hover:opacity-100"
+                    aria-label={`Delete ${feed.name}`}
+                    className="h-7 w-7 text-ink-muted hover:text-accent md:opacity-0 md:group-hover:opacity-100"
                   >
                     <Trash2 size={13} />
                   </Button>
@@ -240,7 +274,7 @@ export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, 
                   ))}
                 </div>
               )}
-              {!discovering && discovered.length === 0 && discoverUrl.trim() && (
+              {hasSearched && !discovering && discovered.length === 0 && (
                 <p className="text-xs text-ink-muted text-center py-2">No feeds discovered yet.</p>
               )}
             </div>

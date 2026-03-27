@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { ExternalLink, Clock, RefreshCw } from 'lucide-react';
 import type { CryptoPrice, HackerNewsItem, Weather, Rates, Headline } from '../types';
-import type { HomepageBrief, HomepageArticle } from '../hooks/useApi';
+import type { HomepageBrief, HomepageArticle } from '../types';
 import { timeAgo, formatDay } from '../utils/date';
 import { WeatherIcon } from './SharedWidgets';
 import { Button } from './ui/button';
@@ -228,22 +228,20 @@ export function NewspaperHome({
 
   // Distribute cards across 3 content columns + hero
   // Strategy: round-robin by category so each column has variety
-  const hero = allCards[0] || null;
-  const remaining = allCards.slice(1);
-
-  // Distribute remaining cards into 3 buckets: col1, col2sub, col3
-  const { col1Cards, col2Secondary, col3Cards } = useMemo(() => {
+  const { hero, col1Cards, col2Secondary, col3Cards } = useMemo(() => {
+    const hero = allCards[0] || null;
+    const remaining = allCards.slice(1);
     const c1: CardItem[] = [];
     const c2: CardItem[] = [];
     const c3: CardItem[] = [];
     remaining.forEach((card, i) => {
       const bucket = i % 3;
-      if (bucket === 0 && c1.length < 5) c1.push(card);
-      else if (bucket === 1 && c2.length < 4) c2.push(card);
-      else if (bucket === 2 && c3.length < 5) c3.push(card);
+      if (bucket === 0) c1.push(card);
+      else if (bucket === 1) c2.push(card);
+      else c3.push(card);
     });
-    return { col1Cards: c1, col2Secondary: c2, col3Cards: c3 };
-  }, [remaining]);
+    return { hero, col1Cards: c1, col2Secondary: c2, col3Cards: c3 };
+  }, [allCards]);
 
   if (loading) {
     return (

@@ -1,17 +1,17 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 
 export function useMediaQuery(query: string): boolean {
-  const getMatches = useCallback(() => {
+  const [matches, setMatches] = useState(() => {
     if (typeof window !== 'undefined') {
       return window.matchMedia(query).matches
     }
     return false
-  }, [query])
-
-  const [matches, setMatches] = useState(getMatches)
+  })
 
   useEffect(() => {
     const mql = window.matchMedia(query)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMatches(mql.matches)
     const handler = (e: MediaQueryListEvent) => setMatches(e.matches)
     mql.addEventListener('change', handler)
     return () => mql.removeEventListener('change', handler)

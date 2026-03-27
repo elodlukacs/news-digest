@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 interface UsePullToRefreshOptions {
   onRefresh: () => void | Promise<void>;
@@ -14,14 +14,15 @@ export function usePullToRefresh({ onRefresh, threshold = 80 }: UsePullToRefresh
   const onRefreshRef = useRef(onRefresh);
   const pullingRef = useRef(false);
   const pullDistanceRef = useRef(0);
+  const thresholdRef = useRef(threshold);
 
   useEffect(() => {
     onRefreshRef.current = onRefresh;
   }, [onRefresh]);
 
-  const setRef = useCallback((node: HTMLDivElement | null) => {
-    containerRef.current = node;
-  }, []);
+  useEffect(() => {
+    thresholdRef.current = threshold;
+  }, [threshold]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -42,7 +43,7 @@ export function usePullToRefresh({ onRefresh, threshold = 80 }: UsePullToRefresh
 
       if (diff > 0) {
         e.preventDefault();
-        const dist = Math.min(diff, threshold * 1.5);
+        const dist = Math.min(diff, thresholdRef.current * 1.5);
         pullDistanceRef.current = dist;
         pullingRef.current = diff > 20;
         setPullDistance(dist);
@@ -50,9 +51,9 @@ export function usePullToRefresh({ onRefresh, threshold = 80 }: UsePullToRefresh
       }
     };
 
-    const handleTouchEnd = () => {
-      if (pullingRef.current && pullDistanceRef.current > threshold) {
-        onRefreshRef.current();
+    const handleTouchEnd = async () => {
+      if (pullingRef.current && pullDistanceRef.current > thresholdRef.current) {
+        await onRefreshRef.current();
       }
       setPulling(false);
       setPullDistance(0);
@@ -71,12 +72,12 @@ export function usePullToRefresh({ onRefresh, threshold = 80 }: UsePullToRefresh
       el.removeEventListener('touchmove', handleTouchMove);
       el.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [threshold]);
+  }, []);
 
   return {
     pulling,
     pullDistance,
     pullProgress: Math.min(pullDistance / threshold, 1),
-    containerRef: setRef,
+    containerRef,
   };
 }

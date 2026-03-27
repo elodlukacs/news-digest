@@ -3,8 +3,28 @@ import { Plus, X, Coffee, AlignJustify, Home, Film, BarChart3, Briefcase } from 
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './ui/tooltip';
+import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import { THEMES } from '../hooks/useTheme';
+import type { Category } from '../types';
+
+interface Props {
+  categories: Category[];
+  activeId: number | null;
+  showBriefing: boolean;
+  showReleases: boolean;
+  showJobs: boolean;
+  onSelect: (id: number) => void;
+  onBriefing: () => void;
+  onReleases: () => void;
+  onJobs: () => void;
+  onAdd: (name: string) => Promise<void>;
+  onHome: () => void;
+  theme: string;
+  onThemeChange: (theme: string) => void;
+  onShowStats: () => void;
+  selectedLlm: string;
+  onLlmChange: (id: string) => void;
+}
 
 const THEME_COLORS: Record<string, { bg: string; label: string }> = {
   classic: { bg: '#8B4513', label: 'Classic' },
@@ -62,7 +82,7 @@ export function NavigationBar({
   const jobsAndClose = () => { onJobs(); setDrawerOpen(false); };
   const homeAndClose = () => { onHome(); setDrawerOpen(false); };
 
-  const isHome = !activeId && !showBriefing && !showReleases && !showJobs;
+  const isHome = activeId === null && !showBriefing && !showReleases && !showJobs;
 
   const todayShort = new Date().toLocaleDateString('en-US', {
     month: 'short',
@@ -73,9 +93,9 @@ export function NavigationBar({
   const currentLabel = showJobs ? 'Jobs' : showReleases ? 'Releases' : showBriefing ? 'Briefing' : activeId ? categories.find(c => c.id === activeId)?.name : 'Home';
 
   return (
-    <TooltipProvider>
-      {/* ═══ Desktop: Unified Masthead ═══ */}
+    <>
       <div className="hidden md:block">
+        {/* ═══ Desktop: Unified Masthead ═══ */}
         <div className="max-w-[1600px] mx-auto px-6">
           {/* Masthead: title left, tools right */}
           <div className="flex items-center justify-between pt-4 pb-3">
@@ -104,6 +124,7 @@ export function NavigationBar({
                           type="button"
                           disabled={opt.disabled}
                           onClick={() => !opt.disabled && onLlmChange(opt.id)}
+                          aria-label={opt.disabled ? `${opt.label} (coming soon)` : opt.label}
                           className={`px-2 py-1 text-[10px] font-sans font-medium tracking-wide rounded transition-all duration-200 ${
                             opt.disabled
                               ? 'text-ink-muted/30 cursor-not-allowed'
@@ -387,7 +408,7 @@ export function NavigationBar({
           </div>
         </SheetContent>
       </Sheet>
-    </TooltipProvider>
+    </>
   );
 }
 

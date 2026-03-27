@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { API_BASE } from '../config';
 import type { CryptoPrice, HackerNewsItem, UpcomingRelease, Weather, Rates, Headline } from '../types';
 
@@ -10,20 +10,23 @@ export function useWidgets() {
   const [hackerNews, setHackerNews] = useState<HackerNewsItem[]>([]);
   const [releases, setReleases] = useState<UpcomingRelease[]>([]);
   const [trending, setTrending] = useState<{ tag: string; count: number }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     Promise.all([
-      fetch(`${API_BASE}/widgets/weather`).then(r => r.json()).catch(() => null),
-      fetch(`${API_BASE}/widgets/rates`).then(r => r.json()).catch(() => null),
-      fetch(`${API_BASE}/widgets/headlines`).then(r => r.json()).catch(() => null),
-      fetch(`${API_BASE}/widgets/crypto`).then(r => r.json()).catch(() => null),
-      fetch(`${API_BASE}/widgets/hackernews`).then(r => r.json()).catch(() => null),
-      fetch(`${API_BASE}/widgets/releases`).then(r => r.json()).catch(() => null),
-      fetch(`${API_BASE}/tags/trending`).then(r => r.json()).catch(() => null),
+      fetch(`${API_BASE}/widgets/weather`, { signal: controller.signal }).then(r => { if (!r.ok) return null; return r.json(); }).catch(() => null),
+      fetch(`${API_BASE}/widgets/rates`, { signal: controller.signal }).then(r => { if (!r.ok) return null; return r.json(); }).catch(() => null),
+      fetch(`${API_BASE}/widgets/headlines`, { signal: controller.signal }).then(r => { if (!r.ok) return null; return r.json(); }).catch(() => null),
+      fetch(`${API_BASE}/widgets/crypto`, { signal: controller.signal }).then(r => { if (!r.ok) return null; return r.json(); }).catch(() => null),
+      fetch(`${API_BASE}/widgets/hackernews`, { signal: controller.signal }).then(r => { if (!r.ok) return null; return r.json(); }).catch(() => null),
+      fetch(`${API_BASE}/widgets/releases`, { signal: controller.signal }).then(r => { if (!r.ok) return null; return r.json(); }).catch(() => null),
+      fetch(`${API_BASE}/tags/trending`, { signal: controller.signal }).then(r => { if (!r.ok) return null; return r.json(); }).catch(() => null),
     ]).then(([w, r, h, c, hn, rel, t]) => {
-      if (cancelled) return;
+      if (controller.signal.aborted) return;
       if (w) setWeather(w);
       if (r) setRates(r);
       if (h) setHeadlines(h);
@@ -31,10 +34,11 @@ export function useWidgets() {
       if (hn) setHackerNews(hn);
       if (rel) setReleases(rel);
       if (t) setTrending(t);
+      setLoading(false);
     });
 
-    return () => { cancelled = true; };
+    return () => { controller.abort(); abortRef.current = null; };
   }, []);
 
-  return { weather, rates, headlines, crypto, hackerNews, releases, trending };
+  return { weather, rates, headlines, crypto, hackerNews, releases, trending, loading };
 }

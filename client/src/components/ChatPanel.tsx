@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { MessageCircle, Send, X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Button } from './ui/button';
@@ -16,6 +16,7 @@ export function ChatPanel({ messages, sending, onSend }: Props) {
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const userScrolledRef = useRef(false);
+  const pendingTextRef = useRef<string | null>(null);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -25,18 +26,27 @@ export function ChatPanel({ messages, sending, onSend }: Props) {
     }
   }, [messages]);
 
-  const handleScroll = () => {
+  // Clear input only after send completes (transition from sending to not sending)
+  useEffect(() => {
+    if (!sending && pendingTextRef.current) {
+      pendingTextRef.current = null;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setInput('');
+    }
+  }, [sending]);
+
+  const handleScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
     const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
     userScrolledRef.current = distFromBottom > 50;
-  };
+  }, []);
 
   const handleSend = () => {
     if (!input.trim() || sending) return;
     userScrolledRef.current = false;
+    pendingTextRef.current = input.trim();
     onSend(input.trim());
-    setInput('');
   };
 
   if (!open) {
@@ -59,14 +69,14 @@ export function ChatPanel({ messages, sending, onSend }: Props) {
         </Button>
       </div>
 
-      <div ref={scrollRef} onScroll={handleScroll} className="max-h-80 overflow-y-auto p-4 space-y-4">
+      <div ref={scrollRef} onScroll={handleScroll} className="max-h-80 overflow-y-auto p-4 space-y-4" role="log" aria-live="polite">
         {messages.length === 0 && (
           <p className="text-[13px] text-ink-muted italic text-center py-4">
             Ask a question about the news summary above...
           </p>
         )}
         {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+          <div key={`${msg.role}-${msg.created_at}-${i}`} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div
               className={`max-w-[80%] px-3 py-2 text-[13px] leading-relaxed ${
                 msg.role === 'user' ? 'bg-masthead/10 text-ink' : 'bg-paper-dark text-ink'
@@ -104,7 +114,7 @@ export function ChatPanel({ messages, sending, onSend }: Props) {
           placeholder="Ask a question..."
           className="flex-1"
         />
-        <Button variant="outline" size="icon" onClick={handleSend} disabled={!input.trim() || sending}>
+        <Button variant="outline" size="icon" onClick={handleSend} disabled={!input.trim() || sending} aria-label="Send message">
           <Send size={14} />
         </Button>
       </div>

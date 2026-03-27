@@ -1,3 +1,10 @@
+export interface CryptoPrice {
+  id: string;
+  symbol: string;
+  price: number;
+  change_24h: number;
+}
+
 export interface ForecastDay {
   date: string;
   code: number;

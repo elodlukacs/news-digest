@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { RefreshCw, AlertCircle, Clock, Zap, Send, Settings, Trash2, ExternalLink, MoreVertical } from 'lucide-react';
 import { API_BASE } from '../config';
 import { SentimentBadge } from './SentimentBadge';
@@ -8,7 +8,7 @@ import { Drawer, DrawerContent } from './ui/drawer';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './ui/tooltip';
+import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import { Skeleton } from './ui/skeleton';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from './ui/card';
 import type { Summary, ChatMessage } from '../types';
@@ -183,6 +183,13 @@ export function SummaryView({
   const [sent, setSent] = useState(false);
   const [telegramError, setTelegramError] = useState<string | null>(null);
   const [actionsOpen, setActionsOpen] = useState(false);
+  const sentTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (sentTimerRef.current) clearTimeout(sentTimerRef.current);
+    };
+  }, []);
 
   const sendToTelegram = async () => {
     setSending(true);
@@ -198,7 +205,8 @@ export function SummaryView({
       const data = await resp.json();
       if (data.success) {
         setSent(true);
-        setTimeout(() => setSent(false), 3000);
+        if (sentTimerRef.current) clearTimeout(sentTimerRef.current);
+        sentTimerRef.current = setTimeout(() => setSent(false), 3000);
       } else {
         setTelegramError(data.error || 'Failed to send');
       }
@@ -216,7 +224,9 @@ export function SummaryView({
   const busy = loading || refreshing;
   const rateLimitInfo = error ? parseRateLimitError(error) : null;
 
-  const sections = summary ? parseSummaryMarkdown(summary.summary, summary.sentiment_data) : [];
+  const sections = useMemo(() => {
+    return summary ? parseSummaryMarkdown(summary.summary, summary.sentiment_data) : [];
+  }, [summary?.summary, summary?.sentiment_data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div>
@@ -225,7 +235,6 @@ export function SummaryView({
           <h2 className="font-serif text-3xl md:text-4xl font-bold text-masthead tracking-tight">{categoryName}</h2>
 
           {/* Desktop: inline buttons */}
-          <TooltipProvider>
             <div className="hidden md:flex items-center gap-2">
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -262,7 +271,6 @@ export function SummaryView({
                 <TooltipContent>Delete category</TooltipContent>
               </Tooltip>
             </div>
-          </TooltipProvider>
 
           {/* Mobile: single trigger button */}
           <Button
@@ -343,6 +351,7 @@ export function SummaryView({
       {error && !rateLimitDismissed && rateLimitInfo?.isRateLimit && (
         <RateLimitDialog
           error={error}
+          open={true}
           onClose={() => setRateLimitDismissed(true)}
         />
       )}

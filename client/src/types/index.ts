@@ -65,13 +65,6 @@ export interface LlmStats {
   quotas: ProviderQuota[];
 }
 
-export interface CryptoPrice {
-  id: string;
-  symbol: string;
-  price: number;
-  change_24h: number;
-}
-
 export interface HackerNewsItem {
   id: number;
   title: string;
@@ -145,4 +138,19 @@ export interface ReleaseDetail {
   status: string | null;
 }
 
-export type { ForecastDay, Weather, Rates, Headline, Briefing } from './widgets';
+export type { CryptoPrice, ForecastDay, Weather, Rates, Headline, Briefing } from './widgets';
+
+export interface HomepageArticle {
+  title: string;
+  excerpt: string;
+  link: string;
+  image: string;
+  pubDate: string;
+  source: string;
+}
+
+export interface HomepageBrief {
+  categoryId: number;
+  categoryName: string;
+  articles: HomepageArticle[];
+}

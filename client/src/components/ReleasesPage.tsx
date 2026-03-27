@@ -69,18 +69,22 @@ export function ReleasesPage({ releases: defaultReleases }: Props) {
   }, [releases, typeFilter, searchQuery]);
 
   // Fetch detail
+  const detailAbortRef = useRef<AbortController | null>(null);
   const fetchDetail = useCallback(async (type: string, id: number) => {
+    if (detailAbortRef.current) detailAbortRef.current.abort();
+    const controller = new AbortController();
+    detailAbortRef.current = controller;
     setDetailLoading(true);
     setDetail(null);
     try {
-      const res = await fetch(`${API_BASE}/widgets/releases/${type}/${id}`);
+      const res = await fetch(`${API_BASE}/widgets/releases/${type}/${id}`, { signal: controller.signal });
       if (!res.ok) return;
       const data = await res.json();
       setDetail(data);
     } catch {
       // ignore
     } finally {
-      setDetailLoading(false);
+      if (!controller.signal.aborted) setDetailLoading(false);
     }
   }, []);
 
@@ -416,52 +420,21 @@ function DateRangeFilter({ dateFrom, dateTo, onDateFromChange, onDateToChange, o
   onDateToChange: (v: string | null) => void;
   onClear: () => void;
 }) {
-  const fromRef = useRef<HTMLInputElement>(null);
-  const toRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const fromEl = fromRef.current;
-    const toEl = toRef.current;
-    if (!fromEl || !toEl) return;
-
-    const handleFrom = () => onDateFromChange(fromEl.value || null);
-    const handleTo = () => onDateToChange(toEl.value || null);
-
-    fromEl.addEventListener('change', handleFrom);
-    fromEl.addEventListener('input', handleFrom);
-    toEl.addEventListener('change', handleTo);
-    toEl.addEventListener('input', handleTo);
-
-    return () => {
-      fromEl.removeEventListener('change', handleFrom);
-      fromEl.removeEventListener('input', handleFrom);
-      toEl.removeEventListener('change', handleTo);
-      toEl.removeEventListener('input', handleTo);
-    };
-  }, [onDateFromChange, onDateToChange]);
-
-  useEffect(() => {
-    if (fromRef.current) fromRef.current.value = dateFrom || '';
-  }, [dateFrom]);
-  useEffect(() => {
-    if (toRef.current) toRef.current.value = dateTo || '';
-  }, [dateTo]);
-
   return (
     <div className="flex items-center gap-2">
       <Calendar size={13} className="text-ink-muted shrink-0" />
       <span className="text-[11px] text-ink-muted font-medium">From</span>
       <Input
-        ref={fromRef}
         type="date"
-        defaultValue={dateFrom || ''}
+        value={dateFrom || ''}
+        onChange={(e) => onDateFromChange(e.target.value || null)}
         className="px-3 py-1.5 text-[12px] bg-paper font-medium focus:outline-none focus:ring-1 focus:ring-masthead/30 transition-all cursor-pointer h-8"
       />
       <span className="text-[11px] text-ink-muted font-medium">to</span>
       <Input
-        ref={toRef}
         type="date"
-        defaultValue={dateTo || ''}
+        value={dateTo || ''}
+        onChange={(e) => onDateToChange(e.target.value || null)}
         className="px-3 py-1.5 text-[12px] bg-paper font-medium focus:outline-none focus:ring-1 focus:ring-masthead/30 transition-all cursor-pointer h-8"
       />
       {(dateFrom || dateTo) && (
