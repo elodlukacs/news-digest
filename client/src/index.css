@@ -139,9 +139,17 @@ body {
 @media (max-width: 767px) {
   .newspaper-grid {
     grid-template-columns: 1fr;
+    border-top: none;
   }
-  .newspaper-grid > :nth-child(n+2):not(:nth-child(2)) {
+  .newspaper-grid > :nth-child(3) {
+    display: block;
+  }
+  .newspaper-grid > :nth-child(4),
+  .newspaper-grid > :nth-child(5) {
     display: none;
+  }
+  .newspaper-grid > * {
+    border-right: none !important;
   }
 }
 

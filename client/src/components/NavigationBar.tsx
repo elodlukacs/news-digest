@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Plus, X, Settings, Trash2, Coffee, Menu, Home, Film, BarChart3 } from 'lucide-react';
+import { Plus, X, Settings, Trash2, Coffee, AlignJustify, Home, Film, BarChart3 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -261,10 +261,9 @@ export function NavigationBar({
       {/* ═══ Mobile: Top bar ═══ */}
       <nav className="md:hidden border-b-2 border-ink">
         <div className="flex items-center justify-between px-4 py-2">
-          <Button variant="ghost" onClick={() => setDrawerOpen(true)} className="flex items-center gap-2 -ml-1" aria-label="Open menu">
-            <Menu size={18} />
-            <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-ink-muted">Index</span>
-          </Button>
+          <button type="button" onClick={() => setDrawerOpen(true)} className="-ml-1 p-1 cursor-pointer" aria-label="Open menu">
+            <AlignJustify size={26} strokeWidth={2.2} className="text-ink" />
+          </button>
 
           <h1 className="font-serif text-lg font-black text-masthead tracking-tight leading-none">
             The Daily Brief
@@ -278,9 +277,9 @@ export function NavigationBar({
 
       {/* ═══ Mobile Drawer (ShadCN Sheet) ═══ */}
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <SheetContent side="left" className="w-[280px] max-w-[85vw] p-0 gap-0 flex flex-col">
-          <SheetHeader className="px-5 py-3 border-b-2 border-ink">
-            <SheetTitle className="font-serif text-base font-black text-masthead tracking-tight">Index</SheetTitle>
+        <SheetContent side="left" className="w-[280px] max-w-[85vw] p-0 gap-0 flex flex-col border-r-0">
+          <SheetHeader className="px-5 py-3">
+            <SheetTitle className="font-serif text-base font-black text-masthead">Index</SheetTitle>
           </SheetHeader>
 
           {/* Drawer body */}
@@ -309,7 +308,7 @@ export function NavigationBar({
                         active ? 'bg-masthead text-white' : 'text-ink hover:bg-paper-dark'
                       }`}
                     >
-                      <span className={`text-[12px] uppercase tracking-[0.1em] font-semibold font-serif ${active ? 'text-white' : 'text-ink'}`}>{cat.name}</span>
+                      <span className={`text-[12px] uppercase font-semibold font-serif ${active ? 'text-white' : 'text-ink'}`}>{cat.name}</span>
                       <div className="flex items-center gap-1.5 ml-auto">
                         {cat.feed_count > 0 && (
                           <span className={`text-[9px] px-1.5 py-0.5 ${active ? 'text-white/60' : 'text-ink-muted bg-paper-dark'}`}>
@@ -319,16 +318,6 @@ export function NavigationBar({
                       </div>
                     </button>
 
-                    {active && (
-                      <div className="flex items-center gap-0.5 px-5 pb-1.5 -mt-0.5 bg-paper-dark/50">
-                        <button onClick={(e) => { e.stopPropagation(); onManageFeeds(cat.id); setDrawerOpen(false); }} className="flex items-center gap-1 text-[10px] uppercase tracking-wider font-medium text-ink-muted hover:text-masthead h-auto px-2 py-1">
-                          <Settings size={10} /> Sources
-                        </button>
-                        <button onClick={(e) => { e.stopPropagation(); onDelete(cat.id); setDrawerOpen(false); onHome(); }} className="flex items-center gap-1 text-[10px] uppercase tracking-wider font-medium text-accent/60 hover:text-accent h-auto px-2 py-1">
-                          <Trash2 size={10} /> Delete
-                        </button>
-                      </div>
-                    )}
                   </div>
                 );
               })}
@@ -361,26 +350,62 @@ export function NavigationBar({
             </div>
           </div>
 
-          {/* Theme switcher in drawer footer */}
-          <div className="border-t border-rule px-5 py-3 bg-paper-dark flex items-center justify-between">
-            <p className="text-[8px] uppercase tracking-[0.25em] font-bold text-ink-muted">Edition</p>
-            <div className="flex items-center gap-2">
-              {THEMES.map((t) => (
-                <Tooltip key={t}>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onThemeChange(t)}
-                      className={`w-4 h-4 rounded-full cursor-pointer transition-all duration-200 border p-0 ${
-                        theme === t ? 'border-ink scale-110' : 'border-transparent opacity-50 hover:opacity-100'
-                      }`}
-                      style={{ backgroundColor: THEME_COLORS[t].bg }}
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent>{THEME_COLORS[t].label}</TooltipContent>
-                </Tooltip>
-              ))}
+          {/* Settings in drawer footer */}
+          <div className="border-t border-rule px-5 py-4 bg-paper-dark space-y-4">
+            {/* Model selector */}
+            <div className="flex items-center justify-between">
+              <p className="text-[8px] uppercase tracking-[0.2em] font-bold text-ink-muted">Model</p>
+              <div className="flex items-center gap-0.5 bg-paper rounded-md p-0.5">
+                {LLM_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    disabled={opt.disabled}
+                    onClick={() => !opt.disabled && onLlmChange(opt.id)}
+                    className={`px-2 py-1 text-[10px] font-sans font-medium rounded transition-all duration-200 ${
+                      opt.disabled
+                        ? 'text-ink-muted/30 cursor-not-allowed'
+                        : selectedLlm === opt.id
+                          ? 'bg-masthead text-white shadow-sm'
+                          : 'text-ink-muted cursor-pointer'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Theme */}
+            <div className="flex items-center justify-between">
+              <p className="text-[8px] uppercase tracking-[0.2em] font-bold text-ink-muted">Theme</p>
+              <div className="flex items-center gap-2.5">
+                {THEMES.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => onThemeChange(t)}
+                    className={`w-5 h-5 rounded-full cursor-pointer transition-all duration-200 border p-0 ${
+                      theme === t ? 'border-ink scale-110' : 'border-transparent opacity-50'
+                    }`}
+                    style={{ backgroundColor: THEME_COLORS[t].bg }}
+                    aria-label={THEME_COLORS[t].label}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="flex items-center justify-between">
+              <p className="text-[8px] uppercase tracking-[0.2em] font-bold text-ink-muted">Stats</p>
+              <button
+                type="button"
+                onClick={() => { onShowStats(); setDrawerOpen(false); }}
+                className="flex items-center gap-1.5 text-[11px] font-medium text-ink-light"
+              >
+                <BarChart3 size={14} />
+                <span>LLM Usage</span>
+              </button>
             </div>
           </div>
         </SheetContent>
@@ -425,7 +450,7 @@ function DrawerItem({ label, icon, active, onClick }: { label: string; icon: Rea
       }`}
     >
       <span className={active ? 'text-white/60' : 'text-ink-muted'}>{icon}</span>
-      <span className={`text-[12px] uppercase tracking-[0.1em] font-semibold font-serif`}>{label}</span>
+      <span className={`text-[12px] uppercase font-semibold font-serif`}>{label}</span>
     </button>
   );
 }

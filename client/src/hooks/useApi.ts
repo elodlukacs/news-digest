@@ -134,6 +134,7 @@ export function useSummary(categoryId: number | null, snapshotId?: number | null
     const controller = new AbortController();
     abortRef.current = controller;
 
+    setSummary(null);
     setRefreshing(true);
     setError(null);
     try {
@@ -148,7 +149,19 @@ export function useSummary(categoryId: number | null, snapshotId?: number | null
       setSummary(data);
     } catch (e: unknown) {
       if (e instanceof DOMException && e.name === 'AbortError') return;
-      setError(e instanceof Error ? e.message : 'Unknown error');
+      // On failure, fall back to latest cached summary from archive
+      try {
+        const fallbackRes = await fetch(`${BASE}/categories/${categoryId}/summary`, { signal: controller.signal });
+        const fallbackData = await fallbackRes.json();
+        if (fallbackRes.ok && fallbackData.summary) {
+          setSummary(fallbackData);
+          setError('Refresh failed — showing latest from archive');
+        } else {
+          setError(e instanceof Error ? e.message : 'Unknown error');
+        }
+      } catch {
+        setError(e instanceof Error ? e.message : 'Unknown error');
+      }
     } finally {
       if (!controller.signal.aborted) setRefreshing(false);
     }

@@ -99,11 +99,11 @@ function HeroCard({
         </div>
       </a>
       <a href={article.link} target="_blank" rel="noopener noreferrer" className="block cursor-pointer">
-        <h2 className="font-serif text-xl xl:text-2xl font-black leading-tight text-ink hover:text-masthead transition-colors">
+        <h2 className="font-serif text-2xl md:text-xl xl:text-2xl font-black leading-tight text-ink hover:text-masthead transition-colors">
           {article.title}
         </h2>
       </a>
-      <p className="text-[14px] leading-[1.75] text-ink-light font-[family-name:var(--font-body)] mt-2 line-clamp-5">
+      <p className="text-[15px] md:text-[14px] leading-[1.75] text-ink-light font-[family-name:var(--font-body)] mt-2 line-clamp-5">
         {article.excerpt}
       </p>
       <div className="mt-2 flex items-center gap-3 text-[10px] text-ink-muted uppercase tracking-wider">
@@ -193,11 +193,11 @@ function TextCard({
         <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-masthead">{categoryName}</span>
       </Button>
       <a href={article.link} target="_blank" rel="noopener noreferrer" className="block cursor-pointer">
-        <h3 className="font-serif text-[15px] font-bold text-ink leading-snug mt-0.5 hover:text-masthead transition-colors">
+        <h3 className="font-serif text-lg md:text-[15px] font-bold text-ink leading-snug mt-0.5 hover:text-masthead transition-colors">
           {article.title}
         </h3>
       </a>
-      <p className="text-[13px] text-ink-light leading-relaxed mt-1 line-clamp-4 font-[family-name:var(--font-body)]">
+      <p className="text-[15px] md:text-[13px] text-ink-light leading-relaxed mt-1 line-clamp-4 font-[family-name:var(--font-body)]">
         {article.excerpt}
       </p>
       <div className="mt-1.5 flex items-center gap-2 text-[10px] text-ink-muted">
@@ -334,7 +334,7 @@ export function NewspaperHome({
       {/* ─── Above the Fold: 5-Column Grid ─── */}
       <div className="newspaper-grid">
         {/* COLUMN 1: Text-only articles from different categories */}
-        <div className="border-r border-rule px-4 pt-4 pb-6">
+        <div className="border-r border-rule px-4 pt-4 pb-6 order-2 md:order-none">
           {col1Cards.map((card, i) => (
             <div key={`c1-${card.categoryId}-${i}`}>
               <TextCard
@@ -348,7 +348,7 @@ export function NewspaperHome({
         </div>
 
         {/* COLUMN 2: Hero + secondary featured (widest) */}
-        <div className="border-r border-rule px-4 pt-4 pb-6">
+        <div className="border-r border-rule px-4 pt-4 pb-6 order-1 md:order-none">
           {hero && (
             <HeroCard
               article={hero.article}
@@ -374,7 +374,7 @@ export function NewspaperHome({
         </div>
 
         {/* COLUMN 3: More category articles */}
-        <div className="border-r border-rule px-4 pt-4 pb-6">
+        <div className="border-r border-rule px-4 pt-4 pb-6 order-3 md:order-none">
           {col3Cards.map((card, i) => (
             <div key={`c3-${card.categoryId}-${i}`}>
               {i === 0 ? (

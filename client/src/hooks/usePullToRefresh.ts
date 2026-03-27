@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
 interface UsePullToRefreshOptions {
   onRefresh: () => void | Promise<void>;
@@ -10,50 +10,71 @@ export function usePullToRefresh({ onRefresh, threshold = 80 }: UsePullToRefresh
   const [pullDistance, setPullDistance] = useState(0);
   const startYRef = useRef<number | null>(null);
   const isPullingRef = useRef(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const onRefreshRef = useRef(onRefresh);
+  const pullingRef = useRef(false);
+  const pullDistanceRef = useRef(0);
 
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if (window.scrollY === 0) {
-      startYRef.current = e.touches[0].clientY;
-      isPullingRef.current = true;
-    }
+  onRefreshRef.current = onRefresh;
+
+  const setRef = useCallback((node: HTMLDivElement | null) => {
+    containerRef.current = node;
   }, []);
 
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!isPullingRef.current || startYRef.current === null) return;
-    
-    const currentY = e.touches[0].clientY;
-    const diff = currentY - startYRef.current;
-    
-    if (diff > 0) {
-      e.preventDefault();
-      setPullDistance(Math.min(diff, threshold * 1.5));
-      setPulling(diff > 20);
-    }
-  }, [threshold]);
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
 
-  const handleTouchEnd = useCallback(() => {
-    if (pulling && pullDistance > threshold) {
+    const handleTouchStart = (e: TouchEvent) => {
+      if (window.scrollY === 0) {
+        startYRef.current = e.touches[0].clientY;
+        isPullingRef.current = true;
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isPullingRef.current || startYRef.current === null) return;
+
+      const currentY = e.touches[0].clientY;
+      const diff = currentY - startYRef.current;
+
+      if (diff > 0) {
+        e.preventDefault();
+        const dist = Math.min(diff, threshold * 1.5);
+        pullDistanceRef.current = dist;
+        pullingRef.current = diff > 20;
+        setPullDistance(dist);
+        setPulling(diff > 20);
+      }
+    };
+
+    const handleTouchEnd = () => {
+      if (pullingRef.current && pullDistanceRef.current > threshold) {
+        onRefreshRef.current();
+      }
       setPulling(false);
       setPullDistance(0);
       isPullingRef.current = false;
+      pullingRef.current = false;
+      pullDistanceRef.current = 0;
       startYRef.current = null;
-      onRefresh();
-    } else {
-      setPulling(false);
-      setPullDistance(0);
-      isPullingRef.current = false;
-      startYRef.current = null;
-    }
-  }, [pulling, pullDistance, threshold, onRefresh]);
+    };
+
+    el.addEventListener('touchstart', handleTouchStart, { passive: true });
+    el.addEventListener('touchmove', handleTouchMove, { passive: false });
+    el.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+    return () => {
+      el.removeEventListener('touchstart', handleTouchStart);
+      el.removeEventListener('touchmove', handleTouchMove);
+      el.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [threshold]);
 
   return {
     pulling,
     pullDistance,
     pullProgress: Math.min(pullDistance / threshold, 1),
-    handlers: {
-      onTouchStart: handleTouchStart,
-      onTouchMove: handleTouchMove,
-      onTouchEnd: handleTouchEnd,
-    },
+    containerRef: setRef,
   };
 }

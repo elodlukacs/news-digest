@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { RefreshCw, AlertCircle, Clock, Zap, Send, Settings, Trash2, ExternalLink } from 'lucide-react';
+import { RefreshCw, AlertCircle, Clock, Zap, Send, Settings, Trash2, ExternalLink, MoreVertical } from 'lucide-react';
 import { API_BASE } from '../config';
 import { SentimentBadge } from './SentimentBadge';
 import { ChatPanel } from './ChatPanel';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import { Drawer, DrawerContent } from './ui/drawer';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
@@ -181,6 +182,7 @@ export function SummaryView({
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [telegramError, setTelegramError] = useState<string | null>(null);
+  const [actionsOpen, setActionsOpen] = useState(false);
 
   const sendToTelegram = async () => {
     setSending(true);
@@ -218,18 +220,16 @@ export function SummaryView({
 
   return (
     <div>
-      <div className="pt-8 pb-4 border-b border-rule">
+      <div className="pt-8 pb-4 md:border-b md:border-rule">
         <div className="flex items-center gap-3">
-          <h2 className="font-serif text-4xl font-bold text-masthead tracking-tight">{categoryName}</h2>
+          <h2 className="font-serif text-3xl md:text-4xl font-bold text-masthead tracking-tight">{categoryName}</h2>
+
+          {/* Desktop: inline buttons */}
           <TooltipProvider>
-            <div className="flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-2">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={onManageFeeds}
-                  >
+                  <Button variant="outline" size="icon" onClick={onManageFeeds}>
                     <Settings size={18} />
                   </Button>
                 </TooltipTrigger>
@@ -238,12 +238,7 @@ export function SummaryView({
               {summary && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={sendToTelegram}
-                      disabled={sending}
-                    >
+                    <Button variant="outline" size="icon" onClick={sendToTelegram} disabled={sending}>
                       <Send size={18} className={sending ? 'animate-pulse' : ''} />
                     </Button>
                   </TooltipTrigger>
@@ -252,11 +247,7 @@ export function SummaryView({
               )}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    size="icon"
-                    onClick={onRefresh}
-                    disabled={busy}
-                  >
+                  <Button size="icon" onClick={onRefresh} disabled={busy}>
                     <RefreshCw size={18} className={busy ? 'animate-spin' : ''} />
                   </Button>
                 </TooltipTrigger>
@@ -264,11 +255,7 @@ export function SummaryView({
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={onDelete}
-                  >
+                  <Button variant="ghost" size="icon" onClick={onDelete}>
                     <Trash2 size={18} />
                   </Button>
                 </TooltipTrigger>
@@ -276,6 +263,16 @@ export function SummaryView({
               </Tooltip>
             </div>
           </TooltipProvider>
+
+          {/* Mobile: single trigger button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden ml-auto"
+            onClick={() => setActionsOpen(true)}
+          >
+            <MoreVertical size={20} />
+          </Button>
         </div>
         {summary && (
           <p className="text-xs text-ink-muted mt-1.5 font-light">
@@ -287,11 +284,59 @@ export function SummaryView({
         )}
       </div>
 
+      {/* Mobile: bottom drawer with actions */}
+      <Drawer open={actionsOpen} onOpenChange={setActionsOpen} direction="bottom">
+        <DrawerContent className="px-0 pb-8 bg-paper rounded-t-2xl">
+          <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-ink-muted px-6 mt-2 mb-3">Actions</p>
+          <nav className="flex flex-col">
+            <button
+              onClick={() => { onManageFeeds(); setActionsOpen(false); }}
+              className="flex items-center gap-4 px-6 py-3.5 active:bg-paper-dark transition-colors"
+            >
+              <Settings size={18} className="text-ink-muted" />
+              <span className="text-[14px] font-medium text-ink">Manage feeds & settings</span>
+            </button>
+            {summary && (
+              <button
+                onClick={() => { sendToTelegram(); setActionsOpen(false); }}
+                disabled={sending}
+                className="flex items-center gap-4 px-6 py-3.5 active:bg-paper-dark transition-colors"
+              >
+                <Send size={18} className={`text-ink-muted ${sending ? 'animate-pulse' : ''}`} />
+                <span className="text-[14px] font-medium text-ink">{sent ? 'Sent to Telegram!' : 'Send to Telegram'}</span>
+              </button>
+            )}
+            <div className="h-px bg-rule/50 mx-6 my-1" />
+            <button
+              onClick={() => { onDelete(); setActionsOpen(false); }}
+              className="flex items-center gap-4 px-6 py-3.5 active:bg-paper-dark transition-colors"
+            >
+              <Trash2 size={18} className="text-accent" />
+              <span className="text-[14px] font-medium text-accent">Delete category</span>
+            </button>
+            <div className="h-px bg-rule/50 mx-6 my-1" />
+            <button
+              onClick={() => { onRefresh(); setActionsOpen(false); }}
+              disabled={busy}
+              className="flex items-center gap-4 px-6 py-4 active:bg-paper-dark transition-colors mt-2"
+            >
+              <RefreshCw size={18} className={`text-masthead ${busy ? 'animate-spin' : ''}`} />
+              <span className="text-[14px] font-semibold text-masthead">{refreshing ? 'Refreshing...' : 'Refresh summary'}</span>
+            </button>
+          </nav>
+        </DrawerContent>
+      </Drawer>
+
       {(loading || refreshing) && !summary && (
-        <div className="py-24 space-y-4">
-          <Skeleton className="w-48 h-8 mx-auto" />
-          <Skeleton className="w-64 h-4 mx-auto" />
-          <Skeleton className="w-32 h-4 mx-auto" />
+        <div className="py-16 space-y-6">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="space-y-3 px-2">
+              <Skeleton className="w-3/4 h-6" />
+              <Skeleton className="w-full h-4" />
+              <Skeleton className="w-5/6 h-4" />
+              <Skeleton className="w-24 h-8 mt-2" />
+            </div>
+          ))}
         </div>
       )}
 
@@ -331,33 +376,35 @@ export function SummaryView({
       )}
 
       {summary && sections.length > 0 && (
-        <div className="pt-8 pb-12 space-y-4">
+        <div className="pt-4 md:pt-8 pb-12 space-y-2 md:space-y-4">
           {sections.map((section, idx) => (
-            <Card key={idx}>
-              <CardHeader className="pb-0">
-                <div className="flex items-start justify-between gap-4">
-                  <CardTitle className="text-xl">{section.title}</CardTitle>
-                  {section.sentiment && (
-                    <SentimentBadge sentiment={section.sentiment} />
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-[15px] leading-[1.8] text-ink font-[family-name:var(--font-body)]">
-                  {section.content}
-                </p>
-              </CardContent>
-              {section.url && (
-                <CardFooter>
-                  <Button variant="outline" size="sm" className="gap-2" asChild>
-                    <a href={section.url} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink size={12} />
-                      Read full article
-                    </a>
-                  </Button>
-                </CardFooter>
-              )}
-            </Card>
+            <article key={idx} className="-mx-6 px-6 py-1.5 border-y border-rule/60 bg-paper-dark/70 md:mx-0 md:px-0 md:py-0 md:bg-transparent md:border-y-0">
+              <Card className="border-0 bg-transparent md:bg-paper-dark md:border md:border-rule">
+                <CardHeader className="pb-0 px-0 md:px-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <CardTitle className="text-lg md:text-xl">{section.title}</CardTitle>
+                    {section.sentiment && (
+                      <SentimentBadge sentiment={section.sentiment} />
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="px-0 md:px-5">
+                  <p className="text-[15px] leading-[1.8] text-ink font-[family-name:var(--font-body)]">
+                    {section.content}
+                  </p>
+                </CardContent>
+                {section.url && (
+                  <CardFooter className="px-0 md:px-5">
+                    <Button variant="outline" size="sm" className="gap-2" asChild>
+                      <a href={section.url} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink size={12} />
+                        Read full article
+                      </a>
+                    </Button>
+                  </CardFooter>
+                )}
+              </Card>
+            </article>
           ))}
 
           {summary.tags_data && summary.tags_data.length > 0 && (
@@ -385,3 +432,4 @@ export function SummaryView({
     </div>
   );
 }
+

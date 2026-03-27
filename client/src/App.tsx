@@ -92,13 +92,13 @@ function App() {
     return () => {};
   }, [activeCategory, showBriefing, showReleases, homepageRefresh, generateBriefing, handleRefresh]);
 
-  const { pulling, pullProgress, handlers } = usePullToRefresh({
+  const { pulling, pullProgress, containerRef } = usePullToRefresh({
     onRefresh: getRefreshHandler(),
     threshold: 80,
   });
 
   return (
-    <div className="min-h-screen bg-paper" {...handlers}>
+    <div className="min-h-screen bg-paper" ref={containerRef}>
       <PullToRefreshIndicator pulling={pulling} pullProgress={pullProgress} />
       <NavigationBar
         categories={categories}
