@@ -5,13 +5,18 @@ const router = express.Router();
 
 router.get('/', async (req, res) => {
   try {
-    const { articleId: title, source } = req.query;
+    const title = req.query.articleId;
+    const source = req.query.source;
+    
+    console.log('[Related] Request:', { title, source });
     
     if (!title) {
       return res.status(400).json({ error: 'Missing articleId' });
     }
 
     const related = await searchAllSources(title, source || null);
+    
+    console.log('[Related] Returning:', related.length, 'articles');
 
     const articles = related.map(a => ({
       id: a.url,
