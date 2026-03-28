@@ -580,10 +580,11 @@ export function NewspaperHome({
             title: selectedArticle.title,
             url: selectedArticle.link,
             source: selectedSource,
-            biasRating: getBiasRating(selectedArticle.link),
+            biasRating: 'center',
             publishedAt: selectedArticle.pubDate,
             excerpt: selectedArticle.excerpt || '',
           }}
+          sourceName={selectedSource}
           onClose={handleCloseRadar}
         />
       )}

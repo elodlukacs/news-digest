@@ -10,6 +10,7 @@ interface BiasRadarPanelProps {
   headline: string;
   content: string;
   currentArticle: SourceArticle;
+  sourceName: string;
   onClose: () => void;
 }
 
@@ -20,6 +21,7 @@ export default function BiasRadarPanel({
   headline,
   content,
   currentArticle,
+  sourceName,
   onClose,
 }: BiasRadarPanelProps) {
   const [activeTab, setActiveTab] = useState<Tab>('compare');
@@ -73,7 +75,12 @@ export default function BiasRadarPanel({
 
         <div className="flex-1 overflow-y-auto">
           {activeTab === 'compare' ? (
-            <BiasRadarCompare articleId={articleId} currentArticle={currentArticle} />
+            <BiasRadarCompare 
+              articleId={articleId} 
+              currentArticle={currentArticle}
+              searchTitle={headline}
+              excludeSource={sourceName}
+            />
           ) : (
             <BiasRadarDecode headline={headline} content={content} />
           )}
