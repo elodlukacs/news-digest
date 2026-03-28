@@ -285,7 +285,7 @@ export function useChat(summaryId: number | null, providerId: string = 'llama') 
   return { messages, sending, error, sendMessage };
 }
 
-export function useBriefing() {
+export function useBriefing(providerId: string = 'llama') {
   const [briefing, setBriefing] = useState<Briefing | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -318,7 +318,12 @@ export function useBriefing() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${BASE}/briefing/generate`, { method: 'POST', signal: controller.signal });
+      const res = await fetch(`${BASE}/briefing/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: providerId }),
+        signal: controller.signal,
+      });
       if (controller.signal.aborted) return;
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);

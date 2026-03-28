@@ -7,6 +7,7 @@ const callLLM = (messages, opts) => rawCallLLM(messages, { ...opts, db });
 const router = express.Router();
 
 router.post('/generate', async (req, res) => {
+  const { provider: selectedProvider } = req.body || {};
   try {
     const categories = db.prepare('SELECT * FROM categories ORDER BY sort_order').all();
     if (categories.length === 0) return res.status(400).json({ error: 'No categories' });
@@ -68,7 +69,7 @@ Rules:
 
 Articles:
 ${articleText}` },
-    ], { purpose: 'briefing' });
+    ], { purpose: 'briefing', providerId: selectedProvider || null });
 
     const generated_at = new Date().toISOString();
     const dateKey = generated_at.split('T')[0];

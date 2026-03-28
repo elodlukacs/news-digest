@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, X, Coffee, AlignJustify, Home, Film, BarChart3, Briefcase, RefreshCw } from 'lucide-react';
+import { Plus, X, Coffee, AlignJustify, Home, Film, BarChart3, Briefcase } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -34,9 +34,8 @@ const THEME_COLORS: Record<string, { bg: string; label: string }> = {
 };
 
 const LLM_OPTIONS = [
-  { id: 'llama', label: 'GPT-OSS-20B', disabled: false },
-  { id: 'minimax', label: 'MiniMax2.7', disabled: false },
-  { id: 'local', label: 'Local', disabled: true },
+  { id: 'llama', label: 'GPT-OSS-20B' },
+  { id: 'minimax', label: 'MiniMax2.7' },
 ] as const;
 
 export function NavigationBar({
@@ -122,21 +121,18 @@ export function NavigationBar({
                       <TooltipTrigger asChild>
                         <button
                           type="button"
-                          disabled={opt.disabled}
-                          onClick={() => !opt.disabled && onLlmChange(opt.id)}
-                          aria-label={opt.disabled ? `${opt.label} (coming soon)` : opt.label}
+                          onClick={() => onLlmChange(opt.id)}
+                          aria-label={opt.label}
                           className={`px-2 py-1 text-[10px] font-sans font-medium tracking-wide rounded transition-all duration-200 ${
-                            opt.disabled
-                              ? 'text-ink-muted/30 cursor-not-allowed'
-                              : selectedLlm === opt.id
-                                ? 'bg-masthead text-white shadow-sm'
-                                : 'text-ink-muted hover:text-ink hover:bg-paper cursor-pointer'
+                            selectedLlm === opt.id
+                              ? 'bg-masthead text-white shadow-sm'
+                              : 'text-ink-muted hover:text-ink hover:bg-paper cursor-pointer'
                           }`}
                         >
                           {opt.label}
                         </button>
                       </TooltipTrigger>
-                      <TooltipContent>{opt.disabled ? 'Coming soon' : opt.label}</TooltipContent>
+                      <TooltipContent>{opt.label}</TooltipContent>
                     </Tooltip>
                   ))}
                 </div>
@@ -352,7 +348,7 @@ export function NavigationBar({
           <div className="border-t border-rule px-5 py-4 bg-paper-dark space-y-4">
             {/* Model selector */}
             <div className="flex items-center justify-between">
-              <p className="text-[8px] uppercase tracking-[0.2em] font-bold text-ink-muted">Model</p>
+              <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-ink-muted">Model</p>
               <div className="flex items-center gap-0.5 bg-paper rounded-md p-0.5">
                 {LLM_OPTIONS.map((opt) => (
                   <button
@@ -376,7 +372,7 @@ export function NavigationBar({
 
             {/* Theme */}
             <div className="flex items-center justify-between">
-              <p className="text-[8px] uppercase tracking-[0.2em] font-bold text-ink-muted">Theme</p>
+              <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-ink-muted">Theme</p>
               <div className="flex items-center gap-2.5">
                 {THEMES.map((t) => (
                   <button
@@ -394,30 +390,18 @@ export function NavigationBar({
             </div>
 
             {/* Stats */}
-            <div className="flex items-center justify-between">
-              <p className="text-[8px] uppercase tracking-[0.2em] font-bold text-ink-muted">Stats</p>
+            <div className="flex items-center justify-between pt-2 pb-6">
+              <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-ink-muted">Stats</p>
               <button
                 type="button"
                 onClick={() => { onShowStats(); setDrawerOpen(false); }}
-                className="flex items-center gap-1.5 text-[11px] font-medium text-ink-light"
+                className="flex items-center gap-2 text-[13px] font-medium text-ink-light hover:text-masthead transition-colors"
               >
-                <BarChart3 size={14} />
+                <BarChart3 size={18} />
                 <span>LLM Usage</span>
               </button>
             </div>
 
-            {/* Reload App */}
-            <div className="flex items-center justify-between pt-2 border-t border-rule/50">
-              <p className="text-[8px] uppercase tracking-[0.2em] font-bold text-ink-muted">App</p>
-              <button
-                type="button"
-                onClick={() => window.location.reload()}
-                className="flex items-center gap-1.5 text-[11px] font-medium text-ink-light hover:text-masthead transition-colors"
-              >
-                <RefreshCw size={14} />
-                <span>Reload</span>
-              </button>
-            </div>
           </div>
         </SheetContent>
       </Sheet>

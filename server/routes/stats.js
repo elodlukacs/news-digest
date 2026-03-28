@@ -11,20 +11,26 @@ router.get('/llm', (req, res) => {
   const rows = db.prepare('SELECT * FROM llm_usage WHERE created_at >= ? ORDER BY created_at DESC').all(since);
 
   const total_calls = rows.length;
+  const total_prompt_tokens = rows.reduce((s, r) => s + (r.prompt_tokens || 0), 0);
+  const total_completion_tokens = rows.reduce((s, r) => s + (r.completion_tokens || 0), 0);
   const total_tokens = rows.reduce((s, r) => s + (r.total_tokens || 0), 0);
+  const total_latency = rows.reduce((s, r) => s + (r.latency_ms || 0), 0);
+  const avg_latency = total_calls > 0 ? Math.round(total_latency / total_calls) : 0;
 
   const byProvider = {};
   const byPurpose = {};
   const daily = {};
 
   for (const r of rows) {
-    if (!byProvider[r.provider]) byProvider[r.provider] = { calls: 0, tokens: 0 };
+    if (!byProvider[r.provider]) byProvider[r.provider] = { calls: 0, tokens: 0, total_latency: 0 };
     byProvider[r.provider].calls++;
     byProvider[r.provider].tokens += r.total_tokens || 0;
+    byProvider[r.provider].total_latency += r.latency_ms || 0;
 
-    if (!byPurpose[r.purpose]) byPurpose[r.purpose] = { calls: 0, tokens: 0 };
+    if (!byPurpose[r.purpose]) byPurpose[r.purpose] = { calls: 0, tokens: 0, total_latency: 0 };
     byPurpose[r.purpose].calls++;
     byPurpose[r.purpose].tokens += r.total_tokens || 0;
+    byPurpose[r.purpose].total_latency += r.latency_ms || 0;
 
     const day = r.created_at.split('T')[0];
     if (!daily[day]) daily[day] = { date: day, tokens: 0, calls: 0 };
@@ -32,9 +38,22 @@ router.get('/llm', (req, res) => {
     daily[day].calls++;
   }
 
+  // Compute avg latency per provider/purpose
+  for (const p of Object.values(byProvider)) {
+    p.avg_latency = p.calls > 0 ? Math.round(p.total_latency / p.calls) : 0;
+    delete p.total_latency;
+  }
+  for (const p of Object.values(byPurpose)) {
+    p.avg_latency = p.calls > 0 ? Math.round(p.total_latency / p.calls) : 0;
+    delete p.total_latency;
+  }
+
   res.json({
     total_calls,
+    total_prompt_tokens,
+    total_completion_tokens,
     total_tokens,
+    avg_latency,
     by_provider: byProvider,
     by_purpose: byPurpose,
     daily: Object.values(daily).sort((a, b) => a.date.localeCompare(b.date)),

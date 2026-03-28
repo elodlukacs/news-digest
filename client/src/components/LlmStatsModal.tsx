@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Zap, Clock, BarChart3, Gauge } from 'lucide-react';
+import { Zap, Clock, BarChart3, Gauge, Timer } from 'lucide-react';
 import { API_BASE } from '../config';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { ScrollArea } from './ui/scroll-area';
@@ -31,7 +31,19 @@ export function LlmStatsModal({ open, onClose }: Props) {
     return () => controller.abort();
   }, [open]);
 
-  const maxDailyTokens = stats ? Math.max(...stats.daily.map((d) => d.tokens), 1) : 1;
+  // Fill in all 30 days so the chart has no gaps
+  const dailyFilled = (() => {
+    if (!stats) return [];
+    const map = new Map(stats.daily.map(d => [d.date, d]));
+    const days: { date: string; tokens: number; calls: number }[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 86400000);
+      const key = d.toISOString().split('T')[0];
+      days.push(map.get(key) || { date: key, tokens: 0, calls: 0 });
+    }
+    return days;
+  })();
+  const maxDailyTokens = Math.max(...dailyFilled.map((d) => d.tokens), 1);
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
@@ -54,9 +66,14 @@ export function LlmStatsModal({ open, onClose }: Props) {
                 <div className="px-4 py-3 bg-paper-dark border border-rule">
                   <div className="flex items-center gap-2 mb-1">
                     <Zap size={12} className="text-masthead" />
-                    <span className="text-[10px] uppercase tracking-wider text-ink-muted">Total Tokens</span>
+                    <span className="text-[10px] uppercase tracking-wider text-ink-muted">Tokens</span>
                   </div>
                   <p className="text-2xl font-serif font-bold">{stats.total_tokens.toLocaleString()}</p>
+                  <p className="text-[10px] text-ink-muted mt-1">
+                    <span className="text-ink-light font-medium">{stats.total_prompt_tokens.toLocaleString()}</span> in
+                    {' '}&middot;{' '}
+                    <span className="text-ink-light font-medium">{stats.total_completion_tokens.toLocaleString()}</span> out
+                  </p>
                 </div>
                 <div className="px-4 py-3 bg-paper-dark border border-rule">
                   <div className="flex items-center gap-2 mb-1">
@@ -67,6 +84,16 @@ export function LlmStatsModal({ open, onClose }: Props) {
                 </div>
               </div>
 
+              <div className="px-4 py-3 bg-paper-dark border border-rule">
+                <div className="flex items-center gap-2 mb-1">
+                  <Timer size={12} className="text-masthead" />
+                  <span className="text-[10px] uppercase tracking-wider text-ink-muted">Avg Latency</span>
+                </div>
+                <p className="text-2xl font-serif font-bold">
+                  {stats.avg_latency > 0 ? `${(stats.avg_latency / 1000).toFixed(1)}s` : '—'}
+                </p>
+              </div>
+
               <div>
                 <h4 className="text-[11px] uppercase tracking-[0.15em] font-semibold text-ink-muted mb-3">By Provider</h4>
                 <div className="space-y-2">
@@ -75,6 +102,7 @@ export function LlmStatsModal({ open, onClose }: Props) {
                       <span className="text-sm font-medium">{name}</span>
                       <span className="text-xs text-ink-muted">
                         {data.calls} calls &middot; {data.tokens.toLocaleString()} tokens
+                        {data.avg_latency > 0 && <> &middot; {(data.avg_latency / 1000).toFixed(1)}s avg</>}
                       </span>
                     </div>
                   ))}
@@ -89,6 +117,7 @@ export function LlmStatsModal({ open, onClose }: Props) {
                       <span className="text-sm font-medium capitalize">{name}</span>
                       <span className="text-xs text-ink-muted">
                         {data.calls} calls &middot; {data.tokens.toLocaleString()} tokens
+                        {data.avg_latency > 0 && <> &middot; {(data.avg_latency / 1000).toFixed(1)}s avg</>}
                       </span>
                     </div>
                   ))}
@@ -159,26 +188,28 @@ export function LlmStatsModal({ open, onClose }: Props) {
                 </div>
               )}
 
-              {stats.daily.length > 0 && (
-                <div>
-                  <h4 className="text-[11px] uppercase tracking-[0.15em] font-semibold text-ink-muted mb-3">
-                    Daily Usage (30 days)
-                  </h4>
-                  <div className="flex items-end gap-px h-24">
-                    {stats.daily.map((d) => (
-                      <div key={d.date} className="flex-1 flex flex-col items-center justify-end group relative">
-                        <div
-                          className="w-full bg-masthead/60 hover:bg-masthead transition-colors cursor-default min-h-[2px]"
-                          style={{ height: `${(d.tokens / maxDailyTokens) * 100}%` }}
-                        />
-                        <div className="absolute bottom-full mb-2 hidden group-hover:block bg-ink text-paper text-[10px] px-2 py-1 whitespace-nowrap z-10">
-                          {d.date}: {d.tokens.toLocaleString()} tokens, {d.calls} calls
-                        </div>
+              <div>
+                <h4 className="text-[11px] uppercase tracking-[0.15em] font-semibold text-ink-muted mb-3">
+                  Daily Usage (30 days)
+                </h4>
+                <div className="flex items-end gap-[3px] h-32 border-b border-rule/30 pt-2">
+                  {dailyFilled.map((d) => (
+                    <div key={d.date} className="flex-1 flex flex-col items-center justify-end group relative h-full">
+                      <div
+                        className={`w-full rounded-t-sm transition-colors cursor-default ${
+                          d.tokens > 0
+                            ? 'bg-masthead/60 hover:bg-masthead'
+                            : 'bg-ink-muted/8 hover:bg-ink-muted/15'
+                        }`}
+                        style={{ height: d.tokens > 0 ? `${Math.max((d.tokens / maxDailyTokens) * 100, 6)}%` : '3%' }}
+                      />
+                      <div className="absolute bottom-full mb-2 hidden group-hover:block bg-ink text-paper text-[10px] px-2 py-1 whitespace-nowrap z-10 rounded pointer-events-none">
+                        {d.date}: {d.tokens.toLocaleString()} tokens, {d.calls} calls
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
                 </div>
-              )}
+              </div>
             </div>
           ) : null}
         </ScrollArea>

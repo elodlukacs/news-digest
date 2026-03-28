@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { NavigationBar } from './components/NavigationBar';
 import { SummaryView } from './components/SummaryView';
 import { FeedManager } from './components/FeedManager';
@@ -33,7 +33,7 @@ function App() {
   const { summary, loading, refreshing, error, refresh } = useSummary(activeId, selectedSnapshotId, selectedLlm);
   const { dates, refresh: refreshHistory } = useSummaryHistory(activeId);
   const { messages: chatMessages, sending: chatSending, sendMessage: chatSend } = useChat(summary?.id || null, selectedLlm);
-  const { briefing, loading: briefingLoading, error: briefingError, generate: generateBriefing } = useBriefing();
+  const { briefing, loading: briefingLoading, error: briefingError, generate: generateBriefing } = useBriefing(selectedLlm);
   const { weather, rates, headlines, crypto, hackerNews, releases, trending } = useWidgets();
   const { briefs: homepageBriefs, loading: homepageLoading, refreshing: homepageRefreshing, refresh: homepageRefresh } = useHomepage();
   const { fetchJobs, ...jobsHook } = useJobs();
@@ -91,30 +91,8 @@ function App() {
     refreshHistory();
   }, [refresh, refreshHistory]);
 
-  const getRefreshHandlerRef = useRef<() => void>(() => {});
-
-  const getRefreshHandler = useCallback((): (() => void) => {
-    if (!activeCategory && !showBriefing && !showReleases && !showJobs) {
-      return homepageRefresh;
-    }
-    if (showJobs) {
-      return fetchJobs;
-    }
-    if (showBriefing) {
-      return generateBriefing;
-    }
-    if (activeCategory) {
-      return handleRefresh;
-    }
-    return () => {};
-  }, [activeCategory, showBriefing, showReleases, showJobs, homepageRefresh, generateBriefing, handleRefresh, fetchJobs]);
-
-  useEffect(() => {
-    getRefreshHandlerRef.current = getRefreshHandler();
-  }, [getRefreshHandler]);
-
   const { pulling, pullProgress, containerRef } = usePullToRefresh({
-    onRefresh: () => getRefreshHandlerRef.current(),
+    onRefresh: () => window.location.reload(),
     threshold: 80,
   });
 

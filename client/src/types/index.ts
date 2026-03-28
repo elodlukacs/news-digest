@@ -58,9 +58,12 @@ export interface ProviderQuota {
 
 export interface LlmStats {
   total_calls: number;
+  total_prompt_tokens: number;
+  total_completion_tokens: number;
   total_tokens: number;
-  by_provider: Record<string, { calls: number; tokens: number }>;
-  by_purpose: Record<string, { calls: number; tokens: number }>;
+  avg_latency: number;
+  by_provider: Record<string, { calls: number; tokens: number; avg_latency: number }>;
+  by_purpose: Record<string, { calls: number; tokens: number; avg_latency: number }>;
   daily: { date: string; tokens: number; calls: number }[];
   quotas: ProviderQuota[];
 }

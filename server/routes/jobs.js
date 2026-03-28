@@ -2,7 +2,8 @@ const express = require('express');
 const db = require('../db');
 const { fetchAllSources } = require('../jobs/sources');
 const { filterJobsWithAI } = require('../jobs/ai-filter');
-const { callLLM } = require('../lib/llm');
+const { callLLM: rawCallLLM } = require('../lib/llm');
+const callLLM = (messages, opts) => rawCallLLM(messages, { ...opts, db });
 
 const router = express.Router();
 
