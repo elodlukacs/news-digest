@@ -142,6 +142,7 @@ export interface ReleaseDetail {
 }
 
 export type { CryptoPrice, ForecastDay, Weather, Rates, Headline, Briefing } from './widgets';
+export type { BiasRating, SourceArticle, TechniqueName, TechniqueResult, GutCheckReaction } from './lens';
 
 export interface HomepageArticle {
   title: string;

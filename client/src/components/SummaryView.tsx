@@ -1,6 +1,5 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
-import { RefreshCw, AlertCircle, Clock, Zap, Send, Settings, Trash2, ExternalLink, MoreVertical } from 'lucide-react';
-import { API_BASE } from '../config';
+import { useState, useEffect, useMemo } from 'react';
+import { RefreshCw, AlertCircle, Clock, Zap, Settings, Trash2, ExternalLink, MoreVertical, Search } from 'lucide-react';
 import { SentimentBadge } from './SentimentBadge';
 import { ChatPanel } from './ChatPanel';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
@@ -8,10 +7,11 @@ import { Drawer, DrawerContent } from './ui/drawer';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import { Skeleton } from './ui/skeleton';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from './ui/card';
 import type { Summary, ChatMessage } from '../types';
+import BiasRadarPanel from './bias-radar/BiasRadarPanel';
+import { getBiasRating } from '../utils/biasRatings';
 
 interface ParsedSection {
   title: string;
@@ -165,7 +165,7 @@ interface Props {
 }
 
 export function SummaryView({
-  categoryId,
+  categoryId: _categoryId,
   categoryName,
   summary,
   loading,
@@ -179,43 +179,8 @@ export function SummaryView({
   onChatSend,
 }: Props) {
   const [rateLimitDismissed, setRateLimitDismissed] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
-  const [telegramError, setTelegramError] = useState<string | null>(null);
   const [actionsOpen, setActionsOpen] = useState(false);
-  const sentTimerRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (sentTimerRef.current) clearTimeout(sentTimerRef.current);
-    };
-  }, []);
-
-  const sendToTelegram = async () => {
-    setSending(true);
-    setSent(false);
-    setTelegramError(null);
-    try {
-      const resp = await fetch(`${API_BASE}/telegram/send`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ categoryId }),
-      });
-      if (!resp.ok) { setTelegramError('Request failed'); return; }
-      const data = await resp.json();
-      if (data.success) {
-        setSent(true);
-        if (sentTimerRef.current) clearTimeout(sentTimerRef.current);
-        sentTimerRef.current = setTimeout(() => setSent(false), 3000);
-      } else {
-        setTelegramError(data.error || 'Failed to send');
-      }
-    } catch {
-      setTelegramError('Failed to connect to server');
-    } finally {
-      setSending(false);
-    }
-  };
+  const [radarSection, setRadarSection] = useState<{ title: string; content: string; url: string } | null>(null);
 
   useEffect(() => {
     setRateLimitDismissed(false);
@@ -233,44 +198,6 @@ export function SummaryView({
       <div className="pt-8 pb-4 md:border-b md:border-rule">
         <div className="flex items-center gap-3">
           <h2 className="font-serif text-3xl md:text-4xl font-bold text-masthead tracking-tight">{categoryName}</h2>
-
-          {/* Desktop: inline buttons */}
-            <div className="hidden md:flex items-center gap-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" size="icon" onClick={onManageFeeds}>
-                    <Settings size={18} />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Manage feeds & settings</TooltipContent>
-              </Tooltip>
-              {summary && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" size="icon" onClick={sendToTelegram} disabled={sending}>
-                      <Send size={18} className={sending ? 'animate-pulse' : ''} />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{sent ? 'Sent!' : 'Send to Telegram'}</TooltipContent>
-                </Tooltip>
-              )}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button size="icon" onClick={onRefresh} disabled={busy}>
-                    <RefreshCw size={18} className={busy ? 'animate-spin' : ''} />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{refreshing ? 'Refreshing...' : 'Refresh'}</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" onClick={onDelete}>
-                    <Trash2 size={18} />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Delete category</TooltipContent>
-              </Tooltip>
-            </div>
 
           {/* Mobile: single trigger button */}
           <Button
@@ -290,6 +217,22 @@ export function SummaryView({
             {summary.provider && <>&nbsp;&middot;&nbsp;{summary.provider}</>}
           </p>
         )}
+
+        {/* Desktop: labeled action buttons */}
+        <div className="hidden md:flex items-center gap-2 mt-3">
+          <Button variant="outline" size="sm" className="gap-2" onClick={onRefresh} disabled={busy}>
+            <RefreshCw size={14} className={busy ? 'animate-spin' : ''} />
+            {refreshing ? 'Refreshing...' : 'Refresh the Articles'}
+          </Button>
+          <Button variant="outline" size="sm" className="gap-2" onClick={onManageFeeds}>
+            <Settings size={14} />
+            Feeds & Settings
+          </Button>
+          <Button variant="ghost" size="sm" className="gap-2 text-ink-muted hover:text-accent" onClick={onDelete}>
+            <Trash2 size={14} />
+            Delete this Category
+          </Button>
+        </div>
       </div>
 
       {/* Mobile: bottom drawer with actions */}
@@ -304,16 +247,6 @@ export function SummaryView({
               <Settings size={18} className="text-ink-muted" />
               <span className="text-[14px] font-medium text-ink">Manage feeds & settings</span>
             </button>
-            {summary && (
-              <button
-                onClick={() => { sendToTelegram(); setActionsOpen(false); }}
-                disabled={sending}
-                className="flex items-center gap-4 px-6 py-3.5 active:bg-paper-dark transition-colors"
-              >
-                <Send size={18} className={`text-ink-muted ${sending ? 'animate-pulse' : ''}`} />
-                <span className="text-[14px] font-medium text-ink">{sent ? 'Sent to Telegram!' : 'Send to Telegram'}</span>
-              </button>
-            )}
             <div className="h-px bg-rule/50 mx-6 my-1" />
             <button
               onClick={() => { onDelete(); setActionsOpen(false); }}
@@ -356,25 +289,6 @@ export function SummaryView({
         />
       )}
 
-      {telegramError && (
-        <Dialog open={true} onOpenChange={() => setTelegramError(null)}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2.5">
-                <Send size={16} className="text-accent" />
-                Telegram Error
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <p className="text-sm leading-relaxed">{telegramError}</p>
-              <Button variant="outline" onClick={() => setTelegramError(null)}>
-                Close
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-
       {error && !rateLimitInfo?.isRateLimit && (
         <Alert variant="destructive" className="mt-8">
           <AlertCircle className="h-4 w-4" />
@@ -401,16 +315,25 @@ export function SummaryView({
                     {section.content}
                   </p>
                 </CardContent>
-                {section.url && (
-                  <CardFooter className="px-0 md:px-5">
+                <CardFooter className="px-0 md:px-5 gap-2">
+                  {section.url && (
                     <Button variant="outline" size="sm" className="gap-2" asChild>
                       <a href={section.url} target="_blank" rel="noopener noreferrer">
                         <ExternalLink size={12} />
                         Read full article
                       </a>
                     </Button>
-                  </CardFooter>
-                )}
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => setRadarSection({ title: section.title, content: section.content, url: section.url })}
+                  >
+                    <Search size={14} strokeWidth={1.5} />
+                    Bias Radar
+                  </Button>
+                </CardFooter>
               </Card>
             </article>
           ))}
@@ -436,6 +359,24 @@ export function SummaryView({
         <div className="py-24 text-center">
           <p className="font-serif text-xl text-ink-muted italic">Click refresh to load the latest summary</p>
         </div>
+      )}
+
+      {radarSection && (
+        <BiasRadarPanel
+          articleId={radarSection.url || radarSection.title}
+          headline={radarSection.title}
+          content={radarSection.content}
+          currentArticle={{
+            id: radarSection.url || radarSection.title,
+            title: radarSection.title,
+            url: radarSection.url,
+            source: categoryName,
+            biasRating: radarSection.url ? getBiasRating(radarSection.url) : 'center',
+            publishedAt: summary?.generated_at || '',
+            excerpt: radarSection.content,
+          }}
+          onClose={() => setRadarSection(null)}
+        />
       )}
     </div>
   );

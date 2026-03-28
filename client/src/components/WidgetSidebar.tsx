@@ -21,42 +21,49 @@ export function WidgetSidebar({ weather, rates, headlines, crypto, trending }: P
         {weather && (
           <section>
             <WidgetHeader title="Weather" />
-            <div>
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <WeatherIcon code={weather.code} size={28} />
-                  <div>
-                    <p className="text-2xl font-semibold text-ink leading-none">{weather.temperature}&deg;</p>
-                    <p className="text-[12px] text-ink-muted mt-1">{weather.condition}</p>
-                  </div>
+            <div className="px-4 py-3">
+              {/* Location */}
+              <p className="text-[12px] text-ink-muted uppercase tracking-wider mb-2 text-center">{weather.location}</p>
+
+              {/* Current conditions */}
+              <div className="flex items-center justify-center gap-3">
+                <div className="text-ink-light">
+                  <WeatherIcon code={weather.code} size={36} />
                 </div>
-                <p className="text-[10px] text-ink-muted uppercase tracking-wider">{weather.location}</p>
+                <div>
+                  <p className="text-3xl font-semibold text-ink leading-none tracking-tight">{weather.temperature}<span className="text-lg text-ink-muted">&deg;</span></p>
+                  <p className="text-[12px] text-ink-muted mt-0.5 capitalize">{weather.condition}</p>
+                </div>
               </div>
-              <div className="mt-2 flex gap-4 text-[10px] text-ink-muted">
+
+              {/* Wind & humidity */}
+              <div className="mt-3 pt-2.5 border-t border-rule/50 flex justify-center gap-6 text-[12px] text-ink-muted">
                 <span className="flex items-center gap-1.5">
-                  <Wind size={11} /> {weather.wind} km/h
+                  <Wind size={13} strokeWidth={1.5} /> {weather.wind} km/h
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <Droplets size={11} /> {weather.humidity}%
+                  <Droplets size={13} strokeWidth={1.5} /> {weather.humidity}%
                 </span>
               </div>
-            </div>
-            {weather.forecast.length > 0 && (
-              <div className="pt-3 grid grid-cols-3 gap-2">
-                {weather.forecast.map((day) => (
-                  <div key={day.date} className="text-center">
-                    <p className="text-[10px] uppercase tracking-wider text-ink-muted mb-2">{formatDay(day.date)}</p>
-                    <div className="flex justify-center mb-2 text-ink-muted">
-                      <WeatherIcon code={day.code} size={18} />
+
+              {/* 3-day forecast */}
+              {weather.forecast.length > 0 && (
+                <div className="mt-3 pt-2.5 border-t border-rule/50 grid grid-cols-3 gap-1">
+                  {weather.forecast.map((day) => (
+                    <div key={day.date} className="text-center py-1.5 rounded-md hover:bg-paper-dark transition-colors">
+                      <p className="text-[10px] uppercase tracking-wider text-ink-muted font-medium">{formatDay(day.date)}</p>
+                      <div className="flex justify-center my-1.5 text-ink-light">
+                        <WeatherIcon code={day.code} size={20} />
+                      </div>
+                      <p className="text-[12px] text-ink font-medium leading-none">
+                        {day.high}&deg;
+                        <span className="text-ink-muted font-normal ml-0.5">{day.low}&deg;</span>
+                      </p>
                     </div>
-                    <p className="text-[12px] text-ink font-medium">
-                      {day.high}&deg;
-                      <span className="text-ink-muted font-normal ml-1">{day.low}&deg;</span>
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
           </section>
         )}
 
