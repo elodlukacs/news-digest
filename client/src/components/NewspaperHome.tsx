@@ -9,7 +9,6 @@ import { Button } from './ui/button';
 import { Skeleton } from './ui/skeleton';
 import { Badge } from './ui/badge';
 import BiasRadarPanel from './bias-radar/BiasRadarPanel';
-import { getBiasRating } from '../utils/biasRatings';
 
 /* ─── Types ──────────────────────────────────────────────── */
 
@@ -572,7 +571,6 @@ export function NewspaperHome({
 
       {selectedArticle && (
         <BiasRadarPanel
-          articleId={selectedArticle.link}
           headline={selectedArticle.title}
           content={selectedArticle.excerpt || ''}
           currentArticle={{

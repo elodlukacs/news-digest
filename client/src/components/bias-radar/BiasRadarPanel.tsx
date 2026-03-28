@@ -6,7 +6,6 @@ import BiasRadarDecode from './BiasRadarDecode';
 import type { SourceArticle } from '../../types/lens';
 
 interface BiasRadarPanelProps {
-  articleId: string;
   headline: string;
   content: string;
   currentArticle: SourceArticle;
@@ -17,7 +16,6 @@ interface BiasRadarPanelProps {
 type Tab = 'compare' | 'decode';
 
 export default function BiasRadarPanel({
-  articleId,
   headline,
   content,
   currentArticle,
@@ -76,7 +74,6 @@ export default function BiasRadarPanel({
         <div className="flex-1 overflow-y-auto">
           {activeTab === 'compare' ? (
             <BiasRadarCompare 
-              articleId={articleId} 
               currentArticle={currentArticle}
               searchTitle={headline}
               excludeSource={sourceName}

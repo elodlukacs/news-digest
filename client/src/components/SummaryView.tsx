@@ -11,7 +11,6 @@ import { Skeleton } from './ui/skeleton';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from './ui/card';
 import type { Summary, ChatMessage } from '../types';
 import BiasRadarPanel from './bias-radar/BiasRadarPanel';
-import { getBiasRating } from '../utils/biasRatings';
 
 interface ParsedSection {
   title: string;
@@ -363,7 +362,6 @@ export function SummaryView({
 
       {radarSection && (
         <BiasRadarPanel
-          articleId={radarSection.url || radarSection.title}
           headline={radarSection.title}
           content={radarSection.content}
           currentArticle={{
@@ -371,10 +369,11 @@ export function SummaryView({
             title: radarSection.title,
             url: radarSection.url,
             source: categoryName,
-            biasRating: radarSection.url ? getBiasRating(radarSection.url) : 'center',
+            biasRating: 'center',
             publishedAt: summary?.generated_at || '',
             excerpt: radarSection.content,
           }}
+          sourceName={categoryName}
           onClose={() => setRadarSection(null)}
         />
       )}

@@ -5,13 +5,12 @@ import type { SourceArticle, GutCheckReaction } from '../../types/lens';
 import { API_BASE } from '../../config';
 
 interface BiasRadarCompareProps {
-  articleId: string;
   currentArticle: SourceArticle;
   searchTitle: string;
   excludeSource?: string;
 }
 
-export default function BiasRadarCompare({ articleId, currentArticle, searchTitle, excludeSource }: BiasRadarCompareProps) {
+export default function BiasRadarCompare({ currentArticle, searchTitle, excludeSource }: BiasRadarCompareProps) {
   const [gutDone, setGutDone] = useState(false);
   const [gutReaction, setGutReaction] = useState<GutCheckReaction | null>(null);
   const [related, setRelated] = useState<SourceArticle[]>([]);
