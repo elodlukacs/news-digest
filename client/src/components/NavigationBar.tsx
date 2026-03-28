@@ -354,14 +354,11 @@ export function NavigationBar({
                   <button
                     key={opt.id}
                     type="button"
-                    disabled={opt.disabled}
-                    onClick={() => !opt.disabled && onLlmChange(opt.id)}
+                    onClick={() => onLlmChange(opt.id)}
                     className={`px-2 py-1 text-[10px] font-sans font-medium rounded transition-all duration-200 ${
-                      opt.disabled
-                        ? 'text-ink-muted/30 cursor-not-allowed'
-                        : selectedLlm === opt.id
-                          ? 'bg-masthead text-white shadow-sm'
-                          : 'text-ink-muted cursor-pointer'
+                      selectedLlm === opt.id
+                        ? 'bg-masthead text-white shadow-sm'
+                        : 'text-ink-muted cursor-pointer'
                     }`}
                   >
                     {opt.label}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { NavigationBar } from './components/NavigationBar';
 import { SummaryView } from './components/SummaryView';
 import { FeedManager } from './components/FeedManager';
