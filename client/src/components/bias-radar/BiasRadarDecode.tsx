@@ -72,13 +72,13 @@ export default function BiasRadarDecode({ headline, content }: BiasRadarDecodePr
                   onClick={() => setFeedback('obvious')}
                   className="flex-1 py-2 text-xs border border-rule rounded-md hover:bg-paper-dark"
                 >
-                  👍 I saw it
+                  I saw it
                 </button>
                 <button
                   onClick={() => setFeedback('surprising')}
                   className="flex-1 py-2 text-xs border border-rule rounded-md hover:bg-paper-dark"
                 >
-                  💡 Didn't notice
+                  Did not notice
                 </button>
               </div>
             </div>
@@ -86,15 +86,11 @@ export default function BiasRadarDecode({ headline, content }: BiasRadarDecodePr
 
           {feedback === 'surprising' && (
             <p className="text-xs text-ink bg-paper-dark rounded-md p-3">
-              That's the point — these techniques work <em>because</em> they're subtle. You'll spot it faster next time.
+              That is the point — these techniques work because they are subtle. You will spot it faster next time.
             </p>
           )}
         </>
       )}
     </div>
   );
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> d4e8cf99316be01a4e5ec9703d0f68a97c293789

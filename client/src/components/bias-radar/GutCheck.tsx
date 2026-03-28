@@ -43,8 +43,4 @@ export default function GutCheck({ onComplete }: GutCheckProps) {
       </div>
     </div>
   );
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> d4e8cf99316be01a4e5ec9703d0f68a97c293789

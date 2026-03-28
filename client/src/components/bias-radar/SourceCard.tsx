@@ -48,8 +48,4 @@ export default function SourceCard({ article, isMain }: SourceCardProps) {
       </a>
     </div>
   );
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> d4e8cf99316be01a4e5ec9703d0f68a97c293789

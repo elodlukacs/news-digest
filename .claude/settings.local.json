@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(ls \"/d/Projects/job/news-digest/client/node_modules/.bin/vite\"*)",
+      "Bash(curl -s http://localhost:3001/api/categories)",
+      "Bash(find /d/Projects/job/news-digest -name *Header* -o -name *header*)",
+      "Bash(grep -r \"ollama\\\\|oss\\\\|minimax\\\\|local\" /d/Projects/job/news-digest/client/src /d/Projects/job/news-digest/server --include=*.js --include=*.ts --include=*.tsx)",
+      "Bash(npx tsc:*)",
+      "Bash(curl -s http://localhost:3001/api/providers/local/status)",
+      "Bash(tasklist)",
+      "Bash(netstat -ano)",
+      "Bash(findstr :3001)",
+      "Bash(taskkill /PID 22296 /F)",
+      "Bash(powershell -Command \"Stop-Process -Id 22296 -Force\")",
+      "Bash(node -e \"const db = require\\(''./db''\\); const rows = db.prepare\\(''SELECT COUNT\\(*\\) as count FROM llm_usage''\\).get\\(\\); console.log\\(''llm_usage rows:'', rows\\); const sample = db.prepare\\(''SELECT * FROM llm_usage ORDER BY created_at DESC LIMIT 5''\\).all\\(\\); console.log\\(''Recent entries:'', JSON.stringify\\(sample, null, 2\\)\\);\")",
+      "Bash(node -e \":*)",
+      "Bash(node -e \"const db = require\\(''./db''\\); db.prepare\\(''DELETE FROM llm_usage''\\).run\\(\\); console.log\\(''Cleared test data''\\);\")",
+      "Bash(npm run:*)",
+      "Bash(taskkill //PID 24556 //F)"
+    ]
+  }
+}

@@ -10,10 +10,7 @@ interface BiasRadarPanelProps {
   content: string;
   currentArticle: SourceArticle;
   sourceName: string;
-<<<<<<< HEAD
   language?: string;
-=======
->>>>>>> d4e8cf99316be01a4e5ec9703d0f68a97c293789
   onClose: () => void;
 }
 
@@ -24,10 +21,7 @@ export default function BiasRadarPanel({
   content,
   currentArticle,
   sourceName,
-<<<<<<< HEAD
   language = 'English',
-=======
->>>>>>> d4e8cf99316be01a4e5ec9703d0f68a97c293789
   onClose,
 }: BiasRadarPanelProps) {
   const [activeTab, setActiveTab] = useState<Tab>('compare');
@@ -42,35 +36,18 @@ export default function BiasRadarPanel({
 
   return createPortal(
     <>
-<<<<<<< HEAD
       <div className="fixed inset-0 bg-black/30 z-40" onClick={onClose} />
-=======
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/30 z-40"
-        onClick={onClose}
-      />
->>>>>>> d4e8cf99316be01a4e5ec9703d0f68a97c293789
 
       <div className="fixed inset-y-0 right-0 w-[420px] bg-paper shadow-2xl flex flex-col z-50 border-l border-rule">
         <div className="flex items-center justify-between px-5 py-4 border-b border-rule">
           <div className="flex items-center gap-2">
             <Search size={18} className="text-ink" />
             <span className="font-semibold text-ink">Bias Radar</span>
-<<<<<<< HEAD
             {language !== 'English' && (
               <span className="text-xs text-ink-muted ml-1">({language})</span>
             )}
           </div>
           <button onClick={onClose} className="text-ink-muted hover:text-ink" aria-label="Close">
-=======
-          </div>
-          <button
-            onClick={onClose}
-            className="text-ink-muted hover:text-ink"
-            aria-label="Close"
-          >
->>>>>>> d4e8cf99316be01a4e5ec9703d0f68a97c293789
             <X size={18} />
           </button>
         </div>
@@ -97,10 +74,7 @@ export default function BiasRadarPanel({
               currentArticle={currentArticle}
               searchTitle={headline}
               excludeSource={sourceName}
-<<<<<<< HEAD
               language={language}
-=======
->>>>>>> d4e8cf99316be01a4e5ec9703d0f68a97c293789
             />
           ) : (
             <BiasRadarDecode headline={headline} content={content} />
@@ -110,8 +84,4 @@ export default function BiasRadarPanel({
     </>,
     document.body
   );
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> d4e8cf99316be01a4e5ec9703d0f68a97c293789
