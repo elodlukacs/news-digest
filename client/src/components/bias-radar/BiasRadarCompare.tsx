@@ -8,10 +8,16 @@ interface BiasRadarCompareProps {
   currentArticle: SourceArticle;
   searchTitle: string;
   excludeSource?: string;
+<<<<<<< HEAD
   language?: string;
 }
 
 export default function BiasRadarCompare({ currentArticle, searchTitle, excludeSource, language = 'English' }: BiasRadarCompareProps) {
+=======
+}
+
+export default function BiasRadarCompare({ currentArticle, searchTitle, excludeSource }: BiasRadarCompareProps) {
+>>>>>>> d4e8cf99316be01a4e5ec9703d0f68a97c293789
   const [gutDone, setGutDone] = useState(false);
   const [gutReaction, setGutReaction] = useState<GutCheckReaction | null>(null);
   const [related, setRelated] = useState<SourceArticle[]>([]);
@@ -22,7 +28,10 @@ export default function BiasRadarCompare({ currentArticle, searchTitle, excludeS
       const params = new URLSearchParams({
         articleId: searchTitle,
         source: excludeSource || '',
+<<<<<<< HEAD
         language: language,
+=======
+>>>>>>> d4e8cf99316be01a4e5ec9703d0f68a97c293789
       });
       const r = await fetch(`${API_BASE}/bias-radar/related?${params}`);
       const data = await r.json();
@@ -30,8 +39,14 @@ export default function BiasRadarCompare({ currentArticle, searchTitle, excludeS
     } finally {
       setLoading(false);
     }
+<<<<<<< HEAD
   }, [searchTitle, excludeSource, language]);
 
+=======
+  }, [searchTitle, excludeSource]);
+
+  // Fetch immediately in parallel with gut check
+>>>>>>> d4e8cf99316be01a4e5ec9703d0f68a97c293789
   useEffect(() => {
     fetchRelated();
   }, [fetchRelated]);
@@ -63,7 +78,11 @@ export default function BiasRadarCompare({ currentArticle, searchTitle, excludeS
 
       {!loading && related.length === 0 && (
         <p className="text-sm text-ink-muted text-center py-6">
+<<<<<<< HEAD
           No other sources found covering this story.
+=======
+          No other sources found covering this story in the last 72 hours.
+>>>>>>> d4e8cf99316be01a4e5ec9703d0f68a97c293789
         </p>
       )}
 
@@ -80,4 +99,8 @@ export default function BiasRadarCompare({ currentArticle, searchTitle, excludeS
       )}
     </div>
   );
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> d4e8cf99316be01a4e5ec9703d0f68a97c293789

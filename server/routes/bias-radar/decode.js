@@ -1,9 +1,14 @@
 const express = require('express');
 const { TECHNIQUE_DETECTION_PROMPT, fillPrompt } = require('../../lib/bias-radar/prompts');
+<<<<<<< HEAD
+=======
+const { callLLM } = require('../../lib/llm');
+>>>>>>> d4e8cf99316be01a4e5ec9703d0f68a97c293789
 const db = require('../../db');
 
 const router = express.Router();
 
+<<<<<<< HEAD
 async function callLLMWithJson(messages, opts = {}) {
   const providers = [
     { name: 'Groq', url: 'https://api.groq.com/openai/v1/chat/completions', key: () => process.env.GROQ_API_KEY, model: 'llama-3.3-70b-versatile' },
@@ -51,6 +56,8 @@ async function callLLMWithJson(messages, opts = {}) {
   return { content: data.choices?.[0]?.message?.content || '', provider: `${provider.name} · ${provider.model}`, usage: data.usage };
 }
 
+=======
+>>>>>>> d4e8cf99316be01a4e5ec9703d0f68a97c293789
 router.post('/', async (req, res) => {
   try {
     const { headline, content } = req.body;
@@ -67,10 +74,17 @@ router.post('/', async (req, res) => {
 
     const messages = [{ role: 'user', content: prompt }];
 
+<<<<<<< HEAD
     const result = await callLLMWithJson(messages, {
       purpose: 'bias-radar-decode',
       temperature: 0.2,
       max_tokens: 600,
+=======
+    const result = await callLLM(messages, {
+      purpose: 'bias-radar-decode',
+      temperature: 0.2,
+      db,
+>>>>>>> d4e8cf99316be01a4e5ec9703d0f68a97c293789
     });
 
     let raw = result.content;
@@ -81,7 +95,11 @@ router.post('/', async (req, res) => {
       return res.json(parsed);
     } catch (parseErr) {
       console.error('[BiasRadar] JSON parse error:', parseErr.message, 'Raw:', raw);
+<<<<<<< HEAD
       return res.status(500).json({ error: 'Failed to parse LLM response', raw: raw.substring(0, 500) });
+=======
+      return res.status(500).json({ error: 'Failed to parse LLM response' });
+>>>>>>> d4e8cf99316be01a4e5ec9703d0f68a97c293789
     }
   } catch (err) {
     console.error('[BiasRadar] Decode error:', err.message);
@@ -89,4 +107,8 @@ router.post('/', async (req, res) => {
   }
 });
 
+<<<<<<< HEAD
 module.exports = router;
+=======
+module.exports = router;
+>>>>>>> d4e8cf99316be01a4e5ec9703d0f68a97c293789

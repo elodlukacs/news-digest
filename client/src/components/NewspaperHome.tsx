@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
-import { ExternalLink, Clock, RefreshCw } from 'lucide-react';
+import { useMemo, useState, useRef, useEffect } from 'react';
+import { ExternalLink, Clock, RefreshCw, Search, Send } from 'lucide-react';
+import { API_BASE } from '../config';
 import type { CryptoPrice, HackerNewsItem, Weather, Rates, Headline } from '../types';
 import type { HomepageBrief, HomepageArticle } from '../types';
 import { timeAgo, formatDay } from '../utils/date';
@@ -7,6 +8,7 @@ import { WeatherIcon } from './SharedWidgets';
 import { Button } from './ui/button';
 import { Skeleton } from './ui/skeleton';
 import { Badge } from './ui/badge';
+import BiasRadarPanel from './bias-radar/BiasRadarPanel';
 
 /* ─── Types ──────────────────────────────────────────────── */
 
@@ -54,12 +56,14 @@ function ArticleImage({
 function HeroCard({
   article,
   categoryName,
+  onAnalyze,
 }: {
   article: HomepageArticle;
   categoryName: string;
+  onAnalyze?: (a: HomepageArticle, src: string) => void;
 }) {
   return (
-    <article className="group">
+    <article className="group relative">
       <a href={article.link} target="_blank" rel="noopener noreferrer" className="block relative overflow-hidden bg-paper-dark mb-3">
         <ArticleImage
           src={article.image}
@@ -80,9 +84,18 @@ function HeroCard({
       <p className="text-[15px] md:text-[14px] leading-[1.75] text-ink-light font-[family-name:var(--font-body)] mt-2 line-clamp-5">
         {article.excerpt}
       </p>
-      <div className="mt-2 flex items-center gap-3 text-[10px] text-ink-muted uppercase tracking-wider">
-        <span className="truncate max-w-[120px]">{truncateSource(article.source)}</span>
-        {article.pubDate && <span className="flex items-center gap-1"><Clock size={9} /> {timeAgo(article.pubDate)}</span>}
+      <div className="mt-2 flex items-center justify-between gap-3 text-[10px] text-ink-muted uppercase tracking-wider">
+        <div className="flex items-center gap-3">
+          <span className="truncate max-w-[120px]">{truncateSource(article.source)}</span>
+          {article.pubDate && <span className="flex items-center gap-1"><Clock size={9} /> {timeAgo(article.pubDate)}</span>}
+        </div>
+        <button
+          onClick={() => onAnalyze?.(article, article.source)}
+          className="flex items-center gap-1 px-2 py-0.5 rounded-full border border-rule text-[9px] font-semibold text-ink-muted hover:text-ink hover:border-ink-muted transition-colors normal-case tracking-normal"
+        >
+          <Search size={12} strokeWidth={1.5} />
+          Bias Radar
+        </button>
       </div>
     </article>
   );
@@ -92,11 +105,13 @@ function ImageCard({
   article,
   categoryName,
   onCategoryClick,
+  onAnalyze,
   horizontal = false,
 }: {
   article: HomepageArticle;
   categoryName: string;
   onCategoryClick: () => void;
+  onAnalyze?: (a: HomepageArticle, src: string) => void;
   horizontal?: boolean;
 }) {
   if (horizontal) {
@@ -119,13 +134,20 @@ function ImageCard({
             </h3>
           </a>
           <p className="text-[11px] text-ink-muted mt-1 line-clamp-3 leading-relaxed">{article.excerpt}</p>
+          <button
+            onClick={() => onAnalyze?.(article, article.source)}
+            className="cursor-pointer mt-1.5 flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-rule text-[10px] font-semibold text-ink-muted hover:text-ink hover:border-ink-muted transition-colors"
+          >
+            <Search size={12} strokeWidth={1.5} />
+            Bias Radar
+          </button>
         </div>
       </article>
     );
   }
 
   return (
-    <article className="group">
+    <article className="group relative">
       <a href={article.link} target="_blank" rel="noopener noreferrer" className="block relative overflow-hidden bg-paper-dark mb-2">
         <ArticleImage
           src={article.image}
@@ -144,9 +166,18 @@ function ImageCard({
       <p className="text-[13px] text-ink-light leading-relaxed mt-1.5 line-clamp-4 font-[family-name:var(--font-body)]">
         {article.excerpt}
       </p>
-      <div className="mt-1.5 flex items-center gap-2 text-[10px] text-ink-muted">
-        <span className="truncate max-w-[100px]">{truncateSource(article.source)}</span>
-        {article.pubDate && <span>{timeAgo(article.pubDate)}</span>}
+      <div className="mt-1.5 flex items-center justify-between gap-2 text-[10px] text-ink-muted">
+        <div className="flex items-center gap-2">
+          <span className="truncate max-w-[100px]">{truncateSource(article.source)}</span>
+          {article.pubDate && <span>{timeAgo(article.pubDate)}</span>}
+        </div>
+        <button
+          onClick={() => onAnalyze?.(article, article.source)}
+          className="cursor-pointer flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-rule text-[10px] font-semibold text-ink-muted hover:text-ink hover:border-ink-muted transition-colors"
+        >
+          <Search size={12} strokeWidth={1.5} />
+          Bias Radar
+        </button>
       </div>
     </article>
   );
@@ -156,13 +187,15 @@ function TextCard({
   article,
   categoryName,
   onCategoryClick,
+  onAnalyze,
 }: {
   article: HomepageArticle;
   categoryName: string;
   onCategoryClick: () => void;
+  onAnalyze?: (a: HomepageArticle, src: string) => void;
 }) {
   return (
-    <article className="group">
+    <article className="group relative">
       <Button variant="ghost" onClick={onCategoryClick} className="cursor-pointer h-auto p-0">
         <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-masthead">{categoryName}</span>
       </Button>
@@ -174,9 +207,18 @@ function TextCard({
       <p className="text-[15px] md:text-[13px] text-ink-light leading-relaxed mt-1 line-clamp-4 font-[family-name:var(--font-body)]">
         {article.excerpt}
       </p>
-      <div className="mt-1.5 flex items-center gap-2 text-[10px] text-ink-muted">
-        <span className="truncate max-w-[100px]">{truncateSource(article.source)}</span>
-        {article.pubDate && <span>{timeAgo(article.pubDate)}</span>}
+      <div className="mt-1.5 flex items-center justify-between gap-2 text-[10px] text-ink-muted">
+        <div className="flex items-center gap-2">
+          <span className="truncate max-w-[100px]">{truncateSource(article.source)}</span>
+          {article.pubDate && <span>{timeAgo(article.pubDate)}</span>}
+        </div>
+        <button
+          onClick={() => onAnalyze?.(article, article.source)}
+          className="cursor-pointer flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-rule text-[10px] font-semibold text-ink-muted hover:text-ink hover:border-ink-muted transition-colors"
+        >
+          <Search size={12} strokeWidth={1.5} />
+          Bias Radar
+        </button>
       </div>
     </article>
   );
@@ -229,7 +271,48 @@ export function NewspaperHome({
   headlines,
   hackerNews,
 }: Props) {
+  const [selectedArticle, setSelectedArticle] = useState<HomepageArticle | null>(null);
+  const [selectedSource, setSelectedSource] = useState<string>('');
+  const [tgSending, setTgSending] = useState(false);
+  const [tgSent, setTgSent] = useState(false);
+  const tgTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => { if (tgTimerRef.current) clearTimeout(tgTimerRef.current); };
+  }, []);
+
+  const sendDigestToTelegram = async () => {
+    setTgSending(true);
+    setTgSent(false);
+    try {
+      const resp = await fetch(`${API_BASE}/telegram/digest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await resp.json();
+      if (data.success) {
+        setTgSent(true);
+        if (tgTimerRef.current) clearTimeout(tgTimerRef.current);
+        tgTimerRef.current = setTimeout(() => setTgSent(false), 3000);
+      }
+    } catch {
+      // silent fail
+    } finally {
+      setTgSending(false);
+    }
+  };
+
   const allCards = useMemo(() => flattenBriefs(briefs), [briefs]);
+
+  function handleAnalyze(article: HomepageArticle, source: string) {
+    setSelectedArticle(article);
+    setSelectedSource(source);
+  }
+
+  function handleCloseRadar() {
+    setSelectedArticle(null);
+    setSelectedSource('');
+  }
 
   // Distribute cards across 3 content columns + hero
   // Strategy: round-robin by category so each column has variety
@@ -297,10 +380,16 @@ export function NewspaperHome({
         <p className="text-[10px] text-ink-muted uppercase tracking-wider">
           Latest from {briefs.length} {briefs.length === 1 ? 'category' : 'categories'}
         </p>
-        <Button variant="ghost" size="sm" onClick={onRefresh} disabled={refreshing}>
-          <RefreshCw size={11} className={refreshing ? 'animate-spin' : ''} />
-          {refreshing ? 'Refreshing' : 'Refresh'}
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" onClick={sendDigestToTelegram} disabled={tgSending || tgSent}>
+            <Send size={11} className={tgSending ? 'animate-pulse' : ''} />
+            {tgSent ? 'Sent!' : tgSending ? 'Sending…' : 'Send full briefing to Telegram'}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onRefresh} disabled={refreshing}>
+            <RefreshCw size={11} className={refreshing ? 'animate-spin' : ''} />
+            {refreshing ? 'Refreshing' : 'Refresh'}
+          </Button>
+        </div>
       </div>
 
       {/* ─── Above the Fold: 5-Column Grid ─── */}
@@ -313,6 +402,7 @@ export function NewspaperHome({
                 article={card.article}
                 categoryName={card.categoryName}
                 onCategoryClick={() => onSelectCategory(card.categoryId)}
+                onAnalyze={handleAnalyze}
               />
               {i < col1Cards.length - 1 && <ColumnRule />}
             </div>
@@ -325,6 +415,7 @@ export function NewspaperHome({
             <HeroCard
               article={hero.article}
               categoryName={hero.categoryName}
+              onAnalyze={handleAnalyze}
             />
           )}
 
@@ -338,6 +429,7 @@ export function NewspaperHome({
                     article={card.article}
                     categoryName={card.categoryName}
                     onCategoryClick={() => onSelectCategory(card.categoryId)}
+                    onAnalyze={handleAnalyze}
                   />
                 ))}
               </div>
@@ -354,12 +446,14 @@ export function NewspaperHome({
                   article={card.article}
                   categoryName={card.categoryName}
                   onCategoryClick={() => onSelectCategory(card.categoryId)}
+                  onAnalyze={handleAnalyze}
                 />
               ) : (
                 <TextCard
                   article={card.article}
                   categoryName={card.categoryName}
                   onCategoryClick={() => onSelectCategory(card.categoryId)}
+                  onAnalyze={handleAnalyze}
                 />
               )}
               {i < col3Cards.length - 1 && <ColumnRule />}
@@ -474,6 +568,24 @@ export function NewspaperHome({
           )}
         </div>
       </div>
+
+      {selectedArticle && (
+        <BiasRadarPanel
+          headline={selectedArticle.title}
+          content={selectedArticle.excerpt || ''}
+          currentArticle={{
+            id: selectedArticle.link,
+            title: selectedArticle.title,
+            url: selectedArticle.link,
+            source: selectedSource,
+            biasRating: 'center',
+            publishedAt: selectedArticle.pubDate,
+            excerpt: selectedArticle.excerpt || '',
+          }}
+          sourceName={selectedSource}
+          onClose={handleCloseRadar}
+        />
+      )}
 
     </div>
   );
