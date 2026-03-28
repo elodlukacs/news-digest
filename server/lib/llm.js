@@ -1,6 +1,8 @@
+const env = (name) => process.env[name];
+
 const AI_PROVIDERS = [
-  { id: 'llama', name: 'Groq', url: 'https://api.groq.com/openai/v1/chat/completions', key: () => process.env.GROQ_API_KEY, model: 'openai/gpt-oss-20b' },
-  { id: 'minimax', name: 'OpenRouter', url: 'https://openrouter.ai/api/v1/chat/completions', key: () => process.env.OPENROUTER_API_KEY, model: 'minimax/minimax-m2.7' },
+  { id: 'llama', name: 'Groq', url: 'https://api.groq.com/openai/v1/chat/completions', key: () => env('GROQ_API_KEY'), model: 'openai/gpt-oss-20b' },
+  { id: 'minimax', name: 'OpenRouter', url: 'https://openrouter.ai/api/v1/chat/completions', key: () => env('OPENROUTER_API_KEY'), model: 'minimax/minimax-m2.7' },
 ];
 
 const providerQuotas = {};
