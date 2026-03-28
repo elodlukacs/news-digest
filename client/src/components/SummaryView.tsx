@@ -7,7 +7,6 @@ import { Drawer, DrawerContent } from './ui/drawer';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import { Skeleton } from './ui/skeleton';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from './ui/card';
 import type { Summary, ChatMessage } from '../types';
@@ -166,7 +165,7 @@ interface Props {
 }
 
 export function SummaryView({
-  categoryId,
+  categoryId: _categoryId,
   categoryName,
   summary,
   loading,
