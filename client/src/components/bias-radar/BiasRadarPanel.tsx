@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Search, X } from 'lucide-react';
 import BiasRadarCompare from './BiasRadarCompare';
 import BiasRadarDecode from './BiasRadarDecode';
@@ -31,7 +32,7 @@ export default function BiasRadarPanel({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  return (
+  return createPortal(
     <>
       {/* Backdrop */}
       <div
@@ -78,6 +79,7 @@ export default function BiasRadarPanel({
           )}
         </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 }
