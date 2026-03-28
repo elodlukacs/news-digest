@@ -11,62 +11,87 @@ const STOPWORDS = new Set([
 
 function extractKeywords(title) {
   if (!title) return [];
-  return title
+  
+  const cleaned = title
     .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, '')
-    .split(/\s+/)
-    .filter((w) => w.length > 3 && !STOPWORDS.has(w))
-    .slice(0, 5);
+    .replace(/[^a-z0-9\s]/g, '');
+  
+  const words = cleaned.split(/\s+/).filter((w) => w.length > 3 && !STOPWORDS.has(w));
+  
+  const skipWords = new Set(['breaking', 'update', 'latest', 'news', 'report', 'coverage']);
+  const majorWords = words.filter(w => !skipWords.has(w));
+  
+  if (majorWords.length <= 2) {
+    return words.slice(0, 4);
+  }
+  
+  return majorWords.slice(0, 4);
+}
+
+function buildSmartQuery(title) {
+  const keywords = extractKeywords(title);
+  
+  if (keywords.length >= 3) {
+    const phrase = keywords.slice(0, 3).join(' ');
+    return [phrase, keywords.join(' OR ')];
+  }
+  
+  return [keywords.join(' '), keywords.join(' OR ')];
 }
 
 async function searchGDELT(title) {
-  const keywords = extractKeywords(title);
-  const query = keywords.join(' ');
+  if (!title) return [];
   
-  if (!query) return [];
+  const [exactQuery, orQuery] = buildSmartQuery(title);
+  
+  if (!exactQuery) return [];
 
-  try {
-    const gdeltUrl = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=artlist&maxrecords=15&format=json&sort=DateDesc`;
-    
-    const response = await fetch(gdeltUrl, { timeout: 15000 });
-    if (!response.ok) {
-      console.warn('[GDELT] Request failed:', response.status);
-      return [];
+  const urlsToTry = [
+    `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent('"' + exactQuery + '"')}&mode=artlist&maxrecords=15&format=json&sort=DateDesc`,
+    `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(orQuery)}&mode=artlist&maxrecords=15&format=json&sort=DateDesc`,
+  ];
+
+  for (const gdeltUrl of urlsToTry) {
+    try {
+      const response = await fetch(gdeltUrl, { timeout: 15000 });
+      if (!response.ok) continue;
+
+      const data = await response.json();
+      
+      if (data.articles && data.articles.length > 0) {
+        return data.articles
+          .filter(a => a.url && a.title)
+          .map(a => ({
+            title: a.title,
+            url: a.url,
+            source: a.domain || 'Unknown',
+            biasRating: getBiasRating(a.url) || 'center',
+            publishedAt: a.seendate || '',
+            excerpt: a.socialimage || '',
+            matchType: 'gdelt',
+          }))
+          .slice(0, 10);
+      }
+    } catch {
+      continue;
     }
-
-    const data = await response.json();
-    
-    if (!data.articles || data.articles.length === 0) {
-      return [];
-    }
-
-    return data.articles
-      .filter(a => a.url && a.title)
-      .map(a => ({
-        title: a.title,
-        url: a.url,
-        source: a.domain || 'Unknown',
-        biasRating: getBiasRating(a.url) || 'center',
-        publishedAt: a.seendate || '',
-        excerpt: a.socialimage || '',
-        matchType: 'gdelt',
-      }))
-      .slice(0, 8);
-  } catch (err) {
-    console.warn('[GDELT] Search failed:', err.message);
-    return [];
   }
+
+  return [];
 }
 
 async function searchGoogleNews(title) {
-  const keywords = extractKeywords(title);
-  const query = keywords.slice(0, 2).join(' ');
+  if (!title) return [];
+  
+  const [exactQuery, orQuery] = buildSmartQuery(title);
+  const queriesToTry = [exactQuery, orQuery];
 
-  if (!query) return [];
-
-  try {
-    const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US`;
-    const parsed = await parser.parseURL(url);
+  for (const query of queriesToTry) {
+    if (!query) continue;
+    
+    try {
+      const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US`;
+      const parsed = await parser.parseURL(url);
 
     if (!parsed.items || parsed.items.length === 0) {
       return [];
@@ -95,10 +120,13 @@ async function searchGoogleNews(title) {
           matchType: 'google',
         };
       });
-  } catch (err) {
-    console.warn('[GoogleNews] Search failed:', err.message);
-    return [];
+      break;
+    } catch (err) {
+      console.warn('[GoogleNews] Search failed:', err.message);
+    }
   }
+  
+  return [];
 }
 
 async function searchBingNews(title) {
@@ -149,7 +177,7 @@ async function searchBingNews(title) {
 }
 
 async function searchAllSources(title, excludeSource = null) {
-  const results = [];
+  console.log('[NewsSearch] Searching for:', title, 'excluding:', excludeSource);
 
   const [gdeltResults, googleResults, bingResults] = await Promise.all([
     searchGDELT(title),
@@ -157,12 +185,16 @@ async function searchAllSources(title, excludeSource = null) {
     searchBingNews(title),
   ]);
 
-  results.push(...gdeltResults, ...googleResults, ...bingResults);
+  console.log('[NewsSearch] Results - GDELT:', gdeltResults.length, 'Google:', googleResults.length, 'Bing:', bingResults.length);
+
+  const results = [...gdeltResults, ...googleResults, ...bingResults];
 
   if (results.length === 0) {
     console.log('[NewsSearch] No results from any source for:', title);
     return [];
   }
+
+  console.log('[NewsSearch] Before filtering:', results.length, 'articles');
 
   let filtered = results;
   if (excludeSource) {
@@ -189,6 +221,8 @@ async function searchAllSources(title, excludeSource = null) {
     const biasB = biasOrder[b.biasRating] ?? 2;
     return Math.abs(biasA - 2) - Math.abs(biasB - 2);
   });
+
+  console.log('[NewsSearch] Final results:', biasOrdered.length, 'Returning:', biasOrdered.slice(0, 6).map(a => a.title?.slice(0, 40)));
 
   return biasOrdered.slice(0, 6);
 }
