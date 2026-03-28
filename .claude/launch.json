@@ -1,0 +1,21 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "api-server",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["index.js"],
+      "port": 3001,
+      "autoPort": false,
+      "cwd": "server"
+    },
+    {
+      "name": "vite-client",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["node_modules/vite/bin/vite.js", "--port", "5173"],
+      "port": 5173,
+      "autoPort": false,
+      "cwd": "client"
+    }
+  ]
+}

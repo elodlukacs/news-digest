@@ -7,9 +7,9 @@
   --font-body: 'Lora', Georgia, serif;
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-widget: 'Source Sans 3', 'Inter', system-ui, sans-serif;
-  --color-ink: #09090B;
-  --color-ink-light: #3F3F46;
-  --color-ink-muted: #71717A;
+  --color-ink: #2C2C2E;
+  --color-ink-light: #4A4A4F;
+  --color-ink-muted: #78787E;
   --color-paper: #F5F0E8;
   --color-paper-dark: #EDE7DB;
   --color-rule: #D4D4D8;
@@ -81,9 +81,9 @@ body {
 
 /* Theme: Broadsheet (NYT-inspired, cool tones) */
 [data-theme="broadsheet"] {
-  --color-ink: #1C1917;
-  --color-ink-light: #44403C;
-  --color-ink-muted: #78716C;
+  --color-ink: #2E2B28;
+  --color-ink-light: #504B46;
+  --color-ink-muted: #7D7872;
   --color-paper: #FAFAF9;
   --color-paper-dark: #F5F5F4;
   --color-rule: #D6D3D1;
