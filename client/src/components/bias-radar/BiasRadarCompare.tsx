@@ -5,11 +5,12 @@ import type { SourceArticle, GutCheckReaction } from '../../types/lens';
 import { API_BASE } from '../../config';
 
 interface BiasRadarCompareProps {
-  articleId: string;
   currentArticle: SourceArticle;
+  searchTitle: string;
+  excludeSource?: string;
 }
 
-export default function BiasRadarCompare({ articleId, currentArticle }: BiasRadarCompareProps) {
+export default function BiasRadarCompare({ currentArticle, searchTitle, excludeSource }: BiasRadarCompareProps) {
   const [gutDone, setGutDone] = useState(false);
   const [gutReaction, setGutReaction] = useState<GutCheckReaction | null>(null);
   const [related, setRelated] = useState<SourceArticle[]>([]);
@@ -17,13 +18,17 @@ export default function BiasRadarCompare({ articleId, currentArticle }: BiasRada
 
   const fetchRelated = useCallback(async () => {
     try {
-      const r = await fetch(`${API_BASE}/bias-radar/related?articleId=${encodeURIComponent(articleId)}`);
+      const params = new URLSearchParams({
+        articleId: searchTitle,
+        source: excludeSource || '',
+      });
+      const r = await fetch(`${API_BASE}/bias-radar/related?${params}`);
       const data = await r.json();
       setRelated(data.articles ?? []);
     } finally {
       setLoading(false);
     }
-  }, [articleId]);
+  }, [searchTitle, excludeSource]);
 
   // Fetch immediately in parallel with gut check
   useEffect(() => {

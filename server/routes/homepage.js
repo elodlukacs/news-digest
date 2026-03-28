@@ -76,8 +76,13 @@ router.post('/refresh', async (req, res) => {
     res.json(briefs);
   } catch (err) {
     console.error('Homepage refresh error:', err);
-    res.status(500).json({ error: 'Failed to refresh homepage' });
+    res.status(500).json({ error: 'Failed to refresh homepage data' });
   }
 });
 
+function getCachedBriefs() {
+  return homepageCache.data;
+}
+
 module.exports = router;
+module.exports.getCachedBriefs = getCachedBriefs;
