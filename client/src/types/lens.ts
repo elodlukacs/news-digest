@@ -52,3 +52,19 @@ export interface TechniqueResult {
 }
 
 export type GutCheckReaction = 'outraged' | 'skeptical' | 'interested' | 'bored';
+
+export interface TimelineEntry {
+  articleId: number;
+  source: string;
+  publishedAt: string;
+  title: string;
+  excerpt: string;
+}
+
+export interface TimelineResult {
+  framingShift: string;
+  claimEvolution: string;
+  inconsistency: string;
+  significance: string;
+  entries: TimelineEntry[];
+}

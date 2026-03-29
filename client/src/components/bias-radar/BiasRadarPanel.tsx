@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Search, X } from 'lucide-react';
 import BiasRadarCompare from './BiasRadarCompare';
 import BiasRadarDecode from './BiasRadarDecode';
+import BiasRadarTimeline from './BiasRadarTimeline';
 import type { SourceArticle } from '../../types/lens';
 
 interface BiasRadarPanelProps {
@@ -14,7 +15,7 @@ interface BiasRadarPanelProps {
   onClose: () => void;
 }
 
-type Tab = 'compare' | 'decode';
+type Tab = 'compare' | 'decode' | 'timeline';
 
 export default function BiasRadarPanel({
   headline,
@@ -60,7 +61,7 @@ export default function BiasRadarPanel({
         </div>
 
         <div className="flex border-b border-rule">
-          {(['compare', 'decode'] as Tab[]).map((tab) => (
+          {(['compare', 'decode', 'timeline'] as Tab[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -70,21 +71,25 @@ export default function BiasRadarPanel({
                   : 'text-ink-muted hover:text-ink'
               }`}
             >
-              {tab === 'compare' ? 'Compare Coverage' : 'Decode Article'}
+              {tab === 'compare' ? 'Compare Coverage' : tab === 'decode' ? 'Decode Article' : 'Timeline'}
             </button>
           ))}
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {activeTab === 'compare' ? (
-            <BiasRadarCompare 
+          {activeTab === 'compare' && (
+            <BiasRadarCompare
               currentArticle={currentArticle}
               searchTitle={headline}
               excludeSource={sourceName}
               language={language}
             />
-          ) : (
+          )}
+          {activeTab === 'decode' && (
             <BiasRadarDecode headline={headline} content={content} />
+          )}
+          {activeTab === 'timeline' && (
+            <BiasRadarTimeline articleId={currentArticle.id} />
           )}
         </div>
       </div>

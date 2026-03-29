@@ -24,6 +24,7 @@ app.use('/api/telegram', require('./routes/telegram'));
 app.use('/api/jobs', require('./routes/jobs'));
 app.use('/api/bias-radar/decode', require('./routes/bias-radar/decode'));
 app.use('/api/bias-radar/related', require('./routes/bias-radar/related'));
+app.use('/api/bias-radar/timeline', require('./routes/bias-radar/timeline'));
 
 app.listen(PORT, () => {
   console.log(`News Reader API running on http://localhost:${PORT}`);

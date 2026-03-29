@@ -3,10 +3,15 @@ const db = require('../db');
 const { parser } = require('../lib/rss');
 const { callLLM: rawCallLLM } = require('../lib/llm');
 const validateId = require('../middleware/validateId');
+const { extractKeywords } = require('../lib/bias-radar/topicCluster');
 
 const router = express.Router();
 
 const callLLM = (messages, opts) => rawCallLLM(messages, { ...opts, db });
+
+function deriveTopicId(title) {
+  return extractKeywords(title).sort().slice(0, 5).join('-');
+}
 
 router.get('/:id/summary', validateId, (req, res) => {
   const category = db.prepare('SELECT * FROM categories WHERE id = ?').get(req.params.id);
@@ -125,10 +130,10 @@ router.post('/:id/refresh', validateId, async (req, res) => {
     if (existingCount > 200) {
       db.prepare('DELETE FROM articles WHERE category_id = ? AND id NOT IN (SELECT id FROM articles WHERE category_id = ? ORDER BY fetched_at DESC LIMIT 200)').run(req.params.id, req.params.id);
     }
-    const insertArticle = db.prepare('INSERT INTO articles (category_id, feed_name, title, description, link, pub_date, fetched_at) VALUES (?,?,?,?,?,?,?)');
+    const insertArticle = db.prepare('INSERT INTO articles (category_id, feed_name, title, description, link, pub_date, fetched_at, topic_id, body_text) VALUES (?,?,?,?,?,?,?,?,?)');
     const insertArticles = db.transaction((arts) => {
       for (const a of arts) {
-        insertArticle.run(req.params.id, a.source, a.title, a.description, a.link, a.pubDate, now);
+        insertArticle.run(req.params.id, a.source, a.title, a.description, a.link, a.pubDate, now, deriveTopicId(a.title), a.description);
       }
     });
     insertArticles(allArticles);
