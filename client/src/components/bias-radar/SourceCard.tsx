@@ -1,20 +1,5 @@
-import type { SourceArticle, BiasRating } from '../../types/lens';
-
-const BIAS_LABELS: Record<BiasRating, string> = {
-  left: 'Left',
-  'lean-left': 'Lean Left',
-  center: 'Center',
-  'lean-right': 'Lean Right',
-  right: 'Right',
-};
-
-const BIAS_COLORS: Record<BiasRating, string> = {
-  left: '#2563eb',
-  'lean-left': '#60a5fa',
-  center: '#6b7280',
-  'lean-right': '#f87171',
-  right: '#dc2626',
-};
+import type { SourceArticle } from '../../types/lens';
+import { BIAS_LABELS, BIAS_COLORS } from '../../utils/biasRatings';
 
 interface SourceCardProps {
   article: SourceArticle;
@@ -27,6 +12,9 @@ export default function SourceCard({ article, isMain }: SourceCardProps) {
 
   return (
     <div className={`rounded-lg border p-4 space-y-2 ${isMain ? 'border-ink' : 'border-rule'}`}>
+      {isMain && (
+        <span className="text-[10px] uppercase tracking-wider text-ink-muted font-medium">You're reading this</span>
+      )}
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-ink-muted">{article.source}</span>
         <span

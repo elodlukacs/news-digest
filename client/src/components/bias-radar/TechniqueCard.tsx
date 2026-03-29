@@ -6,6 +6,12 @@ const DIFFICULTY_COLORS: Record<string, { bg: string; text: string }> = {
   hard: { bg: '#fee2e2', text: '#b91c1c' },
 };
 
+const CONFIDENCE_LABELS: Record<string, string> = {
+  high: '\u25CF High',
+  medium: '\u25D0 Medium',
+  low: '\u25CB Low',
+};
+
 interface TechniqueCardProps {
   result: TechniqueResult;
 }
@@ -42,6 +48,12 @@ export default function TechniqueCard({ result }: TechniqueCardProps) {
       </blockquote>
 
       <p className="text-sm text-ink">{result.explanation}</p>
+
+      {result.confidence && (
+        <p className="text-xs text-ink-muted">
+          Confidence: {CONFIDENCE_LABELS[result.confidence] ?? result.confidence}
+        </p>
+      )}
     </div>
   );
 }

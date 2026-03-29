@@ -84,9 +84,15 @@ export default function BiasRadarDecode({ headline, content }: BiasRadarDecodePr
             </div>
           )}
 
+          {feedback === 'obvious' && (
+            <p className="text-xs text-ink bg-paper-dark rounded-md p-3">
+              Good eye! You spotted it without help.
+            </p>
+          )}
+
           {feedback === 'surprising' && (
             <p className="text-xs text-ink bg-paper-dark rounded-md p-3">
-              That's the point — these techniques work <em>because</em> they're subtle. You'll spot it faster next time.
+              That's the point — these techniques work best when unnoticed. You'll spot it faster next time.
             </p>
           )}
         </>

@@ -16,6 +16,7 @@ export default function GutCheck({ onComplete }: GutCheckProps) {
   const [selected, setSelected] = useState<GutCheckReaction | null>(null);
 
   function handleSelect(value: GutCheckReaction) {
+    if (selected) return;
     setSelected(value);
     onComplete(value);
   }
@@ -41,6 +42,9 @@ export default function GutCheck({ onComplete }: GutCheckProps) {
           </button>
         ))}
       </div>
+      {selected && (
+        <p className="text-xs text-ink-muted mt-2">Got it. Loading other perspectives...</p>
+      )}
     </div>
   );
 }
