@@ -83,9 +83,49 @@ Rules:
 - If the coverage is consistent and the story simply developed naturally, say so clearly.
 - Do NOT speculate about editorial intent — describe what changed, not why.`;
 
+const STEELMAN_PROMPT = `The user has read the following article and holds this position:
+
+"{{USER_POSITION}}"
+
+Your task: Generate the strongest, most charitable counter-argument to their view. This is a steelman, not a strawman.
+
+The counter-argument must:
+- Acknowledge what is genuinely valid or understandable in their position
+- Present the best available evidence and logic for the opposing view
+- Avoid caricature, exaggeration, or bad faith framing
+- Be 3-4 sentences maximum
+
+Respond in this exact format:
+Counter-argument: [your response]
+Question: [One open question the user should sit with — a question that doesn't have an easy answer]
+
+Do NOT state which side you find more convincing. Do NOT imply the user is wrong to hold their view.
+
+ARTICLE CONTEXT:
+{{ARTICLE}}`;
+
+const MISSING_STORY_PROMPT = `You have access to this week's top headlines from a news digest feed:
+
+{{HEADLINES}}
+
+Identify 2-3 significant ongoing stories or topics that received notably little coverage this week, relative to their likely real-world significance.
+
+For each under-covered story:
+- STORY: What is it? Brief factual description.
+- WHY UNDERREPORTED: What structural reason might explain the low coverage? (editorial priorities, complexity, lack of dramatic visuals, political sensitivity, story fatigue, competing news cycles — pick the most plausible, not the most conspiratorial)
+- QUESTION TO ASK: What should a well-informed reader be asking about this topic right now?
+
+Rules:
+- Be specific. Reference real events and real omissions.
+- Avoid conspiracy framing — favor structural, institutional explanations over malicious intent.
+- Keep each entry to 3-4 sentences.
+- Output as a valid JSON array: [{"story": "...", "whyUnderreported": "...", "questionToAsk": "..."}]`;
+
 module.exports = {
   TECHNIQUE_DETECTION_PROMPT,
   FRAMING_ANALYSIS_PROMPT,
   TIMELINE_CHECK_PROMPT,
+  STEELMAN_PROMPT,
+  MISSING_STORY_PROMPT,
   fillPrompt,
 };

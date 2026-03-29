@@ -53,6 +53,11 @@ export interface TechniqueResult {
 
 export type GutCheckReaction = 'outraged' | 'skeptical' | 'interested' | 'bored';
 
+export interface SteelmanResponse {
+  counterArgument: string;
+  followUpQuestion: string;
+}
+
 export interface TimelineEntry {
   articleId: number;
   source: string;

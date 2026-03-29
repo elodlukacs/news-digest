@@ -1,0 +1,117 @@
+{
+  "name": "Bias Radar — Missing Story",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300],
+      "notes": "Every Monday at 08:00"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.API_BASE_URL }}/api/bias-radar/missing-story",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-internal-secret",
+              "value": "={{ $env.INTERNAL_API_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": []
+        },
+        "options": {}
+      },
+      "id": "http-request",
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300],
+      "notes": "POST to bias-radar/missing-story endpoint"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "function escMd(s) { return String(s).replace(/([_*`\\[])/g, '\\\\$1'); }\n\nconst data = $input.all().map(item => item.json);\nconst payload = data[0];\nconst stories = payload.stories || [];\nconst weekArticleCount = payload.weekArticleCount || 0;\n\nlet text;\n\nif (stories.length === 0) {\n  text = '📡 *Bias Radar — Weekly Blind Spots*\\n\\nNo significant coverage gaps found this week.';\n} else {\n  const lines = [\n    '📡 *Bias Radar — What Got Missed This Week*',\n    `_Analyzed ${weekArticleCount} headlines from your feed_`,\n    ''\n  ];\n\n  stories.forEach((story, index) => {\n    lines.push(`*${index + 1}. ${escMd(story.story)}*`);\n    lines.push(`Why underreported: ${escMd(story.whyUnderreported)}`);\n    lines.push(`❓ ${escMd(story.questionToAsk)}`);\n    if (index < stories.length - 1) {\n      lines.push('');\n    }\n  });\n\n  lines.push('');\n  lines.push('_Bias Radar · The Daily Brief_');\n\n  text = lines.join('\\n');\n}\n\nreturn [{ json: { text } }];"
+      },
+      "id": "format-message",
+      "name": "Format Telegram Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [750, 300],
+      "notes": "Format API response as Telegram Markdown message with escaping"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "telegram-send",
+      "name": "Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1000, 300],
+      "notes": "Send formatted message to Telegram channel"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Format Telegram Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Telegram Message": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {},
+  "pinData": {}
+}

@@ -26,6 +26,8 @@ app.use('/api/bias-radar/decode', require('./routes/bias-radar/decode'));
 app.use('/api/bias-radar/related', require('./routes/bias-radar/related'));
 app.use('/api/bias-radar/timeline', require('./routes/bias-radar/timeline'));
 app.use('/api/bias-radar/daily-quiz', require('./routes/bias-radar/daily-quiz'));
+app.use('/api/bias-radar/steelman', require('./routes/bias-radar/steelman'));
+app.use('/api/bias-radar/missing-story', require('./routes/bias-radar/missing-story'));
 
 app.listen(PORT, () => {
   console.log(`News Reader API running on http://localhost:${PORT}`);

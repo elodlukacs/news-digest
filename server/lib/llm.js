@@ -7,7 +7,7 @@ const AI_PROVIDERS = [
 
 const providerQuotas = {};
 
-async function callLLM(messages, { purpose = 'unknown', categoryId = null, temperature = 0.3, providerId = null, db } = {}) {
+async function callLLM(messages, { purpose = 'unknown', categoryId = null, temperature = 0.3, max_tokens = 8192, providerId = null, response_format = null, db } = {}) {
   let providers = AI_PROVIDERS.filter(p => p.key());
   if (providers.length === 0) throw new Error('No AI API keys configured. Set GROQ_API_KEY in .env');
 
@@ -15,7 +15,6 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
     const target = AI_PROVIDERS.find(p => p.id === providerId);
     if (!target) throw new Error(`Unknown provider: ${providerId}`);
     if (!target.key()) throw new Error(`API key not configured for ${target.name}. Set the required env var.`);
-    // When explicitly selected, only use that provider — no fallback
     providers = [target];
   }
 
@@ -28,7 +27,13 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
       const response = await fetch(provider.url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${provider.key()}` },
-        body: JSON.stringify({ model: provider.model, messages, temperature, max_tokens: 8192 }),
+        body: JSON.stringify({
+          model: provider.model,
+          messages,
+          temperature,
+          max_tokens,
+          ...(response_format && { response_format }),
+        }),
       });
 
       const parseHeader = (name) => {

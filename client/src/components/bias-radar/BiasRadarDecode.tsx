@@ -7,12 +7,13 @@ import { API_BASE } from '../../config';
 interface BiasRadarDecodeProps {
   headline: string;
   content: string;
+  language?: string;
 }
 
 type State = 'idle' | 'loading' | 'done' | 'error';
 type Stage = 'scanning' | 'guess' | 'result';
 
-export default function BiasRadarDecode({ headline, content }: BiasRadarDecodeProps) {
+export default function BiasRadarDecode({ headline, content, language }: BiasRadarDecodeProps) {
   const [scanState, setScanState] = useState<State>('idle');
   const [stage, setStage] = useState<Stage>('scanning');
   const [result, setResult] = useState<TechniqueResult | null>(null);
@@ -37,7 +38,7 @@ export default function BiasRadarDecode({ headline, content }: BiasRadarDecodePr
       const res = await fetch(`${API_BASE}/bias-radar/decode`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ headline, content }),
+        body: JSON.stringify({ headline, content, language }),
         signal: abortRef.current.signal,
       });
       if (!res.ok) throw new Error('API error');
@@ -84,7 +85,7 @@ export default function BiasRadarDecode({ headline, content }: BiasRadarDecodePr
   if (scanState === 'error') {
     return (
       <div className="px-4 py-4 text-center">
-        <p className="text-sm text-red-500">Something went wrong. Try again?</p>
+        <p style={{ color: 'var(--accent-error-text)' }} className="text-sm">Something went wrong. Try again?</p>
         <button onClick={analyze} className="mt-2 text-sm underline text-ink-muted">
           Retry
         </button>
@@ -110,19 +111,23 @@ export default function BiasRadarDecode({ headline, content }: BiasRadarDecodePr
 
       return (
         <div className="px-4 py-4 space-y-4">
-          <div className={`rounded-lg border px-4 py-3 ${
-            correct 
-              ? 'border-green-200 bg-green-50' 
-              : 'border-orange-200 bg-orange-50'
-          }`}>
-            <p className={`text-sm font-medium ${
-              correct ? 'text-green-800' : 'text-orange-800'
-            }`}>
+          <div
+            style={{
+              backgroundColor: correct ? 'var(--accent-success-bg)' : 'var(--accent-error-bg)',
+              borderColor: correct ? 'var(--accent-success-border)' : 'var(--accent-error-border)',
+            }}
+            className="rounded-lg border px-4 py-3"
+          >
+            <p
+              style={{ color: correct ? 'var(--accent-success-text-strong)' : 'var(--accent-error-text-strong)' }}
+              className="text-sm font-medium"
+            >
               {correct ? 'You got it!' : 'Not quite'}
             </p>
-            <p className={`text-xs mt-0.5 ${
-              correct ? 'text-green-600' : 'text-orange-600'
-            }`}>
+            <p
+              style={{ color: correct ? 'var(--accent-success-text)' : 'var(--accent-error-text)' }}
+              className="text-xs mt-0.5"
+            >
               You guessed: <strong>{userGuess}</strong>
               {!correct && <> · Answer: <strong>{result.technique}</strong></>}
             </p>
