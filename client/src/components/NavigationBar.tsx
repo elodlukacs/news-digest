@@ -202,7 +202,7 @@ export function NavigationBar({
         {/* Row 1: Core reading navigation — scrollable */}
         <nav className="bg-paper border-b border-rule">
           <div className="max-w-[1600px] mx-auto px-6">
-            <div className="flex items-center overflow-x-auto scrollbar-none">
+            <div className="flex items-center justify-start overflow-x-auto scrollbar-none">
               <NavBox label="Home" icon={<Home size={14} />} active={isHome} onClick={onHome} />
               <NavDivider />
 
