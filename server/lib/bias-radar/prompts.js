@@ -58,8 +58,34 @@ function fillPrompt(template, data) {
   return result;
 }
 
+const TIMELINE_CHECK_PROMPT = `You are analyzing how coverage of a specific story has evolved over time from the same news outlet.
+
+STORY TOPIC: {{STORY_TOPIC}}
+
+PREVIOUS ARTICLES (chronological, oldest first):
+{{PREVIOUS_ARTICLES}}
+
+CURRENT ARTICLE:
+{{CURRENT_ARTICLE}}
+
+Identify how the story's framing has shifted. Respond ONLY with a valid JSON object.
+
+{
+  "framingShift": "<How has the angle, tone, or central narrative changed from earliest to most recent coverage? 2-3 sentences.>",
+  "claimEvolution": "<Have specific claims been revised, dropped, or quietly updated? Quote both the original and revised version if found. If none: 'No significant claim changes detected.'>",
+  "inconsistency": "<Does the current framing conflict with how the outlet covered similar events previously? Be specific. If none: 'No inconsistency detected.'>",
+  "significance": "<In 1-2 sentences: why does this shift matter for how readers should interpret the current story?>"
+}
+
+Rules:
+- Quote the articles directly when referencing specific language.
+- Distinguish between legitimate updates-as-facts-emerge vs. unexplained framing shifts.
+- If the coverage is consistent and the story simply developed naturally, say so clearly.
+- Do NOT speculate about editorial intent — describe what changed, not why.`;
+
 module.exports = {
   TECHNIQUE_DETECTION_PROMPT,
   FRAMING_ANALYSIS_PROMPT,
+  TIMELINE_CHECK_PROMPT,
   fillPrompt,
 };
