@@ -3,6 +3,7 @@ import GutCheck from './GutCheck';
 import SourceCard from './SourceCard';
 import type { SourceArticle, GutCheckReaction } from '../../types/lens';
 import { API_BASE } from '../../config';
+import { BIAS_SORT_ORDER } from '../../utils/biasRatings';
 
 interface BiasRadarCompareProps {
   currentArticle: SourceArticle;
@@ -67,7 +68,9 @@ export default function BiasRadarCompare({ currentArticle, searchTitle, excludeS
         </p>
       )}
 
-      {!loading && related.map((article) => (
+      {!loading && [...related].sort((a, b) =>
+        BIAS_SORT_ORDER.indexOf(a.biasRating) - BIAS_SORT_ORDER.indexOf(b.biasRating)
+      ).map((article) => (
         <SourceCard key={article.id} article={article} />
       ))}
 
@@ -78,6 +81,18 @@ export default function BiasRadarCompare({ currentArticle, searchTitle, excludeS
           </p>
         </div>
       )}
+      <p className="text-[10px] text-ink-muted text-center mt-2">
+        Bias ratings from{' '}
+        <a
+          href="https://www.allsides.com/media-bias/ratings"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline"
+        >
+          AllSides.com
+        </a>{' '}
+        (CC BY-NC 4.0)
+      </p>
     </div>
   );
 }

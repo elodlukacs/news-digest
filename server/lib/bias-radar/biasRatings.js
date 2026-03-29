@@ -1,3 +1,8 @@
+// Bias ratings data derived from AllSides Media Bias Ratings (https://www.allsides.com/media-bias/ratings)
+// Licensed under Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)
+
+const BIAS_SORT_ORDER = ['left', 'lean-left', 'center', 'lean-right', 'right', 'unknown'];
+
 const ratings = {
   'nytimes.com': 'lean-left',
   'washingtonpost.com': 'lean-left',
@@ -56,6 +61,7 @@ const BIAS_LABELS = {
   center: 'Center',
   'lean-right': 'Lean Right',
   right: 'Right',
+  unknown: 'Unknown',
 };
 
 const BIAS_COLORS = {
@@ -64,6 +70,7 @@ const BIAS_COLORS = {
   center: '#6b7280',
   'lean-right': '#f87171',
   right: '#dc2626',
+  unknown: '#6b7280',
 };
 
 function getBiasRating(url) {
@@ -78,9 +85,9 @@ function getBiasRating(url) {
       domain = 'wsj.com';
     }
 
-    return ratings[domain] || null;
+    return ratings[domain] || 'unknown';
   } catch {
-    return null;
+    return 'unknown';
   }
 }
 
@@ -98,5 +105,6 @@ module.exports = {
   getBiasColor,
   BIAS_LABELS,
   BIAS_COLORS,
+  BIAS_SORT_ORDER,
   ratings,
 };

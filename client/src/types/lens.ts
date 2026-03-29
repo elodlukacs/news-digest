@@ -1,4 +1,22 @@
-export type BiasRating = 'left' | 'lean-left' | 'center' | 'lean-right' | 'right';
+export type BiasRating = 'left' | 'lean-left' | 'center' | 'lean-right' | 'right' | 'unknown';
+
+export interface DecodeRequest {
+  headline: string;
+  content: string;
+}
+
+export interface DecodeResponse {
+  technique: TechniqueName;
+  displayName: string;
+  evidence: string;
+  explanation: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  confidence: 'high' | 'medium' | 'low';
+}
+
+export interface RelatedResponse {
+  articles: SourceArticle[];
+}
 
 export interface SourceArticle {
   id: string;

@@ -34,11 +34,18 @@ export default function BiasRadarPanel({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
+
   return createPortal(
     <>
       <div className="fixed inset-0 bg-black/30 z-40" onClick={onClose} />
 
-      <div className="fixed inset-y-0 right-0 w-[420px] bg-paper shadow-2xl flex flex-col z-50 border-l border-rule">
+      <div className="fixed inset-y-0 right-0 w-full max-w-[420px] bg-paper shadow-2xl flex flex-col z-50 border-l border-rule">
         <div className="flex items-center justify-between px-5 py-4 border-b border-rule">
           <div className="flex items-center gap-2">
             <Search size={18} className="text-ink" />

@@ -1,4 +1,27 @@
+// Bias ratings data derived from AllSides Media Bias Ratings (https://www.allsides.com/media-bias/ratings)
+// Licensed under Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)
+
 import type { BiasRating } from '../types/lens';
+
+export const BIAS_SORT_ORDER: BiasRating[] = ['left', 'lean-left', 'center', 'lean-right', 'right', 'unknown'];
+
+export const BIAS_LABELS: Record<BiasRating, string> = {
+  left: 'Left',
+  'lean-left': 'Lean Left',
+  center: 'Center',
+  'lean-right': 'Lean Right',
+  right: 'Right',
+  unknown: 'Unknown',
+};
+
+export const BIAS_COLORS: Record<BiasRating, string> = {
+  left: '#2563eb',
+  'lean-left': '#60a5fa',
+  center: '#6b7280',
+  'lean-right': '#f87171',
+  right: '#dc2626',
+  unknown: '#6b7280',
+};
 
 const ratings: Record<string, BiasRating> = {
   'nytimes.com': 'lean-left',
@@ -60,8 +83,8 @@ export function getBiasRating(url: string): BiasRating {
     if (domain.includes('bbc.co.uk')) domain = 'bbc.co.uk';
     else if (domain.includes('wsj.com') || domain.includes('wallstreetjournal.com')) domain = 'wsj.com';
 
-    return ratings[domain] || 'center';
+    return ratings[domain] || 'unknown';
   } catch {
-    return 'center';
+    return 'unknown';
   }
 }
