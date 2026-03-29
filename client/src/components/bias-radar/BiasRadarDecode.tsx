@@ -72,13 +72,13 @@ export default function BiasRadarDecode({ headline, content }: BiasRadarDecodePr
                   onClick={() => setFeedback('obvious')}
                   className="flex-1 py-2 text-xs border border-rule rounded-md hover:bg-paper-dark"
                 >
-                  👍 I saw it
+                  I saw it
                 </button>
                 <button
                   onClick={() => setFeedback('surprising')}
                   className="flex-1 py-2 text-xs border border-rule rounded-md hover:bg-paper-dark"
                 >
-                  💡 Didn't notice
+                  Did not notice
                 </button>
               </div>
             </div>

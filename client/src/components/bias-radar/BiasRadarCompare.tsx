@@ -9,9 +9,10 @@ interface BiasRadarCompareProps {
   currentArticle: SourceArticle;
   searchTitle: string;
   excludeSource?: string;
+  language?: string;
 }
 
-export default function BiasRadarCompare({ currentArticle, searchTitle, excludeSource }: BiasRadarCompareProps) {
+export default function BiasRadarCompare({ currentArticle, searchTitle, excludeSource, language = 'English' }: BiasRadarCompareProps) {
   const [gutDone, setGutDone] = useState(false);
   const [gutReaction, setGutReaction] = useState<GutCheckReaction | null>(null);
   const [related, setRelated] = useState<SourceArticle[]>([]);
@@ -22,6 +23,7 @@ export default function BiasRadarCompare({ currentArticle, searchTitle, excludeS
       const params = new URLSearchParams({
         articleId: searchTitle,
         source: excludeSource || '',
+        language: language,
       });
       const r = await fetch(`${API_BASE}/bias-radar/related?${params}`);
       const data = await r.json();
@@ -29,9 +31,8 @@ export default function BiasRadarCompare({ currentArticle, searchTitle, excludeS
     } finally {
       setLoading(false);
     }
-  }, [searchTitle, excludeSource]);
+  }, [searchTitle, excludeSource, language]);
 
-  // Fetch immediately in parallel with gut check
   useEffect(() => {
     fetchRelated();
   }, [fetchRelated]);
@@ -51,19 +52,19 @@ export default function BiasRadarCompare({ currentArticle, searchTitle, excludeS
     <div className="px-4 py-4 space-y-4">
       {gutReaction && (
         <p className="text-xs text-ink-muted">
-          You felt <strong>{gutReaction}</strong>. Now let's see how different outlets covered this.
+          You felt <strong>{gutReaction}</strong>. Now let as see how different outlets covered this.
         </p>
       )}
 
       <SourceCard article={currentArticle} isMain />
 
       {loading && (
-        <p className="text-sm text-ink-muted text-center py-6">Finding other perspectives…</p>
+        <p className="text-sm text-ink-muted text-center py-6">Finding other perspectives...</p>
       )}
 
       {!loading && related.length === 0 && (
         <p className="text-sm text-ink-muted text-center py-6">
-          No other sources found covering this story in the last 72 hours.
+          No other sources found covering this story.
         </p>
       )}
 

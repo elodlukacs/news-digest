@@ -9,23 +9,41 @@ const STOPWORDS = new Set([
   'should', 'must', 'may', 'might', 'can', 'just', 'them', 'their',
 ]);
 
-function extractKeywords(title) {
+const HUNGARIAN_STOPWORDS = new Set([
+  'a', 'az', 'egy', 'van', 'volt', 'nem', 'és', 'vagy', 'de', 'is',
+  'azt', 'akkor', 'már', 'még', 'neki', 'nekem', 'hozzá', 'vele', 'benne',
+]);
+
+const LANGUAGE_CONFIGS = {
+  English: { hl: 'en-US', gl: 'US' },
+  Hungarian: { hl: 'hu', gl: 'HU' },
+  German: { hl: 'de', gl: 'DE' },
+  French: { hl: 'fr', gl: 'FR' },
+  Spanish: { hl: 'es', gl: 'ES' },
+  Italian: { hl: 'it', gl: 'IT' },
+  Portuguese: { hl: 'pt', gl: 'PT' },
+  Russian: { hl: 'ru', gl: 'RU' },
+  Chinese: { hl: 'zh-CN', gl: 'CN' },
+  Japanese: { hl: 'ja', gl: 'JP' },
+};
+
+function getLanguageConfig(language) {
+  return LANGUAGE_CONFIGS[language] || LANGUAGE_CONFIGS['English'];
+}
+
+function extractKeywords(title, language = 'English') {
   if (!title) return [];
   
   const cleaned = title
     .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, '');
+    .replace(/[^a-záéűőúüűa-z0-9\s]/g, '');
   
-  const words = cleaned.split(/\s+/).filter((w) => w.length > 3 && !STOPWORDS.has(w));
+  const words = cleaned.split(/\s+/).filter((w) => w.length > 3);
   
-  const skipWords = new Set(['breaking', 'update', 'latest', 'news', 'report', 'coverage']);
-  const majorWords = words.filter(w => !skipWords.has(w));
+  const stopwords = language === 'Hungarian' ? HUNGARIAN_STOPWORDS : STOPWORDS;
+  const majorWords = words.filter(w => !stopwords.has(w));
   
-  if (majorWords.length <= 2) {
-    return words.slice(0, 4);
-  }
-  
-  return majorWords.slice(0, 4);
+  return majorWords.slice(0, 5);
 }
 
 function buildSmartQuery(title) {
@@ -39,11 +57,10 @@ function buildSmartQuery(title) {
   return [keywords.join(' '), keywords.join(' OR ')];
 }
 
-async function searchGDELT(title) {
+async function searchGDELT(title, language = 'English') {
   if (!title) return [];
   
   const [exactQuery, orQuery] = buildSmartQuery(title);
-  
   if (!exactQuery) return [];
 
   const urlsToTry = [
@@ -80,47 +97,47 @@ async function searchGDELT(title) {
   return [];
 }
 
-async function searchGoogleNews(title) {
+async function searchGoogleNews(title, language = 'English') {
   if (!title) return [];
   
   const [exactQuery, orQuery] = buildSmartQuery(title);
   const queriesToTry = [exactQuery, orQuery];
+  const langConfig = getLanguageConfig(language);
 
   for (const query of queriesToTry) {
     if (!query) continue;
     
     try {
-      const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US`;
+      const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=${langConfig.hl}&gl=${langConfig.gl}`;
       const parsed = await parser.parseURL(url);
 
-    if (!parsed.items || parsed.items.length === 0) {
-      return [];
-    }
+      if (!parsed.items || parsed.items.length === 0) {
+        continue;
+      }
 
-    return parsed.items
-      .slice(0, 10)
-      .filter((item) => item.link)
-      .map((item) => {
-        let source = 'Google News';
-        try {
-          const url = new URL(item.link);
-          const paths = url.pathname.split('/').filter(Boolean);
-          if (paths.length > 0 && paths[0] !== 'rss' && paths[0] !== 'search') {
-            source = paths[0];
-          }
-        } catch {}
-        
-        return {
-          title: item.title?.replace(/^.*? - /, '') || item.title,
-          url: item.link,
-          source,
-          biasRating: getBiasRating(item.link) || 'center',
-          publishedAt: item.pubDate || '',
-          excerpt: item.contentSnippet?.slice(0, 200) || '',
-          matchType: 'google',
-        };
-      });
-      break;
+      return parsed.items
+        .slice(0, 10)
+        .filter((item) => item.link)
+        .map((item) => {
+          let source = 'Google News';
+          try {
+            const url = new URL(item.link);
+            const paths = url.pathname.split('/').filter(Boolean);
+            if (paths.length > 0 && paths[0] !== 'rss' && paths[0] !== 'search') {
+              source = paths[0];
+            }
+          } catch {}
+          
+          return {
+            title: item.title?.replace(/^.*? - /, '') || item.title,
+            url: item.link,
+            source,
+            biasRating: getBiasRating(item.link) || 'center',
+            publishedAt: item.pubDate || '',
+            excerpt: item.contentSnippet?.slice(0, 200) || '',
+            matchType: 'google',
+          };
+        });
     } catch (err) {
       console.warn('[GoogleNews] Search failed:', err.message);
     }
@@ -129,72 +146,22 @@ async function searchGoogleNews(title) {
   return [];
 }
 
-async function searchBingNews(title) {
-  const keywords = extractKeywords(title);
-  const query = keywords.slice(0, 3).join(' ');
+async function searchAllSources(title, excludeSource = null, language = 'English') {
+  console.log('[NewsSearch] Searching for:', title, 'language:', language, 'excluding:', excludeSource);
 
-  if (!query) return [];
-  
-  const BING_SUBSCRIPTION_KEY = process.env.BING_NEWS_KEY;
-  if (!BING_SUBSCRIPTION_KEY) {
-    return [];
-  }
-
-  try {
-    const url = `https://api.bing.microsoft.com/v7.0/news/search?q=${encodeURIComponent(query)}&count=10&mkt=en-US&freshness=Day`;
-    const response = await fetch(url, {
-      headers: { 'Ocp-Apim-Subscription-Key': BING_SUBSCRIPTION_KEY },
-      timeout: 10000,
-    });
-
-    if (!response.ok) {
-      console.warn('[Bing] API error:', response.status);
-      return [];
-    }
-
-    const data = await response.json();
-    
-    if (!data.value || data.value.length === 0) {
-      return [];
-    }
-
-    return data.value
-      .filter(a => a.url && a.name)
-      .map(a => ({
-        title: a.name,
-        url: a.url,
-        source: a.provider?.[0]?.name || 'Unknown',
-        biasRating: getBiasRating(a.url) || 'center',
-        publishedAt: a.datePublished || '',
-        excerpt: a.description?.slice(0, 200) || '',
-        matchType: 'bing',
-      }))
-      .slice(0, 8);
-  } catch (err) {
-    console.warn('[Bing] Search failed:', err.message);
-    return [];
-  }
-}
-
-async function searchAllSources(title, excludeSource = null) {
-  console.log('[NewsSearch] Searching for:', title, 'excluding:', excludeSource);
-
-  const [gdeltResults, googleResults, bingResults] = await Promise.all([
-    searchGDELT(title),
-    searchGoogleNews(title),
-    searchBingNews(title),
+  const [gdeltResults, googleResults] = await Promise.all([
+    searchGDELT(title, language),
+    searchGoogleNews(title, language),
   ]);
 
-  console.log('[NewsSearch] Results - GDELT:', gdeltResults.length, 'Google:', googleResults.length, 'Bing:', bingResults.length);
+  console.log('[NewsSearch] Results - GDELT:', gdeltResults.length, 'Google:', googleResults.length);
 
-  const results = [...gdeltResults, ...googleResults, ...bingResults];
+  const results = [...gdeltResults, ...googleResults];
 
   if (results.length === 0) {
     console.log('[NewsSearch] No results from any source for:', title);
     return [];
   }
-
-  console.log('[NewsSearch] Before filtering:', results.length, 'articles');
 
   let filtered = results;
   if (excludeSource) {
@@ -222,7 +189,7 @@ async function searchAllSources(title, excludeSource = null) {
     return Math.abs(biasA - 2) - Math.abs(biasB - 2);
   });
 
-  console.log('[NewsSearch] Final results:', biasOrdered.length, 'Returning:', biasOrdered.slice(0, 6).map(a => a.title?.slice(0, 40)));
+  console.log('[NewsSearch] Final results:', biasOrdered.length);
 
   return biasOrdered.slice(0, 6);
 }
@@ -230,7 +197,7 @@ async function searchAllSources(title, excludeSource = null) {
 module.exports = {
   searchGDELT,
   searchGoogleNews,
-  searchBingNews,
   searchAllSources,
   extractKeywords,
+  getLanguageConfig,
 };

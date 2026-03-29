@@ -7,14 +7,15 @@ router.get('/', async (req, res) => {
   try {
     const title = req.query.articleId;
     const source = req.query.source;
+    const language = req.query.language || 'English';
     
-    console.log('[Related] Request:', { title, source });
+    console.log('[Related] Request:', { title, source, language });
     
     if (!title) {
       return res.status(400).json({ error: 'Missing articleId' });
     }
 
-    const related = await searchAllSources(title, source || null);
+    const related = await searchAllSources(title, source || null, language);
     
     console.log('[Related] Returning:', related.length, 'articles');
 
