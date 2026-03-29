@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { NavigationBar } from './components/NavigationBar';
 import { SummaryView } from './components/SummaryView';
 import { FeedManager } from './components/FeedManager';
@@ -9,8 +9,10 @@ import { LlmStatsModal } from './components/LlmStatsModal';
 import { NewspaperHome } from './components/NewspaperHome';
 import { ReleasesPage } from './components/ReleasesPage';
 import { JobsPage } from './components/JobsPage';
+import DailyQuiz from './components/DailyQuiz';
 import { PullToRefreshIndicator } from './components/PullToRefresh';
 import { useCategories, useFeeds, useSummary, useSummaryHistory, useChat, useBriefing, useHomepage, useJobs } from './hooks/useApi';
+import { cleanupOldData } from './utils/trackReading';
 import { useTheme } from './hooks/useTheme';
 import type { Theme } from './hooks/useTheme';
 import { useWidgets } from './hooks/useWidgets';
@@ -25,6 +27,7 @@ function App() {
   const [showBriefing, setShowBriefing] = useState(false);
   const [showReleases, setShowReleases] = useState(false);
   const [showJobs, setShowJobs] = useState(false);
+  const [showDailyQuiz, setShowDailyQuiz] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [selectedSnapshotId, setSelectedSnapshotId] = useState<number | null>(null);
   const [selectedLlm, setSelectedLlm] = useState('llama');
@@ -38,6 +41,10 @@ function App() {
   const { briefs: homepageBriefs, loading: homepageLoading, refreshing: homepageRefreshing, refresh: homepageRefresh } = useHomepage();
   const { fetchJobs, ...jobsHook } = useJobs();
 
+  useEffect(() => {
+    cleanupOldData();
+  }, []);
+
   const activeCategory = categories.find((c) => c.id === activeId);
   const managingCategory = categories.find((c) => c.id === managingId);
 
@@ -46,6 +53,7 @@ function App() {
     setShowBriefing(false);
     setShowReleases(false);
     setShowJobs(false);
+    setShowDailyQuiz(false);
     setSelectedSnapshotId(null);
   }, []);
 
@@ -54,6 +62,7 @@ function App() {
     setShowBriefing(false);
     setShowReleases(false);
     setShowJobs(false);
+    setShowDailyQuiz(false);
     setSelectedSnapshotId(null);
   }, []);
 
@@ -62,6 +71,7 @@ function App() {
     setActiveId(null);
     setShowReleases(false);
     setShowJobs(false);
+    setShowDailyQuiz(false);
     setSelectedSnapshotId(null);
   }, []);
 
@@ -70,6 +80,7 @@ function App() {
     setActiveId(null);
     setShowBriefing(false);
     setShowJobs(false);
+    setShowDailyQuiz(false);
     setSelectedSnapshotId(null);
   }, []);
 
@@ -78,6 +89,16 @@ function App() {
     setActiveId(null);
     setShowBriefing(false);
     setShowReleases(false);
+    setShowDailyQuiz(false);
+    setSelectedSnapshotId(null);
+  }, []);
+
+  const handleDailyQuiz = useCallback(() => {
+    setShowDailyQuiz(true);
+    setActiveId(null);
+    setShowBriefing(false);
+    setShowReleases(false);
+    setShowJobs(false);
     setSelectedSnapshotId(null);
   }, []);
 
@@ -106,10 +127,12 @@ function App() {
         showBriefing={showBriefing}
         showReleases={showReleases}
         showJobs={showJobs}
+        showDailyQuiz={showDailyQuiz}
         onSelect={handleSelectCategory}
         onBriefing={handleBriefing}
         onReleases={handleReleases}
         onJobs={handleJobs}
+        onDailyQuiz={handleDailyQuiz}
         onAdd={addCategory}
         onHome={handleHome}
         theme={theme}
@@ -138,6 +161,10 @@ function App() {
       ) : showJobs ? (
         <div key="jobs" className="max-w-[1600px] mx-auto px-4 pb-12 view-fade">
           <JobsPage {...jobsHook} fetchJobs={fetchJobs} selectedLlm={selectedLlm} />
+        </div>
+      ) : showDailyQuiz ? (
+        <div key="daily-quiz" className="max-w-[1600px] mx-auto px-4 pb-12 view-fade">
+          <DailyQuiz />
         </div>
       ) : showReleases ? (
         <div key="releases" className="max-w-[1600px] mx-auto px-4 pb-12 view-fade">

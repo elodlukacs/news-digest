@@ -2,6 +2,8 @@
 @import "tailwindcss";
 @plugin "tailwindcss-animate";
 
+@custom-variant dark (&:where([data-theme="evening"] *));
+
 @theme {
   --font-serif: 'Playfair Display', Georgia, serif;
   --font-body: 'Libre Franklin', system-ui, sans-serif;

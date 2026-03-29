@@ -9,6 +9,15 @@ import { Button } from './ui/button';
 import { Skeleton } from './ui/skeleton';
 import { Badge } from './ui/badge';
 import BiasRadarPanel from './bias-radar/BiasRadarPanel';
+import { trackArticleOpen } from '../utils/trackReading';
+
+function handleArticleClick(article: HomepageArticle) {
+  trackArticleOpen({
+    url: article.link,
+    source: article.source,
+    title: article.title,
+  });
+}
 
 /* ─── Types ──────────────────────────────────────────────── */
 
@@ -64,7 +73,7 @@ function HeroCard({
 }) {
   return (
     <article className="group relative">
-      <a href={article.link} target="_blank" rel="noopener noreferrer" className="block relative overflow-hidden bg-paper-dark mb-3">
+      <a href={article.link} target="_blank" rel="noopener noreferrer" onClick={() => handleArticleClick(article)} className="block relative overflow-hidden bg-paper-dark mb-3">
         <ArticleImage
           src={article.image}
           alt={article.title}
@@ -76,7 +85,7 @@ function HeroCard({
           </Badge>
         </div>
       </a>
-      <a href={article.link} target="_blank" rel="noopener noreferrer" className="block cursor-pointer">
+      <a href={article.link} target="_blank" rel="noopener noreferrer" onClick={() => handleArticleClick(article)} className="block cursor-pointer">
         <h2 className="font-serif text-2xl md:text-xl xl:text-2xl font-black leading-tight text-ink hover:text-masthead transition-colors">
           {article.title}
         </h2>
@@ -117,7 +126,7 @@ function ImageCard({
   if (horizontal) {
     return (
       <article className="group flex gap-3">
-        <a href={article.link} target="_blank" rel="noopener noreferrer" className="w-28 h-20 shrink-0 overflow-hidden bg-paper-dark block">
+        <a href={article.link} target="_blank" rel="noopener noreferrer" onClick={() => handleArticleClick(article)} className="w-28 h-20 shrink-0 overflow-hidden bg-paper-dark block">
           <ArticleImage
             src={article.image}
             alt={article.title}
@@ -128,7 +137,7 @@ function ImageCard({
           <Button variant="ghost" onClick={onCategoryClick} className="cursor-pointer h-auto p-0">
             <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-masthead">{categoryName}</span>
           </Button>
-          <a href={article.link} target="_blank" rel="noopener noreferrer" className="block cursor-pointer">
+          <a href={article.link} target="_blank" rel="noopener noreferrer" onClick={() => handleArticleClick(article)} className="block cursor-pointer">
             <h3 className="font-serif text-sm font-bold text-ink leading-snug mt-0.5 hover:text-masthead transition-colors line-clamp-2">
               {article.title}
             </h3>
@@ -158,7 +167,7 @@ function ImageCard({
       <Button variant="ghost" onClick={onCategoryClick} className="cursor-pointer h-auto p-0">
         <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-masthead">{categoryName}</span>
       </Button>
-      <a href={article.link} target="_blank" rel="noopener noreferrer" className="block cursor-pointer">
+      <a href={article.link} target="_blank" rel="noopener noreferrer" onClick={() => handleArticleClick(article)} className="block cursor-pointer">
         <h3 className="font-serif text-base font-bold text-ink leading-snug mt-0.5 hover:text-masthead transition-colors">
           {article.title}
         </h3>
@@ -199,7 +208,7 @@ function TextCard({
       <Button variant="ghost" onClick={onCategoryClick} className="cursor-pointer h-auto p-0">
         <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-masthead">{categoryName}</span>
       </Button>
-      <a href={article.link} target="_blank" rel="noopener noreferrer" className="block cursor-pointer">
+      <a href={article.link} target="_blank" rel="noopener noreferrer" onClick={() => handleArticleClick(article)} className="block cursor-pointer">
         <h3 className="font-serif text-lg md:text-[15px] font-bold text-ink leading-snug mt-0.5 hover:text-masthead transition-colors">
           {article.title}
         </h3>

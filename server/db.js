@@ -102,6 +102,10 @@ db.exec(`
   );
 `);
 
+try { db.exec(`ALTER TABLE categories ADD COLUMN custom_prompt TEXT DEFAULT ''`); } catch (e) {}
+try { db.exec(`ALTER TABLE categories ADD COLUMN language TEXT DEFAULT 'English'`); } catch (e) {}
+try { db.exec(`ALTER TABLE articles ADD COLUMN topic_id TEXT DEFAULT ''`); } catch (e) {}
+
 db.exec(`
   CREATE INDEX IF NOT EXISTS idx_sh_cat_date ON summary_history(category_id, date_key);
   CREATE INDEX IF NOT EXISTS idx_articles_cat ON articles(category_id);
@@ -113,10 +117,6 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_articles_topic ON articles(topic_id);
   CREATE INDEX IF NOT EXISTS idx_articles_source_topic ON articles(feed_name, topic_id, pub_date);
 `);
-
-try { db.exec(`ALTER TABLE categories ADD COLUMN custom_prompt TEXT DEFAULT ''`); } catch (e) {}
-try { db.exec(`ALTER TABLE categories ADD COLUMN language TEXT DEFAULT 'English'`); } catch (e) {}
-try { db.exec(`ALTER TABLE articles ADD COLUMN topic_id TEXT DEFAULT ''`); } catch (e) {}
 try { db.exec(`ALTER TABLE articles ADD COLUMN body_text TEXT DEFAULT ''`); } catch (e) {}
 
 db.prepare("INSERT OR IGNORE INTO user_settings (key, value) VALUES ('theme', 'classic')").run();

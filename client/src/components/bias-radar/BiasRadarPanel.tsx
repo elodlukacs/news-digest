@@ -4,6 +4,7 @@ import { Search, X } from 'lucide-react';
 import BiasRadarCompare from './BiasRadarCompare';
 import BiasRadarDecode from './BiasRadarDecode';
 import BiasRadarTimeline from './BiasRadarTimeline';
+import DietReport from './DietReport';
 import type { SourceArticle } from '../../types/lens';
 
 interface BiasRadarPanelProps {
@@ -15,7 +16,7 @@ interface BiasRadarPanelProps {
   onClose: () => void;
 }
 
-type Tab = 'compare' | 'decode' | 'timeline';
+type Tab = 'compare' | 'decode' | 'timeline' | 'diet';
 
 export default function BiasRadarPanel({
   headline,
@@ -61,7 +62,7 @@ export default function BiasRadarPanel({
         </div>
 
         <div className="flex border-b border-rule">
-          {(['compare', 'decode', 'timeline'] as Tab[]).map((tab) => (
+          {(['compare', 'decode', 'timeline', 'diet'] as Tab[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -71,7 +72,7 @@ export default function BiasRadarPanel({
                   : 'text-ink-muted hover:text-ink'
               }`}
             >
-              {tab === 'compare' ? 'Compare Coverage' : tab === 'decode' ? 'Decode Article' : 'Timeline'}
+              {tab === 'compare' ? 'Compare Coverage' : tab === 'decode' ? 'Decode Article' : tab === 'timeline' ? 'Timeline' : tab === 'diet' ? 'Diet Report' : 'Timeline'}
             </button>
           ))}
         </div>
@@ -90,6 +91,9 @@ export default function BiasRadarPanel({
           )}
           {activeTab === 'timeline' && (
             <BiasRadarTimeline articleId={currentArticle.id} />
+          )}
+          {activeTab === 'diet' && (
+            <DietReport />
           )}
         </div>
       </div>

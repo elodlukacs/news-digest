@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, X, Coffee, AlignJustify, Home, Film, BarChart3, Briefcase } from 'lucide-react';
+import { Plus, X, Coffee, AlignJustify, Home, Film, Brain, Briefcase } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -13,10 +13,12 @@ interface Props {
   showBriefing: boolean;
   showReleases: boolean;
   showJobs: boolean;
+  showDailyQuiz: boolean;
   onSelect: (id: number) => void;
   onBriefing: () => void;
   onReleases: () => void;
   onJobs: () => void;
+  onDailyQuiz: () => void;
   onAdd: (name: string) => Promise<void>;
   onHome: () => void;
   theme: string;
@@ -44,10 +46,12 @@ export function NavigationBar({
   showBriefing,
   showReleases,
   showJobs,
+  showDailyQuiz,
   onSelect,
   onBriefing,
   onReleases,
   onJobs,
+  onDailyQuiz,
   onAdd,
   onHome,
   theme,
@@ -79,9 +83,10 @@ export function NavigationBar({
   const briefingAndClose = () => { onBriefing(); setDrawerOpen(false); };
   const releasesAndClose = () => { onReleases(); setDrawerOpen(false); };
   const jobsAndClose = () => { onJobs(); setDrawerOpen(false); };
+  const quizAndClose = () => { onDailyQuiz(); setDrawerOpen(false); };
   const homeAndClose = () => { onHome(); setDrawerOpen(false); };
 
-  const isHome = activeId === null && !showBriefing && !showReleases && !showJobs;
+  const isHome = activeId === null && !showBriefing && !showReleases && !showJobs && !showDailyQuiz;
 
   const todayShort = new Date().toLocaleDateString('en-US', {
     month: 'short',
@@ -183,7 +188,7 @@ export function NavigationBar({
                     className="flex flex-col items-center gap-0.5 cursor-pointer hover:opacity-70 transition-opacity"
                   >
                     <span className="text-[8px] font-sans uppercase tracking-[0.2em] text-ink-muted/60 font-medium">Stats</span>
-                    <BarChart3 size={16} className="text-ink-light" />
+                    <Brain size={16} className="text-ink-light" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>LLM Statistics</TooltipContent>
@@ -203,6 +208,8 @@ export function NavigationBar({
             <NavBox label="Releases" icon={<Film size={15} />} active={showReleases} onClick={onReleases} />
             <NavDivider />
             <NavBox label="Jobs" icon={<Briefcase size={15} />} active={showJobs} onClick={onJobs} />
+            <NavDivider />
+            <NavBox label="Daily Quiz" icon={<Brain size={15} />} active={showDailyQuiz} onClick={onDailyQuiz} />
 
             {categories.length > 0 && <NavDivider />}
 
@@ -282,6 +289,7 @@ export function NavigationBar({
               <DrawerItem label="Morning Briefing" icon={<Coffee size={14} />} active={showBriefing} onClick={briefingAndClose} />
               <DrawerItem label="Releases" icon={<Film size={14} />} active={showReleases} onClick={releasesAndClose} />
               <DrawerItem label="Jobs" icon={<Briefcase size={14} />} active={showJobs} onClick={jobsAndClose} />
+              <DrawerItem label="Daily Quiz" icon={<Brain size={14} />} active={showDailyQuiz} onClick={quizAndClose} />
             </div>
 
             {categories.length > 0 && (
@@ -394,7 +402,7 @@ export function NavigationBar({
                 onClick={() => { onShowStats(); setDrawerOpen(false); }}
                 className="flex items-center gap-2 text-[13px] font-medium text-ink-light hover:text-masthead transition-colors"
               >
-                <BarChart3 size={18} />
+                <Brain size={18} />
                 <span>LLM Usage</span>
               </button>
             </div>
