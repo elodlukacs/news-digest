@@ -310,7 +310,7 @@ export function SummaryView({
                   </div>
                 </CardHeader>
                 <CardContent className="px-0 md:px-5">
-                  <p className="text-[15px] leading-[1.8] text-ink font-[family-name:var(--font-body)]">
+                  <p className="text-[16px] font-semibold leading-[1.8] text-ink font-[family-name:var(--font-body)]">
                     {section.content}
                   </p>
                 </CardContent>

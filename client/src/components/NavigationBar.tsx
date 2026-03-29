@@ -200,7 +200,7 @@ export function NavigationBar({
         {/* ─── Two-row section nav ─── */}
 
         {/* Row 1: Core reading navigation — scrollable */}
-        <nav className="bg-paper border-b border-rule">
+        <nav className="bg-paper border-b border-t border-rule">
           <div className="max-w-[1600px] mx-auto px-6">
             <div className="flex items-center justify-start overflow-x-auto scrollbar-none">
               <NavBox label="Home" icon={<Home size={14} />} active={isHome} onClick={onHome} />
@@ -249,7 +249,7 @@ export function NavigationBar({
         {/* Row 2: Feature tools — static, right-aligned */}
         <nav className="bg-paper-dark border-b border-rule">
           <div className="max-w-[1600px] mx-auto px-6">
-            <div className="flex items-center justify-end gap-1">
+            <div className="flex items-center justify-start gap-1">
               <NavBox label="Briefing" icon={<Coffee size={13} />} active={showBriefing} onClick={onBriefing} compact />
               <NavDivider />
               <NavBox label="Releases" icon={<Film size={13} />} active={showReleases} onClick={onReleases} compact />
