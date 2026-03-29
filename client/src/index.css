@@ -225,6 +225,22 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   animation: fade-in 0.75s ease-out both;
 }
 
+/* ─── Panel slide-in ─── */
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+@keyframes slide-out-right {
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
+}
+.panel-slide-in {
+  animation: slide-in-right 0.3s ease-out both;
+}
+.panel-slide-out {
+  animation: slide-out-right 0.25s ease-in both;
+}
+
 /* Theme: Morning Post (fresh, green) */
 [data-theme="morning"] {
   --color-ink: #2D3436;

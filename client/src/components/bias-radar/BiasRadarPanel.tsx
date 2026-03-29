@@ -69,7 +69,7 @@ export default function BiasRadarPanel({
           role="dialog"
           aria-modal="true"
           aria-label="Bias Radar"
-          className="fixed inset-y-0 right-0 w-full max-w-[420px] bg-paper shadow-2xl flex flex-col z-50 border-l border-rule"
+          className="fixed inset-y-0 right-0 w-full max-w-[560px] bg-paper shadow-2xl flex flex-col z-50 border-l border-rule panel-slide-in"
         >
           <div className="flex items-center justify-between px-5 py-4 border-b border-rule">
             <div className="flex items-center gap-2">
