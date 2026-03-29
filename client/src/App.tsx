@@ -143,7 +143,7 @@ function App() {
       />
 
       {/* Newspaper Home: full-width grid when no category selected */}
-      {!activeCategory && !showBriefing && !showReleases && !showJobs ? (
+      {!activeCategory && !showBriefing && !showReleases && !showJobs && !showDailyQuiz ? (
         <div key="home" className="max-w-[1600px] mx-auto px-4 pb-12 view-fade">
           <NewspaperHome
             briefs={homepageBriefs}
