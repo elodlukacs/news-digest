@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, X, Coffee, AlignJustify, Home, Film, Brain, Briefcase } from 'lucide-react';
+import { Plus, X, Coffee, AlignJustify, Home, Film, Brain, Briefcase, BarChart2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -99,7 +99,6 @@ export function NavigationBar({
   return (
     <>
       <div className="hidden md:block">
-        {/* ═══ Desktop: Unified Masthead ═══ */}
         <div className="max-w-[1600px] mx-auto px-6">
           {/* Masthead: title left, tools right */}
           <div className="flex items-center justify-between pt-4 pb-3">
@@ -198,61 +197,81 @@ export function NavigationBar({
 
         </div>
 
-        {/* Section nav bar */}
-        <nav className="bg-paper-dark border-y border-rule">
-          <div className="max-w-[1600px] mx-auto px-6 flex items-center overflow-x-auto scrollbar-none">
-            <NavBox label="Home" icon={<Home size={15} />} active={isHome} onClick={onHome} />
-            <NavDivider />
-            <NavBox label="Briefing" icon={<Coffee size={15} />} active={showBriefing} onClick={onBriefing} />
-            <NavDivider />
-            <NavBox label="Releases" icon={<Film size={15} />} active={showReleases} onClick={onReleases} />
-            <NavDivider />
-            <NavBox label="Jobs" icon={<Briefcase size={15} />} active={showJobs} onClick={onJobs} />
-            <NavDivider />
-            <NavBox label="Daily Quiz" icon={<Brain size={15} />} active={showDailyQuiz} onClick={onDailyQuiz} />
+        {/* ─── Two-row section nav ─── */}
 
-            {categories.length > 0 && <NavDivider />}
+        {/* Row 1: Core reading navigation — scrollable */}
+        <nav className="bg-paper border-b border-rule">
+          <div className="max-w-[1600px] mx-auto px-6">
+            <div className="flex items-center overflow-x-auto scrollbar-none">
+              <NavBox label="Home" icon={<Home size={14} />} active={isHome} onClick={onHome} />
+              <NavDivider />
 
-            {categories.map((cat, i) => (
-              <div key={cat.id} className="flex items-center shrink-0">
-                {i > 0 && <NavDivider />}
+              {categories.map((cat) => (
                 <NavBox
+                  key={cat.id}
                   label={cat.name}
                   active={cat.id === activeId}
-                  onClick={() => { onSelect(cat.id); }}
+                  onClick={() => onSelect(cat.id)}
                 />
-              </div>
-            ))}
+              ))}
 
-            <NavDivider />
+              {adding ? (
+                <div className="flex items-center gap-1 shrink-0 px-2">
+                  <Input
+                    autoFocus
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleAdd();
+                      if (e.key === 'Escape') { setAdding(false); setNewName(''); }
+                    }}
+                    placeholder="New section..."
+                    className="w-28 px-2 py-0.5 text-[11px] uppercase tracking-wider font-medium border-b border-masthead bg-transparent text-ink placeholder-ink-muted focus:outline-none h-auto"
+                  />
+                  <Button variant="ghost" size="icon" onClick={() => { setAdding(false); setNewName(''); }} className="h-6 w-6">
+                    <X size={11} />
+                  </Button>
+                </div>
+              ) : (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" onClick={() => setAdding(true)} className="h-6 w-6 text-ink-muted/50">
+                      <Plus size={12} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Add section</TooltipContent>
+                </Tooltip>
+              )}
+            </div>
+          </div>
+        </nav>
 
-            {adding ? (
-              <div className="flex items-center gap-1 shrink-0 px-2">
-                <Input
-                  autoFocus
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleAdd();
-                    if (e.key === 'Escape') { setAdding(false); setNewName(''); }
-                  }}
-                  placeholder="New section..."
-                  className="w-28 px-2 py-0.5 text-[11px] uppercase tracking-wider font-medium border-b border-masthead bg-transparent text-ink placeholder-ink-muted focus:outline-none h-auto"
-                />
-                <Button variant="ghost" size="icon" onClick={() => { setAdding(false); setNewName(''); }} className="h-6 w-6">
-                  <X size={11} />
-                </Button>
-              </div>
-            ) : (
+        {/* Row 2: Feature tools — static, right-aligned */}
+        <nav className="bg-paper-dark border-b border-rule">
+          <div className="max-w-[1600px] mx-auto px-6">
+            <div className="flex items-center justify-end gap-1">
+              <NavBox label="Briefing" icon={<Coffee size={13} />} active={showBriefing} onClick={onBriefing} compact />
+              <NavDivider />
+              <NavBox label="Releases" icon={<Film size={13} />} active={showReleases} onClick={onReleases} compact />
+              <NavDivider />
+              <NavBox label="Jobs" icon={<Briefcase size={13} />} active={showJobs} onClick={onJobs} compact />
+              <NavDivider />
+              <NavBox label="Daily Quiz" icon={<Brain size={13} />} active={showDailyQuiz} onClick={onDailyQuiz} compact />
+              <NavDivider />
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" onClick={() => setAdding(true)} className="h-6 w-6 text-ink-muted/50">
-                    <Plus size={12} />
-                  </Button>
+                  <button
+                    type="button"
+                    onClick={onShowStats}
+                    className="shrink-0 px-3 py-2 flex items-center gap-1.5 text-[11px] font-medium tracking-wide cursor-pointer transition-all duration-200 text-ink-muted hover:text-ink"
+                  >
+                    <BarChart2 size={13} />
+                    Stats
+                  </button>
                 </TooltipTrigger>
-                <TooltipContent>Add section</TooltipContent>
+                <TooltipContent>LLM Usage Statistics</TooltipContent>
               </Tooltip>
-            )}
+            </div>
           </div>
         </nav>
 
@@ -319,7 +338,6 @@ export function NavigationBar({
                         )}
                       </div>
                     </button>
-
                   </div>
                 );
               })}
@@ -416,19 +434,22 @@ export function NavigationBar({
 
 /* ─── Shared sub-components ─── */
 
-function NavBox({ label, icon, active, onClick }: {
+function NavBox({ label, icon, active, onClick, compact }: {
   label: string;
   icon?: React.ReactNode;
   active: boolean;
   onClick: () => void;
+  compact?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
-      className={`shrink-0 px-4 py-2.5 flex items-center gap-1.5 text-[13px] tracking-wide cursor-pointer transition-all duration-200 ${
+      className={`shrink-0 flex items-center gap-1.5 cursor-pointer transition-all duration-200 ${
+        compact ? 'px-3 py-2 text-[11px] font-medium' : 'px-4 py-2.5 text-[13px] tracking-wide font-medium'
+      } ${
         active
           ? 'bg-masthead text-white font-semibold'
-          : 'text-ink-muted font-medium hover:bg-paper-dark hover:text-ink'
+          : 'text-ink-muted hover:bg-paper-dark hover:text-ink'
       }`}
     >
       {icon}
@@ -438,7 +459,7 @@ function NavBox({ label, icon, active, onClick }: {
 }
 
 function NavDivider() {
-  return <div className="w-px h-4 bg-rule shrink-0" />;
+  return <div className="w-px h-4 bg-rule shrink-0 mx-0.5" />;
 }
 
 function DrawerItem({ label, icon, active, onClick }: { label: string; icon: React.ReactNode; active: boolean; onClick: () => void }) {
@@ -450,7 +471,7 @@ function DrawerItem({ label, icon, active, onClick }: { label: string; icon: Rea
       }`}
     >
       <span className={active ? 'text-white/60' : 'text-ink-muted'}>{icon}</span>
-      <span className={`text-[12px] uppercase font-semibold font-serif`}>{label}</span>
+      <span className="text-[12px] uppercase font-semibold font-serif">{label}</span>
     </button>
   );
 }
