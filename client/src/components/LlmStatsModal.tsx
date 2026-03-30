@@ -47,7 +47,7 @@ export function LlmStatsModal({ open, onClose }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-lg max-h-[80vh] p-0">
+      <DialogContent className="top-0 left-0 translate-x-0 translate-y-0 max-w-none w-full h-full max-h-none rounded-none p-0 gap-0 data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100 sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-w-lg sm:w-full sm:h-auto sm:max-h-[80vh] sm:rounded-sm sm:data-[state=open]:slide-in-from-left-1/2 sm:data-[state=open]:slide-in-from-top-[48%] sm:data-[state=closed]:slide-out-to-left-1/2 sm:data-[state=closed]:slide-out-to-top-[48%] sm:data-[state=open]:zoom-in-95 sm:data-[state=closed]:zoom-out-95">
         <DialogHeader className="px-6 py-4 border-b border-rule">
           <DialogTitle className="flex items-center gap-2.5">
             <BarChart3 size={16} className="text-masthead" />
@@ -55,7 +55,7 @@ export function LlmStatsModal({ open, onClose }: Props) {
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[calc(80vh-80px)]">
+        <ScrollArea className="h-[calc(100dvh-57px)] sm:h-auto sm:max-h-[calc(80vh-80px)]">
           {!stats && !error ? (
             <div className="p-8 text-center text-ink-muted text-sm">Loading...</div>
           ) : error ? (
