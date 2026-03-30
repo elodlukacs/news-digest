@@ -30,15 +30,75 @@ Always run `cd client && npx tsc --noEmit && npm run build` to check for build-t
 
 ### Code Review After Every Major Step
 
-After completing each major step or phase of work, launch a code review sub-agent (Task tool) to review the changes before moving on. The reviewer should check for: type errors, convention violations, missing error handling, dead code, and consistency with existing patterns. Address any issues found before proceeding to the next step.
+After completing each major step or phase of work, launch a code review sub-agent (Task tool) to review the changes before moving on. Use the appropriate sub-agent:
+- **code-reviewer** — bugs, error handling, dead code, conventions
+- **typescript-reviewer** — type safety, strict mode, import style
+- **frontend-reviewer** — UI/visual quality, theme consistency, responsive design
+- **architect** — structural integrity, data flow, pattern compliance
+
+Address any issues found before proceeding to the next step.
 
 ### UI / Design / CSS Work
 
-For any task involving UI, design, styling, or CSS changes, always load and use the `frontend-design` skill to ensure high-quality, polished results. This applies to new components, layout changes, theme updates, animations, and visual refinements.
+For any task involving UI, design, styling, or CSS changes, always load and use the `frontend-design` skill to ensure high-quality, polished results. After implementation, launch the **frontend-reviewer** sub-agent to verify theme consistency and visual quality.
 
 ### Tests
 
-No test framework is configured. `server/package.json` has `"test": "echo \"Error: no test specified\" && exit 1"`. Do not attempt to run tests.
+No test framework is configured. Do not attempt to run tests.
+
+## Sub-Agent Workflow
+
+### Available Sub-Agents (`.kilo/agent/`)
+
+| Agent | Purpose | When to Use |
+|-------|---------|-------------|
+| `architect` | Structure, data flow, patterns | Before new features, after refactoring |
+| `code-reviewer` | Bugs, quality, conventions | After every implementation step |
+| `typescript-reviewer` | Type safety, strict mode | After writing/changing TypeScript |
+| `frontend-reviewer` | UI/visual, themes, responsive | After any UI/styling change |
+
+### Phased Workflow for New Features
+
+```
+1. RESEARCH → Grep/Glob to find affected files
+2. PLAN → Use /plan command or architect agent
+3. IMPLEMENT → Write code
+4. REVIEW → Launch code-reviewer + typescript-reviewer
+5. UI CHECK → If frontend changed, launch frontend-reviewer
+6. BUILD CHECK → Run tsc --noEmit && npm run build
+```
+
+### Slash Commands (`.kilo/command/`)
+
+| Command | Purpose |
+|---------|---------|
+| `/review` | Combined code + TypeScript review |
+| `/plan <feature>` | Research + plan before implementing |
+| `/check-arch` | Full architecture health check |
+| `/review-ui` | Visual/theme/responsive review |
+
+## Token Optimization
+
+### Context Management
+
+- **Compact between phases**: After research/planning, compact before implementation. Research context is bulky; the plan is the distilled output.
+- **Do NOT compact mid-implementation**: Losing variable names and file paths is costlier than the tokens saved.
+- **Compact after debugging**: Debug traces pollute context. Clear them before moving to next task.
+- **Compact after failed approaches**: Dead-end reasoning wastes context window.
+
+### Sub-Agent Efficiency
+
+- Sub-agents start with fresh context — they don't inherit your full conversation. Give them precise, self-contained instructions.
+- Tell sub-agents exactly what files to review (via `git diff` output or file list). Don't make them search the whole codebase.
+- Reviewers should use `mode: subagent` — they get Read/Grep/Glob/Bash but no Edit/Write. They report, they don't modify.
+- Consolidate review findings: "5 functions missing error handling" as one finding, not five.
+
+### Avoid Wasteful Patterns
+
+- Don't re-read files you already read in the same conversation — reference them by line number.
+- Don't run multiple searches when one well-targeted Grep will do.
+- Don't explain what you're about to do — just do it (unless the user asks).
+- Don't repeat information already in AGENTS.md in your responses.
 
 ## TypeScript Configuration
 
