@@ -10,7 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Skeleton } from './ui/skeleton';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from './ui/card';
 import type { Summary, ChatMessage } from '../types';
-import BiasRadarPanel from './bias-radar/BiasRadarPanel';
+import { BiasRadarPanel } from '../features/mindgames/bias-radar';
 
 interface ParsedSection {
   title: string;

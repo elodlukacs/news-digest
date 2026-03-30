@@ -28,6 +28,16 @@ app.use('/api/bias-radar/timeline', require('./routes/bias-radar/timeline'));
 app.use('/api/bias-radar/daily-quiz', require('./routes/bias-radar/daily-quiz'));
 app.use('/api/bias-radar/steelman', require('./routes/bias-radar/steelman'));
 app.use('/api/bias-radar/missing-story', require('./routes/bias-radar/missing-story'));
+app.use('/api/forensics', require('./routes/forensics'));
+app.use('/api/inoculation', require('./routes/inoculation'));
+app.use('/api/scientist', require('./routes/scientist'));
+app.use('/api/bridge', require('./routes/bridge'));
+app.use('/api/cognitive', require('./routes/narrative'));
+app.use('/api/cognitive/prompts', require('./routes/prompts'));
+app.use('/api/cognitive', require('./routes/disinfo'));
+app.use('/api/compare', require('./routes/compare'));
+app.use('/api/spectrum', require('./routes/spectrum'));
+app.use('/api/progress', require('./routes/cognitive'));
 
 app.listen(PORT, () => {
   console.log(`News Reader API running on http://localhost:${PORT}`);

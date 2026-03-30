@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { Category, Feed, Summary, HistoryEntry, ChatMessage, Job, JobFilters, JobCounts, Briefing, HomepageBrief } from '../types';
+import type { Category, Feed, Summary, HistoryEntry, ChatMessage, Job, JobFilters, JobCounts, Briefing, HomepageBrief, StudyAnalysis, StudyAnalysisEntry, InformationDietResult } from '../types';
 
 import { API_BASE as BASE } from '../config';
 
@@ -383,6 +383,59 @@ export function useHomepage() {
   return { briefs, loading, refreshing, refresh };
 }
 
+export function useStudyAnalysis() {
+  const [result, setResult] = useState<StudyAnalysis | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [history, setHistory] = useState<StudyAnalysisEntry[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+
+  const loadHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    try {
+      const res = await fetch(`${BASE}/forensics/study/history?limit=20`);
+      const data = await res.json();
+      setHistory(Array.isArray(data) ? data : []);
+    } catch { /* ignore */ } finally { setHistoryLoading(false); }
+  }, []);
+
+  const analyze = useCallback(async (headline: string, provider?: string) => {
+    if (headline.trim().length < 10) return;
+    if (abortRef.current) abortRef.current.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    try {
+      const res = await fetch(`${BASE}/forensics/study`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ headline: headline.trim(), provider }),
+        signal: controller.signal,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Analysis failed');
+      }
+      const data = await res.json();
+      if (!controller.signal.aborted) setResult(data);
+    } catch (e) {
+      if ((e as Error).name === 'AbortError') return;
+      setError(e instanceof Error ? e.message : 'Analysis failed');
+    } finally {
+      if (!controller.signal.aborted) setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => abortRef.current?.abort();
+  }, []);
+
+  return { result, loading, error, analyze, history, historyLoading, loadHistory };
+}
+
 const DEFAULT_FILTERS: JobFilters = { status: '', source: '', workType: '', search: '', country: '', aiOnly: false };
 
 export function useJobs() {
@@ -510,4 +563,42 @@ export function useJobs() {
     fetchJobs, updateStatus, aiFilter,
     refresh: () => fetchList(filters, page),
   };
+}
+
+export function useInformationDiet(sources: { name: string; url?: string }[]) {
+  const [result, setResult] = useState<InformationDietResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  const analyze = useCallback(async () => {
+    if (sources.length === 0) return;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch(`${BASE}/bridge/information-diet`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sources }),
+        signal: controller.signal,
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Analysis failed');
+      setResult(await res.json());
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') return;
+      setError(err instanceof Error ? err.message : 'Analysis failed');
+    } finally {
+      if (!controller.signal.aborted) setLoading(false);
+    }
+  }, [sources]);
+
+  useEffect(() => {
+    return () => abortRef.current?.abort();
+  }, []);
+
+  return { result, loading, error, analyze };
 }

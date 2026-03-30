@@ -8,7 +8,7 @@ import { WeatherIcon } from './SharedWidgets';
 import { Button } from './ui/button';
 import { Skeleton } from './ui/skeleton';
 import { Badge } from './ui/badge';
-import BiasRadarPanel from './bias-radar/BiasRadarPanel';
+import { BiasRadarPanel } from '../features/mindgames/bias-radar';
 import { trackArticleOpen } from '../utils/trackReading';
 
 function handleArticleClick(article: HomepageArticle) {
@@ -351,7 +351,7 @@ export function NewspaperHome({
           </div>
           <div className="col-span-2 space-y-4">
             <Skeleton className="h-72 w-full" />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Skeleton className="h-36 w-full" />
               <Skeleton className="h-36 w-full" />
             </div>
@@ -431,7 +431,7 @@ export function NewspaperHome({
           {col2Secondary.length > 0 && (
             <>
               <ColumnRule />
-              <div className={`grid gap-4 ${col2Secondary.length > 1 ? 'grid-cols-2' : ''}`}>
+              <div className={`grid gap-4 ${col2Secondary.length > 1 ? 'grid-cols-1 md:grid-cols-2' : ''}`}>
                 {col2Secondary.map((card, i) => (
                   <ImageCard
                     key={`c2-${card.categoryId}-${i}`}

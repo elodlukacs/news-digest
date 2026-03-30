@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, X, Coffee, AlignJustify, Home, Film, Brain, Briefcase, BarChart2 } from 'lucide-react';
+import { Plus, X, Coffee, AlignJustify, Home, Film, Brain, Briefcase, BarChart2, Shield } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -13,12 +13,12 @@ interface Props {
   showBriefing: boolean;
   showReleases: boolean;
   showJobs: boolean;
-  showDailyQuiz: boolean;
+  showCognitive: boolean;
   onSelect: (id: number) => void;
   onBriefing: () => void;
   onReleases: () => void;
   onJobs: () => void;
-  onDailyQuiz: () => void;
+  onCognitive: () => void;
   onAdd: (name: string) => Promise<void>;
   onHome: () => void;
   theme: string;
@@ -46,12 +46,12 @@ export function NavigationBar({
   showBriefing,
   showReleases,
   showJobs,
-  showDailyQuiz,
+  showCognitive,
   onSelect,
   onBriefing,
   onReleases,
   onJobs,
-  onDailyQuiz,
+  onCognitive,
   onAdd,
   onHome,
   theme,
@@ -83,10 +83,10 @@ export function NavigationBar({
   const briefingAndClose = () => { onBriefing(); setDrawerOpen(false); };
   const releasesAndClose = () => { onReleases(); setDrawerOpen(false); };
   const jobsAndClose = () => { onJobs(); setDrawerOpen(false); };
-  const quizAndClose = () => { onDailyQuiz(); setDrawerOpen(false); };
+  const cognitiveAndClose = () => { onCognitive(); setDrawerOpen(false); };
   const homeAndClose = () => { onHome(); setDrawerOpen(false); };
 
-  const isHome = activeId === null && !showBriefing && !showReleases && !showJobs && !showDailyQuiz;
+  const isHome = activeId === null && !showBriefing && !showReleases && !showJobs && !showCognitive;
 
   const todayShort = new Date().toLocaleDateString('en-US', {
     month: 'short',
@@ -94,7 +94,7 @@ export function NavigationBar({
     year: 'numeric',
   });
 
-  const currentLabel = showJobs ? 'Jobs' : showReleases ? 'Releases' : showBriefing ? 'Briefing' : activeId ? categories.find(c => c.id === activeId)?.name : 'Home';
+  const currentLabel = showJobs ? 'Jobs' : showReleases ? 'Releases' : showBriefing ? 'Briefing' : showCognitive ? 'MindGames' : activeId ? (categories.find(c => c.id === activeId)?.name) : 'Home';
 
   return (
     <>
@@ -256,7 +256,7 @@ export function NavigationBar({
               <NavDivider />
               <NavBox label="Jobs" icon={<Briefcase size={13} />} active={showJobs} onClick={onJobs} compact />
               <NavDivider />
-              <NavBox label="Daily Quiz" icon={<Brain size={13} />} active={showDailyQuiz} onClick={onDailyQuiz} compact />
+              <NavBox label="MindGames" icon={<Shield size={13} />} active={showCognitive} onClick={onCognitive} compact />
               <NavDivider />
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -308,7 +308,7 @@ export function NavigationBar({
               <DrawerItem label="Morning Briefing" icon={<Coffee size={14} />} active={showBriefing} onClick={briefingAndClose} />
               <DrawerItem label="Releases" icon={<Film size={14} />} active={showReleases} onClick={releasesAndClose} />
               <DrawerItem label="Jobs" icon={<Briefcase size={14} />} active={showJobs} onClick={jobsAndClose} />
-              <DrawerItem label="Daily Quiz" icon={<Brain size={14} />} active={showDailyQuiz} onClick={quizAndClose} />
+              <DrawerItem label="MindGames" icon={<Shield size={14} />} active={showCognitive} onClick={cognitiveAndClose} />
             </div>
 
             {categories.length > 0 && (

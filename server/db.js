@@ -100,6 +100,65 @@ db.exec(`
     remote TEXT DEFAULT 'possible',
     filtered_at TEXT NOT NULL
   );
+
+  -- Cognitive Resilience: "Mental Antibody" Dashboard
+  CREATE TABLE IF NOT EXISTS cognitive_users (
+    id TEXT PRIMARY KEY,
+    rethinking_score INTEGER DEFAULT 0,
+    primary_values TEXT DEFAULT '[]',
+    inoculation_level INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS forensic_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL DEFAULT 'default',
+    raw_text TEXT NOT NULL,
+    fallacy_data TEXT NOT NULL DEFAULT '[]',
+    bias_score REAL DEFAULT 0,
+    emotional_intensity INTEGER DEFAULT 0,
+    funnel_stage TEXT DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS rethinking_journal (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL DEFAULT 'default',
+    topic TEXT NOT NULL,
+    initial_confidence INTEGER DEFAULT 50,
+    final_confidence INTEGER DEFAULT 50,
+    shifting_evidence TEXT DEFAULT '',
+    mode TEXT DEFAULT 'scientist',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS inoculation_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL DEFAULT 'default',
+    level TEXT NOT NULL DEFAULT 'trolling',
+    score INTEGER DEFAULT 0,
+    choices TEXT DEFAULT '[]',
+    completed INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS bridge_audits (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL DEFAULT 'default',
+    sources TEXT NOT NULL DEFAULT '[]',
+    siloing_score REAL DEFAULT 0,
+    shared_values TEXT DEFAULT '[]',
+    questions TEXT DEFAULT '[]',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS study_analyses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL DEFAULT 'default',
+    headline TEXT NOT NULL,
+    analysis_data TEXT NOT NULL DEFAULT '{}',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
 `);
 
 try { db.exec(`ALTER TABLE categories ADD COLUMN custom_prompt TEXT DEFAULT ''`); } catch (e) {}
@@ -116,6 +175,13 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_jobs_work_type ON jobs(work_type);
   CREATE INDEX IF NOT EXISTS idx_articles_topic ON articles(topic_id);
   CREATE INDEX IF NOT EXISTS idx_articles_source_topic ON articles(feed_name, topic_id, pub_date);
+  CREATE INDEX IF NOT EXISTS idx_forensic_user ON forensic_history(user_id);
+  CREATE INDEX IF NOT EXISTS idx_forensic_date ON forensic_history(created_at);
+  CREATE INDEX IF NOT EXISTS idx_rethinking_user ON rethinking_journal(user_id);
+  CREATE INDEX IF NOT EXISTS idx_inoculation_user ON inoculation_sessions(user_id);
+  CREATE INDEX IF NOT EXISTS idx_bridge_user ON bridge_audits(user_id);
+  CREATE INDEX IF NOT EXISTS idx_study_user ON study_analyses(user_id);
+  CREATE INDEX IF NOT EXISTS idx_study_date ON study_analyses(created_at);
 `);
 try { db.exec(`ALTER TABLE articles ADD COLUMN body_text TEXT DEFAULT ''`); } catch (e) {}
 

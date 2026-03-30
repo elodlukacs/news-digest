@@ -9,7 +9,7 @@ import { LlmStatsModal } from './components/LlmStatsModal';
 import { NewspaperHome } from './components/NewspaperHome';
 import { ReleasesPage } from './components/ReleasesPage';
 import { JobsPage } from './components/JobsPage';
-import DailyQuiz from './components/DailyQuiz';
+import { CognitiveDashboard } from './features/mindgames';
 import { PullToRefreshIndicator } from './components/PullToRefresh';
 import { useCategories, useFeeds, useSummary, useSummaryHistory, useChat, useBriefing, useHomepage, useJobs } from './hooks/useApi';
 import { cleanupOldData } from './utils/trackReading';
@@ -27,7 +27,7 @@ function App() {
   const [showBriefing, setShowBriefing] = useState(false);
   const [showReleases, setShowReleases] = useState(false);
   const [showJobs, setShowJobs] = useState(false);
-  const [showDailyQuiz, setShowDailyQuiz] = useState(false);
+  const [showCognitive, setShowCognitive] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [selectedSnapshotId, setSelectedSnapshotId] = useState<number | null>(null);
   const [selectedLlm, setSelectedLlm] = useState('llama');
@@ -53,7 +53,8 @@ function App() {
     setShowBriefing(false);
     setShowReleases(false);
     setShowJobs(false);
-    setShowDailyQuiz(false);
+
+    setShowCognitive(false);
     setSelectedSnapshotId(null);
   }, []);
 
@@ -62,7 +63,8 @@ function App() {
     setShowBriefing(false);
     setShowReleases(false);
     setShowJobs(false);
-    setShowDailyQuiz(false);
+
+    setShowCognitive(false);
     setSelectedSnapshotId(null);
   }, []);
 
@@ -71,7 +73,8 @@ function App() {
     setActiveId(null);
     setShowReleases(false);
     setShowJobs(false);
-    setShowDailyQuiz(false);
+
+    setShowCognitive(false);
     setSelectedSnapshotId(null);
   }, []);
 
@@ -80,7 +83,8 @@ function App() {
     setActiveId(null);
     setShowBriefing(false);
     setShowJobs(false);
-    setShowDailyQuiz(false);
+
+    setShowCognitive(false);
     setSelectedSnapshotId(null);
   }, []);
 
@@ -89,16 +93,18 @@ function App() {
     setActiveId(null);
     setShowBriefing(false);
     setShowReleases(false);
-    setShowDailyQuiz(false);
+
+    setShowCognitive(false);
     setSelectedSnapshotId(null);
   }, []);
 
-  const handleDailyQuiz = useCallback(() => {
-    setShowDailyQuiz(true);
+  const handleCognitive = useCallback(() => {
+    setShowCognitive(true);
     setActiveId(null);
     setShowBriefing(false);
     setShowReleases(false);
     setShowJobs(false);
+
     setSelectedSnapshotId(null);
   }, []);
 
@@ -127,12 +133,12 @@ function App() {
         showBriefing={showBriefing}
         showReleases={showReleases}
         showJobs={showJobs}
-        showDailyQuiz={showDailyQuiz}
+        showCognitive={showCognitive}
         onSelect={handleSelectCategory}
         onBriefing={handleBriefing}
         onReleases={handleReleases}
         onJobs={handleJobs}
-        onDailyQuiz={handleDailyQuiz}
+        onCognitive={handleCognitive}
         onAdd={addCategory}
         onHome={handleHome}
         theme={theme}
@@ -143,7 +149,7 @@ function App() {
       />
 
       {/* Newspaper Home: full-width grid when no category selected */}
-      {!activeCategory && !showBriefing && !showReleases && !showJobs && !showDailyQuiz ? (
+      {!activeCategory && !showBriefing && !showReleases && !showJobs && !showCognitive ? (
         <div key="home" className="max-w-[1600px] mx-auto px-4 pb-12 view-fade">
           <NewspaperHome
             briefs={homepageBriefs}
@@ -162,9 +168,9 @@ function App() {
         <div key="jobs" className="max-w-[1600px] mx-auto px-4 pb-12 view-fade">
           <JobsPage {...jobsHook} fetchJobs={fetchJobs} selectedLlm={selectedLlm} />
         </div>
-      ) : showDailyQuiz ? (
-        <div key="daily-quiz" className="max-w-[1600px] mx-auto px-4 pb-12 view-fade">
-          <DailyQuiz />
+      ) : showCognitive ? (
+        <div key="cognitive" className="max-w-[1600px] mx-auto px-4 pb-12 view-fade">
+          <CognitiveDashboard />
         </div>
       ) : showReleases ? (
         <div key="releases" className="max-w-[1600px] mx-auto px-4 pb-12 view-fade">

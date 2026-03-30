@@ -18,6 +18,13 @@
   --color-accent: #DC2626;
   --color-masthead: #8B4513;
   --radius: 0.25rem;
+  /* Cognitive Resilience secondary palette (OKLCH — avoids red/green bias) */
+  --color-observation: oklch(0.7 0.1 220);
+  --color-outrage: oklch(0.6 0.2 30);
+  --color-curiosity: oklch(0.8 0.15 140);
+  --color-observation-muted: oklch(0.9 0.04 220);
+  --color-outrage-muted: oklch(0.9 0.04 30);
+  --color-curiosity-muted: oklch(0.93 0.04 140);
 }
 
 /* ShadCN bridge — maps ShadCN token names to existing newspaper theme */
@@ -135,6 +142,12 @@ body {
   --color-rule: #3D3D5C;
   --color-accent: #E07B5F;
   --color-masthead: #C9A04E;
+  --color-observation: oklch(0.65 0.12 220);
+  --color-outrage: oklch(0.6 0.2 30);
+  --color-curiosity: oklch(0.72 0.15 140);
+  --color-observation-muted: oklch(0.25 0.06 220);
+  --color-outrage-muted: oklch(0.25 0.06 30);
+  --color-curiosity-muted: oklch(0.25 0.06 140);
   --accent-info-bg: #1E3A5F;
   --accent-info-border: #3B82F6;
   --accent-info-text: #93C5FD;
@@ -188,15 +201,13 @@ body {
     grid-template-columns: 1fr;
     border-top: none;
   }
-  .newspaper-grid > :nth-child(3) {
-    display: block;
-  }
-  .newspaper-grid > :nth-child(4),
-  .newspaper-grid > :nth-child(5) {
-    display: none;
-  }
   .newspaper-grid > * {
     border-right: none !important;
+    border-bottom: 1px solid var(--color-rule);
+    padding: 1rem;
+  }
+  .newspaper-grid > :last-child {
+    border-bottom: none;
   }
 }
 
@@ -267,4 +278,32 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   --accent-error-border: #F6AD55;
   --accent-error-text: #C05621;
   --accent-error-text-strong: #7B341E;
+}
+
+/* ─── Cognitive Resilience Drillboard ─── */
+.drillboard {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.drillboard-col-3 { grid-column: span 3; }
+.drillboard-col-4 { grid-column: span 4; }
+.drillboard-col-6 { grid-column: span 6; }
+.drillboard-col-12 { grid-column: span 12; }
+
+@media (max-width: 1023px) {
+  .drillboard { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .drillboard-col-3 { grid-column: span 3; }
+  .drillboard-col-4 { grid-column: span 6; }
+  .drillboard-col-6 { grid-column: span 6; }
+  .drillboard-col-12 { grid-column: span 6; }
+}
+
+@media (max-width: 639px) {
+  .drillboard { grid-template-columns: 1fr; }
+  .drillboard-col-3,
+  .drillboard-col-4,
+  .drillboard-col-6,
+  .drillboard-col-12 { grid-column: span 1; }
 }
