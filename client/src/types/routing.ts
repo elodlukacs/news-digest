@@ -6,7 +6,7 @@ export interface AppOutletContext {
   rates: Rates | null;
   headlines: Headline[];
   hackerNews: HackerNewsItem[];
-  trending: string[];
+  trending: { tag: string; count: number }[];
   releases: UpcomingRelease[];
   categories: Category[];
   selectedLlm: string;
