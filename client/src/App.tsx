@@ -75,6 +75,7 @@ function AppLayout() {
     onLlmChange: setSelectedLlm,
     onManageFeeds: handleManageFeeds,
     deleteCategory: handleDeleteCategory,
+    onSelectCategory: handleSelectCategory,
   };
 
   const { pulling, pullProgress, containerRef } = usePullToRefresh({
@@ -97,7 +98,7 @@ function AppLayout() {
         />
 
         <FadeOnRouteChange>
-          <Outlet context={{ ...outletContext, onSelectCategory: handleSelectCategory }} />
+          <Outlet context={outletContext} />
         </FadeOnRouteChange>
 
         {managingId && managingCategory && (
