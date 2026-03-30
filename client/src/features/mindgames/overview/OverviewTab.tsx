@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Brain, Search, Shield, Microscope, RotateCcw, Trash2, Activity, Target, Heart } from 'lucide-react';
 import { StressDiagnostic } from '../reflection/StressDiagnostic';
 import { TabHeader } from '../common';
@@ -15,11 +16,8 @@ interface DashboardStats {
   avgSiloScore: number;
 }
 
-interface Props {
-  onNavigate: (tab: 'training' | 'analysis' | 'reflection' | 'reference') => void;
-}
-
-export function OverviewTab({ onNavigate }: Props) {
+export function OverviewTab() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [stressDiagOpen, setStressDiagOpen] = useState(false);
 
@@ -81,19 +79,19 @@ export function OverviewTab({ onNavigate }: Props) {
           icon={<Target size={20} className="text-curiosity" />}
           title="Start Training"
           description="Build mental antibodies"
-          onClick={() => onNavigate('training')}
+          onClick={() => navigate('/mindgames/training')}
         />
         <QuickActionCard
           icon={<Search size={20} className="text-observation" />}
           title="Analyze Content"
           description="Deconstruct news and studies"
-          onClick={() => onNavigate('analysis')}
+          onClick={() => navigate('/mindgames/analysis')}
         />
         <QuickActionCard
           icon={<Microscope size={20} className="text-masthead" />}
           title="Reflect"
           description="Examine your beliefs"
-          onClick={() => onNavigate('reflection')}
+          onClick={() => navigate('/mindgames/reflection')}
         />
       </div>
 

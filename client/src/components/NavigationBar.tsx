@@ -1,26 +1,17 @@
 import { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Plus, X, Coffee, AlignJustify, Home, Film, Brain, Briefcase, BarChart2, Shield } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import { THEMES } from '../hooks/useTheme';
+import { slugify } from '../utils/slugify';
 import type { Category } from '../types';
 
 interface Props {
   categories: Category[];
-  activeId: number | null;
-  showBriefing: boolean;
-  showReleases: boolean;
-  showJobs: boolean;
-  showCognitive: boolean;
-  onSelect: (id: number) => void;
-  onBriefing: () => void;
-  onReleases: () => void;
-  onJobs: () => void;
-  onCognitive: () => void;
   onAdd: (name: string) => Promise<void>;
-  onHome: () => void;
   theme: string;
   onThemeChange: (theme: string) => void;
   onShowStats: () => void;
@@ -42,27 +33,30 @@ const LLM_OPTIONS = [
 
 export function NavigationBar({
   categories,
-  activeId,
-  showBriefing,
-  showReleases,
-  showJobs,
-  showCognitive,
-  onSelect,
-  onBriefing,
-  onReleases,
-  onJobs,
-  onCognitive,
   onAdd,
-  onHome,
   theme,
   onThemeChange,
   onShowStats,
   selectedLlm,
   onLlmChange,
 }: Props) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const path = location.pathname;
+
+  const activeCategorySlug = path.startsWith('/category/') ? path.split('/category/')[1] : null;
+  const activeCategoryId = activeCategorySlug
+    ? categories.find(c => slugify(c.name) === activeCategorySlug)?.id ?? null
+    : null;
+  const isHome = path === '/';
+  const showBriefing = path === '/briefing';
+  const showReleases = path === '/releases';
+  const showJobs = path === '/jobs';
+  const showCognitive = path.startsWith('/mindgames');
 
   const handleAdd = async () => {
     if (!newName.trim()) return;
@@ -76,17 +70,16 @@ export function NavigationBar({
   };
 
   const selectAndClose = (id: number) => {
-    onSelect(id);
+    const cat = categories.find(c => c.id === id);
+    if (cat) navigate(`/category/${slugify(cat.name)}`);
     setDrawerOpen(false);
   };
 
-  const briefingAndClose = () => { onBriefing(); setDrawerOpen(false); };
-  const releasesAndClose = () => { onReleases(); setDrawerOpen(false); };
-  const jobsAndClose = () => { onJobs(); setDrawerOpen(false); };
-  const cognitiveAndClose = () => { onCognitive(); setDrawerOpen(false); };
-  const homeAndClose = () => { onHome(); setDrawerOpen(false); };
-
-  const isHome = activeId === null && !showBriefing && !showReleases && !showJobs && !showCognitive;
+  const briefingAndClose = () => { navigate('/briefing'); setDrawerOpen(false); };
+  const releasesAndClose = () => { navigate('/releases'); setDrawerOpen(false); };
+  const jobsAndClose = () => { navigate('/jobs'); setDrawerOpen(false); };
+  const cognitiveAndClose = () => { navigate('/mindgames'); setDrawerOpen(false); };
+  const homeAndClose = () => { navigate('/'); setDrawerOpen(false); };
 
   const todayShort = new Date().toLocaleDateString('en-US', {
     month: 'short',
@@ -94,15 +87,13 @@ export function NavigationBar({
     year: 'numeric',
   });
 
-  const currentLabel = showJobs ? 'Jobs' : showReleases ? 'Releases' : showBriefing ? 'Briefing' : showCognitive ? 'MindGames' : activeId ? (categories.find(c => c.id === activeId)?.name) : 'Home';
+  const currentLabel = showJobs ? 'Jobs' : showReleases ? 'Releases' : showBriefing ? 'Briefing' : showCognitive ? 'MindGames' : activeCategoryId ? (categories.find(c => c.id === activeCategoryId)?.name) : 'Home';
 
   return (
     <>
       <div className="hidden md:block">
         <div className="max-w-[1600px] mx-auto px-6">
-          {/* Masthead: title left, tools right */}
           <div className="flex items-center justify-between pt-4 pb-3">
-            {/* Left: Title block */}
             <div className="flex items-end gap-4">
               <div>
                 <h1 className="font-serif text-[38px] lg:text-[42px] font-black tracking-[-0.02em] text-masthead leading-[0.9]">
@@ -114,9 +105,7 @@ export function NavigationBar({
               </div>
             </div>
 
-            {/* Right: Tools area */}
             <div className="flex items-center gap-5">
-              {/* LLM Selection */}
               <div className="flex flex-col items-center gap-1.5">
                 <span className="text-[8px] font-sans uppercase tracking-[0.2em] text-ink-muted/60 font-medium">Model</span>
                 <div className="flex items-center gap-0.5 bg-paper-dark rounded-md p-0.5">
@@ -144,7 +133,6 @@ export function NavigationBar({
 
               <div className="w-px h-8 bg-rule" />
 
-              {/* Date */}
               <div className="flex flex-col items-center gap-0.5">
                 <span className="text-[8px] font-sans uppercase tracking-[0.2em] text-ink-muted/60 font-medium">Date</span>
                 <span className="text-[11px] font-sans tracking-wide text-ink-light font-medium">{todayShort}</span>
@@ -152,7 +140,6 @@ export function NavigationBar({
 
               <div className="w-px h-8 bg-rule" />
 
-              {/* Theme */}
               <div className="flex flex-col items-center gap-1.5">
                 <span className="text-[8px] font-sans uppercase tracking-[0.2em] text-ink-muted/60 font-medium">Theme</span>
                 <div className="flex items-center gap-2">
@@ -178,7 +165,6 @@ export function NavigationBar({
 
               <div className="w-px h-8 bg-rule" />
 
-              {/* Stats */}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
@@ -197,21 +183,18 @@ export function NavigationBar({
 
         </div>
 
-        {/* ─── Two-row section nav ─── */}
-
-        {/* Row 1: Core reading navigation — scrollable */}
         <nav className="bg-paper border-b border-t border-rule">
           <div className="max-w-[1600px] mx-auto px-6">
             <div className="flex items-center justify-start overflow-x-auto scrollbar-none">
-              <NavBox label="Home" icon={<Home size={14} />} active={isHome} onClick={onHome} />
+              <NavBox label="Home" icon={<Home size={14} />} active={isHome} onClick={() => navigate('/')} />
               <NavDivider />
 
               {categories.map((cat) => (
                 <NavBox
                   key={cat.id}
                   label={cat.name}
-                  active={cat.id === activeId}
-                  onClick={() => onSelect(cat.id)}
+                  active={cat.id === activeCategoryId}
+                  onClick={() => navigate(`/category/${slugify(cat.name)}`)}
                 />
               ))}
 
@@ -246,17 +229,16 @@ export function NavigationBar({
           </div>
         </nav>
 
-        {/* Row 2: Feature tools — static, right-aligned */}
         <nav className="bg-paper-dark border-b border-rule">
           <div className="max-w-[1600px] mx-auto px-6">
             <div className="flex items-center justify-start gap-1">
-              <NavBox label="Briefing" icon={<Coffee size={13} />} active={showBriefing} onClick={onBriefing} compact />
+              <NavBox label="Briefing" icon={<Coffee size={13} />} active={showBriefing} onClick={() => navigate('/briefing')} compact />
               <NavDivider />
-              <NavBox label="Releases" icon={<Film size={13} />} active={showReleases} onClick={onReleases} compact />
+              <NavBox label="Releases" icon={<Film size={13} />} active={showReleases} onClick={() => navigate('/releases')} compact />
               <NavDivider />
-              <NavBox label="Jobs" icon={<Briefcase size={13} />} active={showJobs} onClick={onJobs} compact />
+              <NavBox label="Jobs" icon={<Briefcase size={13} />} active={showJobs} onClick={() => navigate('/jobs')} compact />
               <NavDivider />
-              <NavBox label="MindGames" icon={<Shield size={13} />} active={showCognitive} onClick={onCognitive} compact />
+              <NavBox label="MindGames" icon={<Shield size={13} />} active={showCognitive} onClick={() => navigate('/mindgames')} compact />
               <NavDivider />
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -277,7 +259,6 @@ export function NavigationBar({
 
       </div>
 
-      {/* ═══ Mobile: Top bar ═══ */}
       <nav className="md:hidden border-b-2 border-ink">
         <div className="flex items-center justify-between px-4 py-2">
           <button type="button" onClick={() => setDrawerOpen(true)} className="-ml-1 p-1 cursor-pointer" aria-label="Open menu">
@@ -294,14 +275,12 @@ export function NavigationBar({
         </div>
       </nav>
 
-      {/* ═══ Mobile Drawer (ShadCN Sheet) ═══ */}
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
         <SheetContent side="left" className="w-[280px] max-w-[85vw] p-0 gap-0 flex flex-col border-r-0">
           <SheetHeader className="px-5 py-3">
             <SheetTitle className="font-serif text-base font-black text-masthead">Index</SheetTitle>
           </SheetHeader>
 
-          {/* Drawer body */}
           <div className="flex-1 overflow-y-auto">
             <div className="py-1">
               <DrawerItem label="Home" icon={<Home size={14} />} active={isHome} onClick={homeAndClose} />
@@ -320,7 +299,7 @@ export function NavigationBar({
 
             <div className="pb-2">
               {categories.map((cat) => {
-                const active = cat.id === activeId;
+                const active = cat.id === activeCategoryId;
                 return (
                   <div key={cat.id} className="group">
                     <button
@@ -343,7 +322,6 @@ export function NavigationBar({
               })}
             </div>
 
-            {/* Add */}
             <div className="px-5 mt-1 pb-4">
               {adding ? (
                 <div className="flex items-center gap-2">
@@ -370,9 +348,7 @@ export function NavigationBar({
             </div>
           </div>
 
-          {/* Settings in drawer footer */}
           <div className="border-t border-rule px-5 py-4 bg-paper-dark space-y-4">
-            {/* Model selector */}
             <div className="flex items-center justify-between">
               <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-ink-muted">Model</p>
               <div className="flex items-center gap-0.5 bg-paper rounded-md p-0.5">
@@ -393,7 +369,6 @@ export function NavigationBar({
               </div>
             </div>
 
-            {/* Theme */}
             <div className="flex items-center justify-between">
               <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-ink-muted">Theme</p>
               <div className="flex items-center gap-2.5">
@@ -412,7 +387,6 @@ export function NavigationBar({
               </div>
             </div>
 
-            {/* Stats */}
             <div className="flex items-center justify-between pt-2 pb-6">
               <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-ink-muted">Stats</p>
               <button
@@ -431,8 +405,6 @@ export function NavigationBar({
     </>
   );
 }
-
-/* ─── Shared sub-components ─── */
 
 function NavBox({ label, icon, active, onClick, compact }: {
   label: string;

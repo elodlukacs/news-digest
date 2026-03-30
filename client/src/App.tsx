@@ -1,122 +1,81 @@
 import { useState, useCallback, useEffect } from 'react';
+import { Routes, Route, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { NavigationBar } from './components/NavigationBar';
-import { SummaryView } from './components/SummaryView';
 import { FeedManager } from './components/FeedManager';
-import { WidgetSidebar } from './components/WidgetSidebar';
-import { LeftSidebar } from './components/LeftSidebar';
-import { MorningBriefing } from './components/MorningBriefing';
 import { LlmStatsModal } from './components/LlmStatsModal';
-import { NewspaperHome } from './components/NewspaperHome';
-import { ReleasesPage } from './components/ReleasesPage';
-import { JobsPage } from './components/JobsPage';
-import { CognitiveDashboard } from './features/mindgames';
 import { PullToRefreshIndicator } from './components/PullToRefresh';
-import { useCategories, useFeeds, useSummary, useSummaryHistory, useChat, useBriefing, useHomepage, useJobs } from './hooks/useApi';
+import { useCategories, useFeeds } from './hooks/useApi';
 import { cleanupOldData } from './utils/trackReading';
+import { slugify } from './utils/slugify';
 import { useTheme } from './hooks/useTheme';
 import type { Theme } from './hooks/useTheme';
 import { useWidgets } from './hooks/useWidgets';
 import { usePullToRefresh } from './hooks/usePullToRefresh';
 import { TooltipProvider } from './components/ui/tooltip';
+import { HomeRoute } from './components/routes/HomeRoute';
+import { CategoryRoute } from './components/routes/CategoryRoute';
+import { BriefingRoute } from './components/routes/BriefingRoute';
+import { JobsRoute } from './components/routes/JobsRoute';
+import { ReleasesRoute } from './components/routes/ReleasesRoute';
+import { MindGamesRoute } from './components/routes/MindGamesRoute';
+import {
+  MindGamesOverviewRoute,
+  MindGamesTrainingRoute,
+  MindGamesAnalysisRoute,
+  MindGamesReflectionRoute,
+  MindGamesReferenceRoute,
+  MindGamesQuizRoute,
+} from './components/routes/MindGamesRoutes';
+import type { AppOutletContext } from './types/routing';
 
-function App() {
+function FadeOnRouteChange({ children }: { children: React.ReactNode }) {
+  const location = useLocation();
+  return (
+    <div key={location.pathname} className="view-fade">
+      {children}
+    </div>
+  );
+}
+
+function AppLayout() {
   const { theme, setTheme } = useTheme();
   const { categories, addCategory, deleteCategory } = useCategories();
-  const [activeId, setActiveId] = useState<number | null>(null);
   const [managingId, setManagingId] = useState<number | null>(null);
-  const [showBriefing, setShowBriefing] = useState(false);
-  const [showReleases, setShowReleases] = useState(false);
-  const [showJobs, setShowJobs] = useState(false);
-  const [showCognitive, setShowCognitive] = useState(false);
   const [showStats, setShowStats] = useState(false);
-  const [selectedSnapshotId, setSelectedSnapshotId] = useState<number | null>(null);
   const [selectedLlm, setSelectedLlm] = useState('llama');
+  const navigate = useNavigate();
 
   const { feeds, addFeed, deleteFeed } = useFeeds(managingId);
-  const { summary, loading, refreshing, error, refresh } = useSummary(activeId, selectedSnapshotId, selectedLlm);
-  const { dates, refresh: refreshHistory } = useSummaryHistory(activeId);
-  const { messages: chatMessages, sending: chatSending, sendMessage: chatSend } = useChat(summary?.id || null, selectedLlm);
-  const { briefing, loading: briefingLoading, error: briefingError, generate: generateBriefing } = useBriefing(selectedLlm);
   const { weather, rates, headlines, crypto, hackerNews, releases, trending } = useWidgets();
-  const { briefs: homepageBriefs, loading: homepageLoading, refreshing: homepageRefreshing, refresh: homepageRefresh } = useHomepage();
-  const { fetchJobs, ...jobsHook } = useJobs();
 
-  useEffect(() => {
-    cleanupOldData();
-  }, []);
-
-  const activeCategory = categories.find((c) => c.id === activeId);
   const managingCategory = categories.find((c) => c.id === managingId);
 
-  const handleSelectCategory = useCallback((id: number) => {
-    setActiveId(id);
-    setShowBriefing(false);
-    setShowReleases(false);
-    setShowJobs(false);
+  const handleSelectCategory = useCallback((name: string) => {
+    navigate(`/category/${slugify(name)}`);
+  }, [navigate]);
 
-    setShowCognitive(false);
-    setSelectedSnapshotId(null);
-  }, []);
-
-  const handleHome = useCallback(() => {
-    setActiveId(null);
-    setShowBriefing(false);
-    setShowReleases(false);
-    setShowJobs(false);
-
-    setShowCognitive(false);
-    setSelectedSnapshotId(null);
-  }, []);
-
-  const handleBriefing = useCallback(() => {
-    setShowBriefing(true);
-    setActiveId(null);
-    setShowReleases(false);
-    setShowJobs(false);
-
-    setShowCognitive(false);
-    setSelectedSnapshotId(null);
-  }, []);
-
-  const handleReleases = useCallback(() => {
-    setShowReleases(true);
-    setActiveId(null);
-    setShowBriefing(false);
-    setShowJobs(false);
-
-    setShowCognitive(false);
-    setSelectedSnapshotId(null);
-  }, []);
-
-  const handleJobs = useCallback(() => {
-    setShowJobs(true);
-    setActiveId(null);
-    setShowBriefing(false);
-    setShowReleases(false);
-
-    setShowCognitive(false);
-    setSelectedSnapshotId(null);
-  }, []);
-
-  const handleCognitive = useCallback(() => {
-    setShowCognitive(true);
-    setActiveId(null);
-    setShowBriefing(false);
-    setShowReleases(false);
-    setShowJobs(false);
-
-    setSelectedSnapshotId(null);
+  const handleManageFeeds = useCallback((categoryId: number) => {
+    setManagingId(categoryId);
   }, []);
 
   const handleDeleteCategory = useCallback(async (id: number) => {
     await deleteCategory(id);
-    if (activeId === id) setActiveId(null);
-  }, [deleteCategory, activeId]);
+  }, [deleteCategory]);
 
-  const handleRefresh = useCallback(async () => {
-    await refresh();
-    refreshHistory();
-  }, [refresh, refreshHistory]);
+  const outletContext: AppOutletContext = {
+    weather,
+    crypto,
+    rates,
+    headlines,
+    hackerNews,
+    trending,
+    releases,
+    categories,
+    selectedLlm,
+    onLlmChange: setSelectedLlm,
+    onManageFeeds: handleManageFeeds,
+    deleteCategory: handleDeleteCategory,
+  };
 
   const { pulling, pullProgress, containerRef } = usePullToRefresh({
     onRefresh: () => window.location.reload(),
@@ -125,114 +84,62 @@ function App() {
 
   return (
     <TooltipProvider>
-    <div className="min-h-screen bg-paper" ref={containerRef}>
-      <PullToRefreshIndicator pulling={pulling} pullProgress={pullProgress} />
-      <NavigationBar
-        categories={categories}
-        activeId={activeId}
-        showBriefing={showBriefing}
-        showReleases={showReleases}
-        showJobs={showJobs}
-        showCognitive={showCognitive}
-        onSelect={handleSelectCategory}
-        onBriefing={handleBriefing}
-        onReleases={handleReleases}
-        onJobs={handleJobs}
-        onCognitive={handleCognitive}
-        onAdd={addCategory}
-        onHome={handleHome}
-        theme={theme}
-        onThemeChange={(t) => setTheme(t as Theme)}
-        onShowStats={() => setShowStats(true)}
-        selectedLlm={selectedLlm}
-        onLlmChange={setSelectedLlm}
-      />
-
-      {/* Newspaper Home: full-width grid when no category selected */}
-      {!activeCategory && !showBriefing && !showReleases && !showJobs && !showCognitive ? (
-        <div key="home" className="max-w-[1600px] mx-auto px-4 pb-12 view-fade">
-          <NewspaperHome
-            briefs={homepageBriefs}
-            loading={homepageLoading}
-            refreshing={homepageRefreshing}
-            onRefresh={homepageRefresh}
-            onSelectCategory={handleSelectCategory}
-            weather={weather}
-            crypto={crypto}
-            rates={rates}
-            headlines={headlines}
-            hackerNews={hackerNews}
-          />
-        </div>
-      ) : showJobs ? (
-        <div key="jobs" className="max-w-[1600px] mx-auto px-4 pb-12 view-fade">
-          <JobsPage {...jobsHook} fetchJobs={fetchJobs} selectedLlm={selectedLlm} />
-        </div>
-      ) : showCognitive ? (
-        <div key="cognitive" className="max-w-[1600px] mx-auto px-4 pb-12 view-fade">
-          <CognitiveDashboard />
-        </div>
-      ) : showReleases ? (
-        <div key="releases" className="max-w-[1600px] mx-auto px-4 pb-12 view-fade">
-          <ReleasesPage releases={releases || []} />
-        </div>
-      ) : (
-        <div key={showBriefing ? 'briefing' : `cat-${activeId}`} className="max-w-7xl mx-auto px-6 pb-20 flex gap-8 view-fade">
-          {/* Left sidebar */}
-          <LeftSidebar
-            hackerNews={hackerNews}
-            dates={dates}
-            selectedSnapshotId={selectedSnapshotId}
-            onSelectSnapshot={setSelectedSnapshotId}
-            showHistory={!!activeCategory && !showBriefing}
-          />
-
-          {/* Main content */}
-          <main className="flex-1 min-w-0">
-            {showBriefing ? (
-              <MorningBriefing
-                briefing={briefing}
-                loading={briefingLoading}
-                error={briefingError}
-                onGenerate={generateBriefing}
-              />
-            ) : activeCategory ? (
-              <SummaryView
-                categoryId={activeCategory.id}
-                categoryName={activeCategory.name}
-                summary={summary}
-                loading={loading}
-                refreshing={refreshing}
-                error={error}
-                onRefresh={handleRefresh}
-                onManageFeeds={() => setManagingId(activeCategory.id)}
-                onDelete={() => handleDeleteCategory(activeCategory.id)}
-                chatMessages={chatMessages}
-                chatSending={chatSending}
-                onChatSend={chatSend}
-              />
-            ) : null}
-          </main>
-
-          {/* Right sidebar: Widgets */}
-          <WidgetSidebar weather={weather} rates={rates} headlines={headlines} crypto={crypto} trending={trending} />
-        </div>
-      )}
-
-      {managingId && managingCategory && (
-        <FeedManager
-          categoryId={managingId}
-          categoryName={managingCategory.name}
-          feeds={feeds}
-          onAdd={addFeed}
-          onDelete={deleteFeed}
-          onClose={() => setManagingId(null)}
+      <div className="min-h-screen bg-paper" ref={containerRef}>
+        <PullToRefreshIndicator pulling={pulling} pullProgress={pullProgress} />
+        <NavigationBar
+          categories={categories}
+          onAdd={addCategory}
+          theme={theme}
+          onThemeChange={(t) => setTheme(t as Theme)}
+          onShowStats={() => setShowStats(true)}
+          selectedLlm={selectedLlm}
+          onLlmChange={setSelectedLlm}
         />
-      )}
 
-      <LlmStatsModal open={showStats} onClose={() => setShowStats(false)} />
-    </div>
+        <FadeOnRouteChange>
+          <Outlet context={{ ...outletContext, onSelectCategory: handleSelectCategory }} />
+        </FadeOnRouteChange>
+
+        {managingId && managingCategory && (
+          <FeedManager
+            categoryId={managingId}
+            categoryName={managingCategory.name}
+            feeds={feeds}
+            onAdd={addFeed}
+            onDelete={deleteFeed}
+            onClose={() => setManagingId(null)}
+          />
+        )}
+
+        <LlmStatsModal open={showStats} onClose={() => setShowStats(false)} />
+      </div>
     </TooltipProvider>
+  );
+}
+
+function App() {
+  useEffect(() => {
+    cleanupOldData();
+  }, []);
+
+  return (
+    <Routes>
+      <Route element={<AppLayout />}>
+        <Route index element={<HomeRoute />} />
+        <Route path="category/:categoryName" element={<CategoryRoute />} />
+        <Route path="briefing" element={<BriefingRoute />} />
+        <Route path="jobs" element={<JobsRoute />} />
+        <Route path="releases" element={<ReleasesRoute />} />
+        <Route path="mindgames" element={<MindGamesRoute />}>
+          <Route index element={<MindGamesOverviewRoute />} />
+          <Route path="training" element={<MindGamesTrainingRoute />} />
+          <Route path="analysis" element={<MindGamesAnalysisRoute />} />
+          <Route path="reflection" element={<MindGamesReflectionRoute />} />
+          <Route path="reference" element={<MindGamesReferenceRoute />} />
+          <Route path="quiz" element={<MindGamesQuizRoute />} />
+        </Route>
+      </Route>
+    </Routes>
   );
 }
 

@@ -26,7 +26,7 @@ interface Props {
   loading: boolean;
   refreshing: boolean;
   onRefresh: () => void;
-  onSelectCategory: (id: number) => void;
+  onSelectCategory: (name: string) => void;
   weather: Weather | null;
   crypto: CryptoPrice[];
   rates: Rates | null;
@@ -410,7 +410,7 @@ export function NewspaperHome({
               <TextCard
                 article={card.article}
                 categoryName={card.categoryName}
-                onCategoryClick={() => onSelectCategory(card.categoryId)}
+                onCategoryClick={() => onSelectCategory(card.categoryName)}
                 onAnalyze={handleAnalyze}
               />
               {i < col1Cards.length - 1 && <ColumnRule />}
@@ -437,7 +437,7 @@ export function NewspaperHome({
                     key={`c2-${card.categoryId}-${i}`}
                     article={card.article}
                     categoryName={card.categoryName}
-                    onCategoryClick={() => onSelectCategory(card.categoryId)}
+                    onCategoryClick={() => onSelectCategory(card.categoryName)}
                     onAnalyze={handleAnalyze}
                   />
                 ))}
@@ -454,14 +454,14 @@ export function NewspaperHome({
                 <ImageCard
                   article={card.article}
                   categoryName={card.categoryName}
-                  onCategoryClick={() => onSelectCategory(card.categoryId)}
+                  onCategoryClick={() => onSelectCategory(card.categoryName)}
                   onAnalyze={handleAnalyze}
                 />
               ) : (
                 <TextCard
                   article={card.article}
                   categoryName={card.categoryName}
-                  onCategoryClick={() => onSelectCategory(card.categoryId)}
+                  onCategoryClick={() => onSelectCategory(card.categoryName)}
                   onAnalyze={handleAnalyze}
                 />
               )}
