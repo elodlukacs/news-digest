@@ -97,7 +97,7 @@ export function useFeeds(categoryId: number | null) {
   return { feeds, loading, refresh, addFeed, deleteFeed };
 }
 
-export function useSummary(categoryId: number | null, snapshotId?: number | null, providerId: string = 'llama') {
+export function useSummary(categoryId: number | null, snapshotId?: number | null, providerId: string = 'openai/gpt-oss-20b') {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -229,7 +229,7 @@ export function useSummaryHistory(categoryId: number | null) {
   return { dates, refresh };
 }
 
-export function useChat(summaryId: number | null, providerId: string = 'llama') {
+export function useChat(summaryId: number | null, providerId: string = 'openai/gpt-oss-20b') {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -285,7 +285,7 @@ export function useChat(summaryId: number | null, providerId: string = 'llama') 
   return { messages, sending, error, sendMessage };
 }
 
-export function useBriefing(providerId: string = 'llama') {
+export function useBriefing(providerId: string = 'openai/gpt-oss-20b') {
   const [briefing, setBriefing] = useState<Briefing | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

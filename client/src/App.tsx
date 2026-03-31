@@ -5,6 +5,7 @@ import { FeedManager } from './components/FeedManager';
 import { LlmStatsModal } from './components/LlmStatsModal';
 import { PullToRefreshIndicator } from './components/PullToRefresh';
 import { useCategories, useFeeds } from './hooks/useApi';
+import { useModels } from './hooks/useModels';
 import { cleanupOldData } from './utils/trackReading';
 import { slugify } from './utils/slugify';
 import { useTheme } from './hooks/useTheme';
@@ -34,11 +35,12 @@ function AppLayout() {
   const { categories, addCategory, deleteCategory } = useCategories();
   const [managingId, setManagingId] = useState<number | null>(null);
   const [showStats, setShowStats] = useState(false);
-  const [selectedLlm, setSelectedLlm] = useState('llama');
+  const [selectedLlm, setSelectedLlm] = useState('openai/gpt-oss-20b');
   const navigate = useNavigate();
 
   const { feeds, addFeed, deleteFeed } = useFeeds(managingId);
   const { weather, rates, headlines, crypto, hackerNews, releases, trending } = useWidgets();
+  const { models, loading: modelsLoading } = useModels();
 
   const managingCategory = categories.find((c) => c.id === managingId);
 
@@ -87,6 +89,8 @@ function AppLayout() {
           onShowStats={() => setShowStats(true)}
           selectedLlm={selectedLlm}
           onLlmChange={setSelectedLlm}
+          models={models}
+          modelsLoading={modelsLoading}
         />
 
         <Outlet context={outletContext} />

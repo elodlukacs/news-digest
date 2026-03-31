@@ -13,9 +13,17 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
 
   if (providerId) {
     const target = AI_PROVIDERS.find(p => p.id === providerId);
-    if (!target) throw new Error(`Unknown provider: ${providerId}`);
-    if (!target.key()) throw new Error(`API key not configured for ${target.name}. Set the required env var.`);
-    providers = [target];
+    if (target) {
+      if (!target.key()) throw new Error(`API key not configured for ${target.name}. Set the required env var.`);
+      providers = [target];
+    } else if (providerId.includes('/')) {
+      // Treat as a Groq model ID
+      const groq = AI_PROVIDERS.find(p => p.id === 'llama');
+      if (!groq || !groq.key()) throw new Error('GROQ_API_KEY not configured');
+      providers = [{ ...groq, model: providerId }];
+    } else {
+      throw new Error(`Unknown provider: ${providerId}`);
+    }
   }
 
   let lastError = null;

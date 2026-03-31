@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Plus, X, Coffee, AlignJustify, Home, Film, Brain, Briefcase, BarChart2, Shield, MessageSquareCode } from 'lucide-react';
+import { Plus, X, Coffee, AlignJustify, Home, Film, Brain, Briefcase, BarChart2, Shield, MessageSquareCode, ChevronDown, Check } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from './ui/dropdown-menu';
 import { THEMES } from '../hooks/useTheme';
 import { slugify } from '../utils/slugify';
 import type { Category } from '../types';
+import type { GroqModel } from '../hooks/useModels';
 
 interface Props {
   categories: Category[];
@@ -17,6 +19,8 @@ interface Props {
   onShowStats: () => void;
   selectedLlm: string;
   onLlmChange: (id: string) => void;
+  models: GroqModel[];
+  modelsLoading: boolean;
 }
 
 const THEME_COLORS: Record<string, { bg: string; label: string }> = {
@@ -26,11 +30,6 @@ const THEME_COLORS: Record<string, { bg: string; label: string }> = {
   morning: { bg: '#2D6A4F', label: 'Morning' },
 };
 
-const LLM_OPTIONS = [
-  { id: 'llama', label: 'GPT-OSS-20B' },
-  { id: 'minimax', label: 'MiniMax2.7' },
-] as const;
-
 export function NavigationBar({
   categories,
   onAdd,
@@ -39,6 +38,8 @@ export function NavigationBar({
   onShowStats,
   selectedLlm,
   onLlmChange,
+  models,
+  modelsLoading,
 }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -110,27 +111,45 @@ export function NavigationBar({
             <div className="flex items-center gap-5">
               <div className="flex flex-col items-center gap-1.5">
                 <span className="text-[8px] font-sans uppercase tracking-[0.2em] text-ink-muted/60 font-medium">Model</span>
-                <div className="flex items-center gap-0.5 bg-paper-dark rounded-md p-0.5">
-                  {LLM_OPTIONS.map((opt) => (
-                    <Tooltip key={opt.id}>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          onClick={() => onLlmChange(opt.id)}
-                          aria-label={opt.label}
-                          className={`px-2 py-1 text-[10px] font-sans font-medium tracking-wide rounded transition-all duration-200 ${
-                            selectedLlm === opt.id
-                              ? 'bg-masthead text-white shadow-sm'
-                              : 'text-ink-muted hover:text-ink hover:bg-paper cursor-pointer'
-                          }`}
-                        >
-                          {opt.label}
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>{opt.label}</TooltipContent>
-                    </Tooltip>
-                  ))}
-                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-sans font-medium tracking-wide bg-paper-dark rounded-md text-ink hover:bg-paper cursor-pointer transition-all duration-200 min-w-[120px] justify-between"
+                    >
+                      <span className="truncate max-w-[140px]">
+                        {modelsLoading ? 'Loading...' : formatModelName(selectedLlm)}
+                      </span>
+                      <ChevronDown size={10} className="shrink-0 text-ink-muted" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="max-h-[400px] overflow-y-auto min-w-[220px]">
+                    {groupModels(models).map((group) => (
+                      <div key={group.owner}>
+                        <div className="px-3 py-1.5 text-[9px] font-sans uppercase tracking-[0.15em] font-bold text-ink-muted/60 sticky top-0 bg-paper">
+                          {group.owner}
+                        </div>
+                        {group.models.map((m) => (
+                          <DropdownMenuItem
+                            key={m.id}
+                            onClick={() => onLlmChange(m.id)}
+                            className="text-[11px] font-sans gap-2 flex-col items-start py-1.5"
+                          >
+                            <div className="flex items-center gap-2 w-full">
+                              <Check size={12} className={selectedLlm === m.id ? 'opacity-100' : 'opacity-0'} />
+                              <span className="truncate flex-1">{m.name}</span>
+                            </div>
+                            <div className="ml-5 flex items-center gap-2 text-[9px] text-ink-muted/70 font-medium">
+                              <span>{formatTokens(m.context_window)} ctx</span>
+                              <span>·</span>
+                              <span>{formatTokens(m.max_completion_tokens)} out</span>
+                            </div>
+                          </DropdownMenuItem>
+                        ))}
+                      </div>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
 
               <div className="w-px h-8 bg-rule" />
@@ -356,22 +375,45 @@ export function NavigationBar({
           <div className="border-t border-rule px-5 py-4 bg-paper-dark space-y-4">
             <div className="flex items-center justify-between">
               <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-ink-muted">Model</p>
-              <div className="flex items-center gap-0.5 bg-paper rounded-md p-0.5">
-                {LLM_OPTIONS.map((opt) => (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
                   <button
-                    key={opt.id}
                     type="button"
-                    onClick={() => onLlmChange(opt.id)}
-                    className={`px-2 py-1 text-[10px] font-sans font-medium rounded transition-all duration-200 ${
-                      selectedLlm === opt.id
-                        ? 'bg-masthead text-white shadow-sm'
-                        : 'text-ink-muted cursor-pointer'
-                    }`}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-sans font-medium bg-paper rounded-md text-ink cursor-pointer transition-all duration-200 min-w-[120px] justify-between"
                   >
-                    {opt.label}
+                    <span className="truncate max-w-[140px]">
+                      {modelsLoading ? 'Loading...' : formatModelName(selectedLlm)}
+                    </span>
+                    <ChevronDown size={10} className="shrink-0 text-ink-muted" />
                   </button>
-                ))}
-              </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="max-h-[300px] overflow-y-auto min-w-[200px]">
+                  {groupModels(models).map((group) => (
+                    <div key={group.owner}>
+                      <div className="px-3 py-1.5 text-[9px] font-sans uppercase tracking-[0.15em] font-bold text-ink-muted/60 sticky top-0 bg-paper">
+                        {group.owner}
+                      </div>
+                      {group.models.map((m) => (
+                        <DropdownMenuItem
+                          key={m.id}
+                          onClick={() => onLlmChange(m.id)}
+                          className="text-[11px] font-sans gap-2 flex-col items-start py-1.5"
+                        >
+                          <div className="flex items-center gap-2 w-full">
+                            <Check size={12} className={selectedLlm === m.id ? 'opacity-100' : 'opacity-0'} />
+                            <span className="truncate flex-1">{m.name}</span>
+                          </div>
+                          <div className="ml-5 flex items-center gap-2 text-[9px] text-ink-muted/70 font-medium">
+                            <span>{formatTokens(m.context_window)} ctx</span>
+                            <span>·</span>
+                            <span>{formatTokens(m.max_completion_tokens)} out</span>
+                          </div>
+                        </DropdownMenuItem>
+                      ))}
+                    </div>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             <div className="flex items-center justify-between">
@@ -409,6 +451,25 @@ export function NavigationBar({
       </Sheet>
     </>
   );
+}
+
+function formatModelName(id: string): string {
+  return id.replace(/^openai\//, '').replace(/^meta-llama\//, 'Llama ');
+}
+
+function formatTokens(n: number): string {
+  if (n >= 1024) return `${Math.round(n / 1024)}k`;
+  return String(n);
+}
+
+function groupModels(models: GroqModel[]): { owner: string; models: GroqModel[] }[] {
+  const groups = new Map<string, GroqModel[]>();
+  for (const m of models) {
+    const list = groups.get(m.owned_by);
+    if (list) list.push(m);
+    else groups.set(m.owned_by, [m]);
+  }
+  return Array.from(groups.entries()).map(([owner, models]) => ({ owner, models }));
 }
 
 function NavBox({ label, icon, active, onClick, compact }: {

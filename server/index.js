@@ -18,6 +18,7 @@ app.use('/api/discover-feed', require('./routes/discovery'));
 app.use('/api/briefing', require('./routes/briefing'));
 app.use('/api/chat', require('./routes/chat'));
 app.use('/api/stats', require('./routes/stats'));
+app.use('/api/models', require('./routes/models'));
 app.use('/api/widgets', require('./routes/widgets'));
 app.use('/api/homepage', require('./routes/homepage'));
 app.use('/api/telegram', require('./routes/telegram'));
