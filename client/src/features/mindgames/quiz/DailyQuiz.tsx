@@ -106,12 +106,12 @@ export function DailyQuiz() {
       <div className="mx-auto max-w-lg px-4 py-8 space-y-6">
         <div className="text-center">
           <p className="text-xs uppercase tracking-widest text-ink-muted mb-1">Daily Technique Quiz</p>
-          <h1 className="text-lg font-semibold text-ink">What technique is this?</h1>
+          <h1 className="text-xl font-serif font-bold text-ink">What technique is this?</h1>
         </div>
 
-        <div className="rounded-xl border border-rule bg-paper-dark px-5 py-4 space-y-2">
+        <div className="rounded-xl border-2 border-rule bg-paper-dark px-5 py-5 space-y-3">
           <p className="text-xs text-ink-muted">{article.source}</p>
-          <p className="text-base font-medium text-ink leading-snug">{article.headline}</p>
+          <p className="text-lg font-serif font-semibold text-ink leading-snug">{article.headline}</p>
           <p className="text-sm text-ink-muted line-clamp-4">{article.content?.slice(0, 300)}</p>
           <a 
             href={article.url} 
@@ -123,7 +123,7 @@ export function DailyQuiz() {
           </a>
           <button
             onClick={() => setStage('guessing')}
-            className="mt-2 w-full rounded-lg bg-ink py-2.5 text-sm font-medium text-paper hover:opacity-90"
+            className="mt-3 w-full rounded-lg bg-ink py-3 text-sm font-semibold text-paper hover:bg-ink/90 transition-colors cursor-pointer"
           >
             I have read it — guess the technique →
           </button>
@@ -137,8 +137,8 @@ export function DailyQuiz() {
       <div className="mx-auto max-w-lg px-4 py-8 space-y-6">
         <div className="text-center">
           <p className="text-xs uppercase tracking-widest text-ink-muted mb-1">Daily Technique Quiz</p>
-          <h1 className="text-lg font-semibold text-ink">What technique is this?</h1>
-          <p className="text-sm text-ink-muted">{article?.headline}</p>
+          <h1 className="text-xl font-serif font-bold text-ink">What technique is this?</h1>
+          <p className="text-sm text-ink-muted mt-1">{article?.headline}</p>
         </div>
         <TechniquePicker onSelect={handleGuess} />
       </div>

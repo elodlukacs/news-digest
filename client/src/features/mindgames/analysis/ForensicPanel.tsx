@@ -116,7 +116,7 @@ export function ForensicPanel() {
     FALLACY_DEFINITIONS[Object.keys(FALLACY_DEFINITIONS).find(k => name.toLowerCase().includes(k.toLowerCase())) || ''] || '';
 
   return (
-    <Card className="p-5 md:p-6 h-full flex flex-col gap-4">
+    <Card className="p-5 md:p-6 h-full flex flex-col gap-5">
       <FeaturePanelHeader
         icon={
           activeTab === 'forensic' ? (
@@ -205,15 +205,15 @@ export function ForensicPanel() {
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Paste an article or headline to analyze…"
-            className="flex-1 min-h-[120px] text-[13px] resize-none border-ink/20 focus:border-masthead"
+            className="flex-1 min-h-[120px] text-sm resize-none border-ink/20 focus:border-masthead"
           />
 
           {/* Analyze button */}
-          <Button onClick={analyze} disabled={loading || text.trim().length < 20} className="w-full gap-2 text-[13px] h-10">
+          <Button onClick={analyze} disabled={loading || text.trim().length < 20} className="w-full gap-2 text-sm h-11">
             {loading ? <><Loader2 size={15} className="animate-spin" /> Analyzing…</> : <><Search size={15} /> Analyze Text</>}
           </Button>
 
-          {streamStep && <p className="text-[12px] text-observation animate-pulse -mt-1">{streamStep}</p>}
+          {streamStep && <p className="text-sm text-observation animate-pulse -mt-1">{streamStep}</p>}
 
           {error && (
             <div className="p-3 bg-outrage-muted rounded-md text-[13px] text-outrage flex items-center gap-2 border border-outrage/20">

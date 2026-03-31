@@ -176,7 +176,7 @@ export function BridgePanel() {
   const isLoading = loading || bridgeLoading;
 
   return (
-    <Card className="p-5 md:p-6 h-full flex flex-col gap-4">
+    <Card className="p-5 md:p-6 h-full flex flex-col gap-5">
       {/* Header */}
       <FeaturePanelHeader
         icon={<Heart size={20} className="text-curiosity shrink-0" />}
@@ -203,7 +203,7 @@ export function BridgePanel() {
       />
 
       {/* Tab switcher */}
-      <div className="flex rounded-lg border border-rule overflow-hidden">
+      <div className="flex rounded-xl border-2 border-rule overflow-hidden">
         <button
           onClick={() => setTab('audit')}
           className={`flex-1 py-2.5 text-sm font-semibold transition-all cursor-pointer ${tab === 'audit' ? 'bg-ink text-paper' : 'bg-paper text-ink-muted hover:text-ink hover:bg-paper-dark'}`}
@@ -268,7 +268,7 @@ export function BridgePanel() {
               value={newSource}
               onChange={(e) => setNewSource(e.target.value)}
               placeholder="Add news source (e.g., BBC, Fox News)..."
-              className="text-[13px] flex-1 border-ink/20 focus:border-masthead h-10"
+              className="text-sm flex-1 border-ink/20 focus:border-masthead h-11"
               onKeyDown={(e) => e.key === 'Enter' && addSource()}
               aria-label="Add news source"
             />
@@ -289,10 +289,10 @@ export function BridgePanel() {
           )}
 
           <div className="flex gap-2">
-            <Button onClick={runAudit} disabled={isLoading || sources.length === 0} className="flex-1 gap-2 text-[13px] h-10">
+            <Button onClick={runAudit} disabled={isLoading || sources.length === 0} className="flex-1 gap-2 text-sm h-11">
               {loading ? <><Loader2 size={15} className="animate-spin" /> Auditing…</> : <><Globe size={15} /> Run SOS Audit</>}
             </Button>
-            <Button onClick={loadValues} variant="outline" className="text-[13px] h-10">Values Quiz</Button>
+            <Button onClick={loadValues} variant="outline" className="text-sm h-11">Values Quiz</Button>
           </div>
 
           {audit && (
@@ -361,16 +361,16 @@ export function BridgePanel() {
             value={viewA}
             onChange={(e) => setViewA(e.target.value)}
             placeholder='View A: e.g., "We need stricter climate regulations..."'
-            className="text-[13px] resize-none border-ink/20 focus:border-masthead min-h-[80px]"
+            className="text-sm resize-none border-ink/20 focus:border-masthead min-h-[80px]"
           />
           <Textarea
             value={viewB}
             onChange={(e) => setViewB(e.target.value)}
             placeholder='View B: e.g., "Climate regulations will destroy jobs..."'
-            className="text-[13px] resize-none border-ink/20 focus:border-masthead min-h-[80px]"
+            className="text-sm resize-none border-ink/20 focus:border-masthead min-h-[80px]"
           />
 
-          <Button onClick={runBridge} disabled={isLoading || !viewA.trim() || !viewB.trim()} className="w-full gap-2 text-[13px] h-10">
+          <Button onClick={runBridge} disabled={isLoading || !viewA.trim() || !viewB.trim()} className="w-full gap-2 text-sm h-11">
             {bridgeLoading ? <><Loader2 size={15} className="animate-spin" /> Analyzing…</> : <><MessageSquare size={15} /> Find Bridges</>}
           </Button>
 

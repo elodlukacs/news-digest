@@ -174,10 +174,10 @@ export function NarrativeMapPanel() {
   }) || [];
 
   return (
-    <Card className="p-5 h-full flex flex-col gap-3">
+    <Card className="p-5 md:p-6 h-full flex flex-col gap-4">
       <div className="space-y-1.5">
         <FeaturePanelHeader
-          icon={<Map size={17} className="text-outrage shrink-0" />}
+          icon={<Map size={20} className="text-outrage shrink-0" />}
           title="Narrative Map"
           infoTitle="Narrative Map"
           researcher="AI-based narrative cluster analysis"
@@ -196,7 +196,7 @@ export function NarrativeMapPanel() {
         />
       </div>
 
-      <p className="text-[13px] text-ink-muted leading-relaxed -mt-1">
+      <p className="text-sm text-ink-muted leading-relaxed -mt-1">
         Analyze how narratives spread across social platforms. See the journey from origin to mainstream amplification.
       </p>
 
@@ -205,10 +205,10 @@ export function NarrativeMapPanel() {
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
           placeholder="Enter narrative topic (e.g., 'Election fraud claims')"
-          className="flex-1 text-[13px] border-ink/20 focus:border-masthead"
+          className="flex-1 text-sm border-ink/20 focus:border-masthead h-11"
           onKeyDown={(e) => e.key === 'Enter' && analyze()}
         />
-        <Button onClick={analyze} disabled={loading || topic.trim().length < 3} className="gap-2 text-[13px]">
+        <Button onClick={analyze} disabled={loading || topic.trim().length < 3} className="gap-2 text-sm h-11">
           {loading ? <Loader2 size={15} className="animate-spin" /> : <Play size={15} />}
           <span>Analyze</span>
         </Button>

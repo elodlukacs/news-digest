@@ -100,7 +100,7 @@ export function PromptLibrary() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4">
         <FeaturePanelHeader
-          icon={<BookOpen size={18} className="text-masthead shrink-0" />}
+          icon={<BookOpen size={20} className="text-masthead shrink-0" />}
           title="Prompt Library"
           infoTitle="Prompt Library"
           researcher="Practical critical thinking layer"
@@ -129,7 +129,7 @@ export function PromptLibrary() {
             placeholder="Search prompts..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-9 text-xs"
+            className="pl-9 h-11 text-sm"
           />
         </div>
         <div className="flex items-center gap-2 flex-wrap">

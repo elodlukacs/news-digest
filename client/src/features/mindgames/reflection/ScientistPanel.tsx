@@ -142,7 +142,7 @@ export function ScientistPanel({ selectedLlm }: Props) {
   const modeInfo = THINKING_MODES[thinkingMode];
 
   return (
-    <Card className="p-5 md:p-6 h-full flex flex-col gap-4">
+    <Card className="p-5 md:p-6 h-full flex flex-col gap-5">
       {/* Header */}
       <div className="space-y-1.5">
           <FeaturePanelHeader
@@ -214,7 +214,7 @@ export function ScientistPanel({ selectedLlm }: Props) {
             value={claim}
             onChange={(e) => setClaim(e.target.value)}
             placeholder="I believe that [claim]..."
-            className="flex-1 min-h-[100px] text-[13px] resize-none border-ink/20 focus:border-masthead"
+            className="flex-1 min-h-[100px] text-sm resize-none border-ink/20 focus:border-masthead"
           />
 
       {/* Confidence slider (before debate) */}
@@ -259,7 +259,7 @@ export function ScientistPanel({ selectedLlm }: Props) {
       )}
 
       {/* Deliberate button */}
-      <Button onClick={runDebate} disabled={loading || claim.trim().length < 10} className="w-full gap-2 text-[13px] h-10">
+      <Button onClick={runDebate} disabled={loading || claim.trim().length < 10} className="w-full gap-2 text-sm h-11">
         {loading ? <><Loader2 size={15} className="animate-spin" /> Deliberating…</> : <><MessageSquare size={15} /> Deliberate</>}
       </Button>
 
@@ -282,7 +282,7 @@ export function ScientistPanel({ selectedLlm }: Props) {
                 <span className="text-[13px] font-bold text-ink">{postSlider[0]}%</span>
               </div>
               <Slider value={postSlider} onValueChange={setPostSlider} min={0} max={100} step={5} />
-              <Button onClick={recordShift} variant="outline" className="w-full text-[13px] h-10 gap-2">
+              <Button onClick={recordShift} variant="outline" className="w-full text-sm h-11 gap-2">
                 <Brain size={15} /> Record Belief Shift
               </Button>
               {postSlider[0] === 100 && initialConfidence === 100 && (

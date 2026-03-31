@@ -130,7 +130,7 @@ export function CompareCoverage() {
   const getBiasColor = (bias: string) => BIAS_COLORS[bias] || '#6B7280';
 
   return (
-    <Card className="p-5 h-full flex flex-col gap-4">
+    <Card className="p-5 md:p-6 h-full flex flex-col gap-5">
       <FeaturePanelHeader
         icon={<Scale size={20} className="text-observation shrink-0" />}
         title="Compare Coverage"
@@ -178,10 +178,10 @@ export function CompareCoverage() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder={inputType === 'url' ? 'https://example.com/article...' : 'e.g., climate policy, Ukraine war, election...'}
-          className="text-[13px] flex-1 border-ink/20 focus:border-masthead h-10"
+          className="text-sm flex-1 border-ink/20 focus:border-masthead h-11"
           onKeyDown={(e) => e.key === 'Enter' && analyze()}
         />
-        <Button onClick={analyze} disabled={loading || !input.trim()} className="gap-2 text-[13px] h-10 px-4">
+        <Button onClick={analyze} disabled={loading || !input.trim()} className="gap-2 text-sm h-11 px-4">
           {loading ? <Loader2 size={15} className="animate-spin" /> : <Scale size={15} />}
           Analyze
         </Button>

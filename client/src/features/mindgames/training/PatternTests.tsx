@@ -423,9 +423,9 @@ export function PatternTests() {
   const accuracyRate = totalTests > 0 ? Math.round(((totalTests - patternDetections) / totalTests) * 100) : 0;
   
   return (
-    <Card className="p-5 h-full flex flex-col gap-3">
+    <Card className="p-5 md:p-6 h-full flex flex-col gap-4">
       <FeaturePanelHeader 
-        icon={<Eye size={17} className="text-curiosity shrink-0" />}
+        icon={<Eye size={20} className="text-curiosity shrink-0" />}
         title="Pattern Recognition Tests"
         infoTitle="Pattern Recognition Tests"
         researcher="Dan Ariely · Behavioural Economist"
@@ -456,44 +456,44 @@ export function PatternTests() {
         ) : undefined}
       />
       
-      <p className="text-[12px] text-ink-muted leading-relaxed -mt-1">
+      <p className="text-sm text-ink-muted leading-relaxed -mt-1">
         Test your ability to resist apophenia — the tendency to see patterns that don't exist. These exercises demonstrate how easily our brains find meaning in random data.
       </p>
       
       {/* Test Type Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TestType)}>
-        <TabsList className="grid grid-cols-4 gap-1 p-1 bg-paper-dark rounded-md h-auto">
+        <TabsList className="grid grid-cols-4 gap-1 p-1 bg-paper-dark rounded-lg h-auto">
           <Tooltip>
             <TooltipTrigger asChild>
-              <TabsTrigger value="coincidence" className="text-[10px] py-1.5 px-2 data-[state=active]:bg-masthead">
+              <TabsTrigger value="coincidence" className="text-xs py-2 px-2 data-[state=active]:bg-ink data-[state=active]:text-paper">
                 Coincidence
               </TabsTrigger>
             </TooltipTrigger>
-            <TooltipContent className="text-[11px]">Recognize random coincidences vs. meaningful patterns</TooltipContent>
+            <TooltipContent className="text-xs">Recognize random coincidences vs. meaningful patterns</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <TabsTrigger value="scatter" className="text-[10px] py-1.5 px-2 data-[state=active]:bg-masthead">
+              <TabsTrigger value="scatter" className="text-xs py-2 px-2 data-[state=active]:bg-ink data-[state=active]:text-paper">
                 Scatter
               </TabsTrigger>
             </TooltipTrigger>
-            <TooltipContent className="text-[11px]">Find patterns in random data distributions</TooltipContent>
+            <TooltipContent className="text-xs">Find patterns in random data distributions</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <TabsTrigger value="sequence" className="text-[10px] py-1.5 px-2 data-[state=active]:bg-masthead">
+              <TabsTrigger value="sequence" className="text-xs py-2 px-2 data-[state=active]:bg-ink data-[state=active]:text-paper">
                 Sequence
               </TabsTrigger>
             </TooltipTrigger>
-            <TooltipContent className="text-[11px]">Predict the next number in a sequence</TooltipContent>
+            <TooltipContent className="text-xs">Predict the next number in a sequence</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <TabsTrigger value="correlation" className="text-[10px] py-1.5 px-2 data-[state=active]:bg-masthead">
+              <TabsTrigger value="correlation" className="text-xs py-2 px-2 data-[state=active]:bg-ink data-[state=active]:text-paper">
                 Correlation
               </TabsTrigger>
             </TooltipTrigger>
-            <TooltipContent className="text-[11px]">Identify spurious correlations</TooltipContent>
+            <TooltipContent className="text-xs">Identify spurious correlations</TooltipContent>
           </Tooltip>
         </TabsList>
         
@@ -673,7 +673,7 @@ export function PatternTests() {
                 <div className="flex items-center justify-center gap-3 flex-wrap">
                   {currentSequence.numbers.map((num, i) => (
                     <div key={i} className="relative">
-                      <div className="w-12 h-12 rounded-full bg-masthead text-white flex items-center justify-center text-[16px] font-bold font-serif">
+                      <div className="w-12 h-12 rounded-full bg-ink text-paper flex items-center justify-center text-[16px] font-bold font-serif">
                         {num}
                       </div>
                       {i < currentSequence.numbers.length - 1 && (

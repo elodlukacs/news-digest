@@ -129,7 +129,7 @@ export function DisinfoMap() {
       {/* Header */}
       <div className="space-y-1.5">
         <FeaturePanelHeader
-          icon={<GitBranch size={18} className="text-outrage shrink-0" />}
+          icon={<GitBranch size={20} className="text-outrage shrink-0" />}
           title="Disinfo Influencer Map"
           infoTitle="Disinfo Influencer Map"
           researcher="Conspiracy convergence gateway research"
@@ -166,23 +166,23 @@ export function DisinfoMap() {
       </div>
 
       {/* Tab Switcher */}
-      <div className="flex gap-2 border-b border-rule pb-2">
+      <div className="flex rounded-xl border-2 border-rule overflow-hidden">
         <button
           onClick={() => setActiveTab('visual')}
-          className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
-            activeTab === 'visual' 
-              ? 'bg-masthead text-paper' 
-              : 'text-ink-muted hover:text-ink'
+          className={`flex-1 py-2.5 text-sm font-semibold transition-all cursor-pointer ${
+            activeTab === 'visual'
+              ? 'bg-ink text-paper'
+              : 'bg-paper text-ink-muted hover:text-ink hover:bg-paper-dark'
           }`}
         >
           Funnel Visualization
         </button>
         <button
           onClick={() => setActiveTab('details')}
-          className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
-            activeTab === 'details' 
-              ? 'bg-masthead text-paper' 
-              : 'text-ink-muted hover:text-ink'
+          className={`flex-1 py-2.5 text-sm font-semibold border-l border-rule transition-all cursor-pointer ${
+            activeTab === 'details'
+              ? 'bg-ink text-paper'
+              : 'bg-paper text-ink-muted hover:text-ink hover:bg-paper-dark'
           }`}
         >
           Detailed View

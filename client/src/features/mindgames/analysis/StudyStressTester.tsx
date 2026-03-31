@@ -137,17 +137,17 @@ export function StudyStressTester() {
   };
 
   return (
-    <Card className="p-5 h-full flex flex-col gap-3">
+    <Card className="p-5 md:p-6 h-full flex flex-col gap-4">
       <div className="flex items-center gap-2">
-        <FlaskConical size={17} className="text-curiosity shrink-0" />
-        <h3 className="font-serif text-base font-bold uppercase tracking-wide text-ink flex-1">Study Stress-Tester</h3>
+        <FlaskConical size={20} className="text-curiosity shrink-0" />
+        <h3 className="font-serif text-lg font-bold text-ink flex-1">Study Stress-Tester</h3>
         <button onClick={toggleHistory} className="flex items-center gap-1 text-[11px] text-ink-muted hover:text-ink transition-colors cursor-pointer px-1">
           <History size={13} />
           {showHistory ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
         </button>
       </div>
 
-      <p className="text-[13px] text-ink-muted leading-relaxed -mt-1">
+      <p className="text-sm text-ink-muted leading-relaxed -mt-1">
         Evaluate research study quality in news headlines. Check sample size, methodology, conflicts of interest, and more.
       </p>
 
@@ -185,10 +185,10 @@ export function StudyStressTester() {
         value={headline}
         onChange={(e) => setHeadline(e.target.value)}
         placeholder="Paste a research headline to evaluate…&#10;e.g., 'Study shows 50% of people prefer new drug with no side effects'"
-        className="flex-1 min-h-[100px] text-[13px] resize-none border-ink/20 focus:border-masthead"
+        className="flex-1 min-h-[100px] text-sm resize-none border-ink/20 focus:border-masthead"
       />
 
-      <Button onClick={analyze} disabled={loading || headline.trim().length < 10} className="w-full gap-2 text-[13px] h-10">
+      <Button onClick={analyze} disabled={loading || headline.trim().length < 10} className="w-full gap-2 text-sm h-11">
         {loading ? <><Loader2 size={15} className="animate-spin" /> Analyzing…</> : <><FlaskConical size={15} /> Evaluate Study</>}
       </Button>
 

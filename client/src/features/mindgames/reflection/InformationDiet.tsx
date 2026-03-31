@@ -53,11 +53,11 @@ export function InformationDiet({ existingSources = [], onAnalyze }: Props) {
           value={newSource}
           onChange={e => setNewSource(e.target.value)}
           placeholder="Add news source (e.g., BBC, Fox News, Reuters)..."
-          className="text-[13px] flex-1 border-ink/20 focus:border-masthead h-9"
+          className="text-sm flex-1 border-ink/20 focus:border-masthead h-11"
           onKeyDown={e => e.key === 'Enter' && addSource()}
           aria-label="Add news source"
         />
-        <Button onClick={addSource} disabled={!newSource.trim()} variant="outline" className="px-3 h-9" aria-label="Add source">
+        <Button onClick={addSource} disabled={!newSource.trim()} variant="outline" className="px-3 h-11" aria-label="Add source">
           <Plus size={15} />
         </Button>
       </div>
@@ -73,7 +73,7 @@ export function InformationDiet({ existingSources = [], onAnalyze }: Props) {
         </div>
       )}
 
-      <Button onClick={runAnalysis} disabled={loading || sources.length === 0} className="w-full gap-2 text-[13px] h-9">
+      <Button onClick={runAnalysis} disabled={loading || sources.length === 0} className="w-full gap-2 text-sm h-11">
         {loading ? <><Loader2 size={15} className="animate-spin" /> Analyzing…</> : <><PieChart size={15} /> Analyze Information Diet</>}
       </Button>
 

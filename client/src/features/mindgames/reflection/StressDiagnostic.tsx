@@ -145,7 +145,7 @@ export function StressDiagnostic({ open, onOpenChange }: Props) {
             <Brain size={20} className="text-masthead" />
             <DialogTitle className="font-serif text-xl">How Sharp Is Your Guard Today?</DialogTitle>
           </div>
-          <DialogDescription className="text-[11px]">
+          <DialogDescription className="text-xs">
             Based on research by Taber & Lodge (motivated reasoning) and Stanovich (cognitive reflection).
             Your responses stay private — no data is sent to any server.
           </DialogDescription>
@@ -153,18 +153,18 @@ export function StressDiagnostic({ open, onOpenChange }: Props) {
 
         {step === 'quiz' ? (
           <div className="space-y-5 py-2">
-            <p className="text-[11px] text-ink-muted italic">
+            <p className="text-xs text-ink-muted italic">
               Answer honestly. This is a self-check tool, not a judgment.
             </p>
 
             {/* Question 1: Stress Level */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <label className="text-[12px] font-medium text-ink flex items-center gap-1.5">
+                <label className="text-sm font-medium text-ink flex items-center gap-1.5">
                   <Zap size={13} className="text-outrage" />
                   How stressed do you feel right now?
                 </label>
-                <span className="text-[11px] font-bold text-masthead">{answers.stressLevel}/10</span>
+                <span className="text-xs font-bold text-ink">{answers.stressLevel}/10</span>
               </div>
               <Slider
                 value={[answers.stressLevel]}
@@ -173,7 +173,7 @@ export function StressDiagnostic({ open, onOpenChange }: Props) {
                 max={10}
                 step={1}
               />
-              <div className="flex justify-between text-[9px] text-ink-muted">
+              <div className="flex justify-between text-[10px] text-ink-muted">
                 <span>Calm</span>
                 <span>Very stressed</span>
               </div>
@@ -181,7 +181,7 @@ export function StressDiagnostic({ open, onOpenChange }: Props) {
 
             {/* Question 2: Emotional State */}
             <div className="space-y-2">
-              <label className="text-[12px] font-medium text-ink flex items-center gap-1.5">
+              <label className="text-sm font-medium text-ink flex items-center gap-1.5">
                 <MessageSquare size={13} className="text-observation" />
                 What is your current emotional state?
               </label>
@@ -191,9 +191,9 @@ export function StressDiagnostic({ open, onOpenChange }: Props) {
                     key={state.value}
                     type="button"
                     onClick={() => setAnswers(a => ({ ...a, emotionalState: state.value }))}
-                    className={`py-2 px-2 text-[11px] rounded border transition-all ${
+                    className={`py-2 px-2 text-xs rounded-lg border transition-all ${
                       answers.emotionalState === state.value
-                        ? 'border-masthead bg-paper-dark font-semibold'
+                        ? 'border-ink bg-paper-dark font-semibold'
                         : 'border-rule hover:border-ink-muted'
                     }`}
                   >
@@ -207,10 +207,10 @@ export function StressDiagnostic({ open, onOpenChange }: Props) {
             {/* Question 3: Confidence */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <label className="text-[12px] font-medium text-ink">
+                <label className="text-sm font-medium text-ink">
                   How confident are you in your current beliefs?
                 </label>
-                <span className="text-[11px] font-bold text-masthead">{answers.confidence}/10</span>
+                <span className="text-xs font-bold text-ink">{answers.confidence}/10</span>
               </div>
               <Slider
                 value={[answers.confidence]}
@@ -219,7 +219,7 @@ export function StressDiagnostic({ open, onOpenChange }: Props) {
                 max={10}
                 step={1}
               />
-              <div className="flex justify-between text-[9px] text-ink-muted">
+              <div className="flex justify-between text-[10px] text-ink-muted">
                 <span>Questioning</span>
                 <span>Very certain</span>
               </div>
@@ -228,11 +228,11 @@ export function StressDiagnostic({ open, onOpenChange }: Props) {
             {/* Question 4: Tiredness */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <label className="text-[12px] font-medium text-ink flex items-center gap-1.5">
+                <label className="text-sm font-medium text-ink flex items-center gap-1.5">
                   <Clock size={13} className="text-curiosity" />
                   How tired are you right now?
                 </label>
-                <span className="text-[11px] font-bold text-masthead">{answers.tiredness}/10</span>
+                <span className="text-xs font-bold text-ink">{answers.tiredness}/10</span>
               </div>
               <Slider
                 value={[answers.tiredness]}
@@ -241,7 +241,7 @@ export function StressDiagnostic({ open, onOpenChange }: Props) {
                 max={10}
                 step={1}
               />
-              <div className="flex justify-between text-[9px] text-ink-muted">
+              <div className="flex justify-between text-[10px] text-ink-muted">
                 <span>Fully alert</span>
                 <span>Exhausted</span>
               </div>
@@ -249,7 +249,7 @@ export function StressDiagnostic({ open, onOpenChange }: Props) {
 
             {/* Question 5: Media Trust */}
             <div className="space-y-2">
-              <label className="text-[12px] font-medium text-ink">
+              <label className="text-sm font-medium text-ink">
                 How much do you trust mainstream media?
               </label>
               <div className="space-y-1">
@@ -258,9 +258,9 @@ export function StressDiagnostic({ open, onOpenChange }: Props) {
                     key={level.value}
                     type="button"
                     onClick={() => setAnswers(a => ({ ...a, mediaTrust: level.value }))}
-                    className={`w-full text-left py-2 px-3 text-[11px] rounded border transition-all ${
+                    className={`w-full text-left py-2 px-3 text-xs rounded-lg border transition-all ${
                       answers.mediaTrust === level.value
-                        ? 'border-masthead bg-paper-dark font-medium'
+                        ? 'border-ink bg-paper-dark font-medium'
                         : 'border-rule hover:border-ink-muted'
                     }`}
                   >
@@ -273,11 +273,11 @@ export function StressDiagnostic({ open, onOpenChange }: Props) {
             {/* Question 6: Sleep */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <label className="text-[12px] font-medium text-ink flex items-center gap-1.5">
+                <label className="text-sm font-medium text-ink flex items-center gap-1.5">
                   <Coffee size={13} className="text-masthead" />
                   Hours of sleep last night?
                 </label>
-                <span className="text-[11px] font-bold text-masthead">{answers.sleepHours}h</span>
+                <span className="text-xs font-bold text-ink">{answers.sleepHours}h</span>
               </div>
               <Slider
                 value={[answers.sleepHours]}
@@ -286,7 +286,7 @@ export function StressDiagnostic({ open, onOpenChange }: Props) {
                 max={10}
                 step={1}
               />
-              <div className="flex justify-between text-[9px] text-ink-muted">
+              <div className="flex justify-between text-[10px] text-ink-muted">
                 <span>1h</span>
                 <span>10h</span>
               </div>
@@ -311,7 +311,7 @@ export function StressDiagnostic({ open, onOpenChange }: Props) {
                 </span>
                 <div className="text-left">
                   <p className="text-2xl font-bold text-ink">{score}</p>
-                  <p className="text-[9px] text-ink-muted">out of 10</p>
+                  <p className="text-[10px] text-ink-muted">out of 10</p>
                 </div>
               </div>
               <Badge
