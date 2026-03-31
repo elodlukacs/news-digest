@@ -86,7 +86,7 @@ export default function BiasRadarPanel({
           aria-label="Bias Radar"
           className={`fixed z-50 bg-paper shadow-2xl flex flex-col border-rule panel-slide-in
             inset-x-0 bottom-0 rounded-t-2xl border-t max-h-[90dvh]
-            md:inset-y-0 md:right-0 md:bottom-auto md:rounded-none
+            md:inset-y-0 md:right-0 md:left-auto md:rounded-none
             md:w-full md:max-w-[560px] md:border-l md:border-t-0 md:max-h-full
           `}
         >

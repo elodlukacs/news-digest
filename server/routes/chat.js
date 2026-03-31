@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const { callLLM } = require('../lib/llm');
+const { buildMessages } = require('../lib/promptManager');
 
 const router = express.Router();
 
@@ -17,8 +18,9 @@ router.post('/', async (req, res) => {
     const now = new Date().toISOString();
     db.prepare('INSERT INTO chat_messages (summary_id, role, content, created_at) VALUES (?,?,?,?)').run(summary_id, 'user', message, now);
 
+    const promptMessages = buildMessages('chat', { summary: summary.summary });
     const messages = [
-      { role: 'system', content: `You are a helpful news analyst. Answer questions about the following news summary. Be concise and factual.\n\nNews Summary:\n${summary.summary}` },
+      ...promptMessages,
       ...history,
       { role: 'user', content: message },
     ];

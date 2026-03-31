@@ -1,73 +1,20 @@
 const express = require('express');
 const db = require('../db');
 const { callLLM } = require('../lib/llm');
+const { getPrompt } = require('../lib/promptManager');
 
 const router = express.Router();
-
-const DISINFO_MAP_PROMPT = `You are a disinformation researcher specializing in tracking how misinformation pathways evolve from health/wellness gateways into conspiracy funnels.
-
-Analyze the landscape of health and wellness misinformation and how it serves as a gateway to broader conspiracy thinking.
-
-Return JSON with:
-{
-  "gatewayTopics": [
-    {
-      "id": "string",
-      "name": "string",
-      "description": "string",
-      "examples": ["string"],
-      "leakageRisk": "low|medium|high",
-      "commonClaims": ["string"]
-    }
-  ],
-  "bridgeFigures": [
-    {
-      "id": "string",
-      "name": "string",
-      "type": "influencer|doctor|media|celebrity",
-      "followers": "string",
-      "transitionPattern": "string",
-      "gatewayTopics": ["string"],
-      "targetConspiracies": ["string"],
-      "leakageLevel": "low|medium|high"
-    }
-  ],
-  "conspiracyCores": [
-    {
-      "id": "string",
-      "name": "string",
-      "description": "string",
-      "coreNarratives": ["string"],
-      "connectedGateways": ["string"],
-      "radicalizationPotential": "low|medium|high"
-    }
-  ],
-  "pathways": [
-    {
-      "from": "string (gateway or figure id)",
-      "to": "string (figure or core id)",
-      "mechanism": "string",
-      "warningSigns": ["string"],
-      "leakagePoint": "string"
-    }
-  ],
-  "warningBanners": [
-    {
-      "type": "gateway|bridge|conspiracy",
-      "title": "string",
-      "message": "string"
-    }
-  ]
-}`;
 
 // POST /api/cognitive/disinfo-map — get disinfo influencer map data
 router.post('/disinfo-map', async (req, res) => {
   const { gatewayFocus, conspiracyFocus, userId } = req.body;
 
   try {
+    const disinfoPrompt = getPrompt('disinfo-map');
+
     const result = await callLLM(
       [
-        { role: 'system', content: DISINFO_MAP_PROMPT },
+        { role: 'system', content: disinfoPrompt.user_prompt },
         { role: 'user', content: `Analyze current patterns of health/wellness misinformation gateways and their connections to conspiracy funnels.${gatewayFocus ? `\nFocus areas: ${gatewayFocus}` : ''}${conspiracyFocus ? `\nConspiracy themes to examine: ${conspiracyFocus}` : ''}` }
       ],
       { purpose: 'disinfo_map', temperature: 0.5, response_format: { type: 'json_object' }, db }

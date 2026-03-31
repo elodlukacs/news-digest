@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Plus, X, Coffee, AlignJustify, Home, Film, Brain, Briefcase, BarChart2, Shield } from 'lucide-react';
+import { Plus, X, Coffee, AlignJustify, Home, Film, Brain, Briefcase, BarChart2, Shield, MessageSquareCode } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -57,6 +57,7 @@ export function NavigationBar({
   const showReleases = path === '/releases';
   const showJobs = path === '/jobs';
   const showCognitive = path.startsWith('/mindgames');
+  const showPrompts = path === '/prompts';
 
   const handleAdd = async () => {
     if (!newName.trim()) return;
@@ -79,6 +80,7 @@ export function NavigationBar({
   const releasesAndClose = () => { navigate('/releases'); setDrawerOpen(false); };
   const jobsAndClose = () => { navigate('/jobs'); setDrawerOpen(false); };
   const cognitiveAndClose = () => { navigate('/mindgames'); setDrawerOpen(false); };
+  const promptsAndClose = () => { navigate('/prompts'); setDrawerOpen(false); };
   const homeAndClose = () => { navigate('/'); setDrawerOpen(false); };
 
   const todayShort = new Date().toLocaleDateString('en-US', {
@@ -87,7 +89,7 @@ export function NavigationBar({
     year: 'numeric',
   });
 
-  const currentLabel = showJobs ? 'Jobs' : showReleases ? 'Releases' : showBriefing ? 'Briefing' : showCognitive ? 'MindGames' : activeCategoryId ? (categories.find(c => c.id === activeCategoryId)?.name) : 'Home';
+  const currentLabel = showJobs ? 'Jobs' : showReleases ? 'Releases' : showBriefing ? 'Briefing' : showCognitive ? 'MindGames' : showPrompts ? 'Prompts' : activeCategoryId ? (categories.find(c => c.id === activeCategoryId)?.name) : 'Home';
 
   return (
     <>
@@ -240,6 +242,8 @@ export function NavigationBar({
               <NavDivider />
               <NavBox label="MindGames" icon={<Shield size={13} />} active={showCognitive} onClick={() => navigate('/mindgames')} compact />
               <NavDivider />
+              <NavBox label="Prompts" icon={<MessageSquareCode size={13} />} active={showPrompts} onClick={() => navigate('/prompts')} compact />
+              <NavDivider />
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
@@ -288,6 +292,7 @@ export function NavigationBar({
               <DrawerItem label="Releases" icon={<Film size={14} />} active={showReleases} onClick={releasesAndClose} />
               <DrawerItem label="Jobs" icon={<Briefcase size={14} />} active={showJobs} onClick={jobsAndClose} />
               <DrawerItem label="MindGames" icon={<Shield size={14} />} active={showCognitive} onClick={cognitiveAndClose} />
+              <DrawerItem label="Prompts" icon={<MessageSquareCode size={14} />} active={showPrompts} onClick={promptsAndClose} />
             </div>
 
             {categories.length > 0 && (

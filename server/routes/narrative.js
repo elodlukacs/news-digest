@@ -1,74 +1,11 @@
 const express = require('express');
 const db = require('../db');
 const { callLLM } = require('../lib/llm');
+const { getPrompt } = require('../lib/promptManager');
 
 const router = express.Router();
 
 const PLATFORMS = ['Twitter/X', 'Facebook', 'Reddit', 'News sites', 'YouTube', 'TikTok', 'Instagram'];
-
-const NARRATIVE_MAP_PROMPT = `You are a misinformation analyst specializing in tracking how narratives spread across social media platforms.
-
-Map how this misinformation narrative spreads across platforms:
-- Track the narrative's journey: origin platform, amplification points, mainstreaming
-- Identify key platforms involved at each stage
-- Note how the narrative mutates (initial claim vs current version)
-- Identify "bridge accounts" that bring fringe ideas to mainstream
-- Rate virality and current stage (Emerging | Circulating | Mainstreamed | Declining)
-- Provide timeline stages with approximate dates
-
-Return JSON:
-{
-  "narrative": "string (narrative name/title)",
-  "description": "string (brief description of the narrative)",
-  "stage": "Emerging | Circulating | Mainstreamed | Declining",
-  "viralityScore": number (0-100),
-  "stages": [
-    {
-      "id": "string",
-      "label": "string",
-      "date": "string",
-      "description": "string",
-      "platforms": ["string"],
-      "mutations": ["string"]
-    }
-  ],
-  "platforms": [
-    {
-      "id": "string",
-      "name": "string",
-      "virality": number (0-100, determines node size),
-      "role": "origin | amplifier | bridge | mainstream | decline",
-      "description": "string",
-      "keyAccounts": ["string"]
-    }
-  ],
-  "connections": [
-    {
-      "from": "string (platform id)",
-      "to": "string (platform id)",
-      "weight": number (1-10, determines edge thickness),
-      "description": "string",
-      "stage": "string"
-    }
-  ],
-  "keyAccounts": [
-    {
-      "platform": "string",
-      "handle": "string",
-      "role": "string",
-      "followers": "string"
-    }
-  ],
-  "mutationHistory": [
-    {
-      "stage": "string",
-      "original": "string",
-      "current": "string",
-      "date": "string"
-    }
-  ],
-  "summary": "string (overall analysis)"
-}`;
 
 router.post('/narrative-map', async (req, res) => {
   const { topic, userId, provider } = req.body;
@@ -81,9 +18,11 @@ router.post('/narrative-map', async (req, res) => {
   const uid = userId || 'default';
 
   try {
+    const narrativePrompt = getPrompt('narrative-map');
+
     const result = await callLLM(
       [
-        { role: 'system', content: NARRATIVE_MAP_PROMPT },
+        { role: 'system', content: narrativePrompt.user_prompt },
         { role: 'user', content: `Map the spread of this narrative across platforms:\n\n"${trimmed}"` }
       ],
       { purpose: 'narrative_map', temperature: 0.3, response_format: { type: 'json_object' }, providerId: provider || null, db }

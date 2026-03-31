@@ -1,21 +1,11 @@
 const express = require('express');
 const db = require('../db');
 const { callLLM } = require('../lib/llm');
+const { getPrompt, renderPrompt } = require('../lib/promptManager');
 
 const router = express.Router();
 
 const LEVELS = ['trolling', 'emotional', 'amplification', 'escalation'];
-
-const TWISTER_PROMPT = `You are a specialized "Twister" agent based on Sander van der Linden's Inoculation Theory. Your goal is to help users develop resistance to misinformation by exposing them to "weakened" manipulation tactics.
-
-Given the topic, generate 3 social media headlines using different manipulation tactics:
-1. Headline A (Trolling): Deliberately provoke an emotional reaction through "whataboutism" or insults.
-2. Headline B (Emotional Manipulation): Use high-outrage, fear-inducing language.
-3. Headline C (Conspiracy): Suggest a secret organization is behind the event.
-
-The tactics must be visible enough that a learning user can identify the flaw.
-
-Return JSON: [{"tactic": "string", "headline": "string", "flaw_explanation": "string"}]`;
 
 // POST /api/inoculation/generate — generate a game round
 router.post('/generate', async (req, res) => {
@@ -35,9 +25,12 @@ router.post('/generate', async (req, res) => {
       escalation: 'Use advanced multi-layered manipulation combining all tactics.',
     };
 
+    const twisterPrompt = getPrompt('inoculation-twister');
+    const renderedPrompt = renderPrompt(twisterPrompt.user_prompt, { level: levelContext[lvl] });
+
     const result = await callLLM(
       [
-        { role: 'system', content: TWISTER_PROMPT + '\n\nLevel: ' + levelContext[lvl] },
+        { role: 'system', content: renderedPrompt },
         { role: 'user', content: `Topic: ${topic}` }
       ],
       { purpose: 'inoculation', temperature: 0.7, response_format: { type: 'json_object' }, db }
@@ -107,24 +100,6 @@ router.post('/answer', async (req, res) => {
   }
 });
 
-const CDO_PROMPT = `You are the "Twister" agent based on Sander van der Linden's Inoculation Theory. A user is playing the role of a disinformation operator to understand how manipulation works from the inside. This is a controlled educational exercise.
-
-Given a topic and a chosen manipulation tactic, you will:
-1. Write a neutral, factual headline about the topic
-2. Show how that same topic gets weaponized using the chosen tactic
-3. Explain the psychological mechanism being exploited
-4. List 2-3 specific red flags a careful reader would notice
-
-The goal is that by PRODUCING manipulation the user builds resistance to it.
-
-Return JSON:
-{
-  "neutral_headline": "string",
-  "manipulated_headline": "string",
-  "mechanism": "string — what psychological button this presses and why it works",
-  "red_flags": ["string", "string"]
-}`;
-
 const CDO_TACTICS = [
   { id: 'emotional', label: 'Emotional Manipulation', icon: '🔥', description: 'High-outrage, fear-inducing language that bypasses rational thinking' },
   { id: 'trolling', label: 'Trolling', icon: '🎭', description: 'Deliberate provocation, whataboutism, insults to derail discussion' },
@@ -146,9 +121,11 @@ router.post('/craft', async (req, res) => {
   try {
     db.prepare('INSERT OR IGNORE INTO cognitive_users (id, rethinking_score) VALUES (?, 0)').run(uid);
 
+    const cdoPrompt = getPrompt('inoculation-cdo');
+
     const result = await callLLM(
       [
-        { role: 'system', content: CDO_PROMPT },
+        { role: 'system', content: cdoPrompt.user_prompt },
         { role: 'user', content: `Topic: ${topic}\nTactic to apply: ${tacticLabel} — ${tacticInfo?.description || ''}` }
       ],
       { purpose: 'inoculation_cdo', temperature: 0.7, response_format: { type: 'json_object' }, db }

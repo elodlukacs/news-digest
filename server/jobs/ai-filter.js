@@ -1,3 +1,5 @@
+const { getPrompt, renderPrompt } = require('../lib/promptManager');
+
 const BATCH_SIZE = 100;
 
 async function filterJobsWithAI(jobs, callLLM, providerId) {
@@ -14,22 +16,10 @@ async function filterJobsWithAI(jobs, callLLM, providerId) {
       workType: j.workType,
     }));
 
-    const prompt = `You are a job relevance classifier. Given this list of job postings, return ONLY the jobs relevant for a Senior Frontend Developer (JavaScript, TypeScript, React, Vue, Angular, Next.js, CSS, HTML, Web).
-
-Include: senior/lead/staff/principal frontend, UI, or web developer roles.
-Exclude: backend-only, DevOps, mobile-native-only, data, ML, design-only, or unrelated roles.
-
-For each matching job, also assess whether it is remote-friendly:
-- "yes" = explicitly remote or the source/description strongly implies remote work
-- "possible" = not clear, could be remote or hybrid
-- "no" = clearly on-site or office-only
-
-Return a JSON array of objects with "id" and "remote" fields, nothing else.
-Example: [{"id":"abc","remote":"yes"},{"id":"def","remote":"possible"}]
-If none match, return: []
-
-Jobs:
-${JSON.stringify(jobSummaries)}`;
+    const jobFilterPrompt = getPrompt('job-filter');
+    const prompt = renderPrompt(jobFilterPrompt.user_prompt, {
+      jobs: JSON.stringify(jobSummaries),
+    });
 
     try {
       const response = await callLLM(

@@ -1,7 +1,7 @@
 const express = require('express');
 const db = require('../../db');
 const { callLLM } = require('../../lib/llm');
-const { TIMELINE_CHECK_PROMPT, fillPrompt } = require('../../lib/bias-radar/prompts');
+const { getPrompt, renderPrompt } = require('../../lib/promptManager');
 
 const router = express.Router();
 
@@ -39,14 +39,15 @@ router.get('/', async (req, res) => {
 
     const currentText = `"${article.title}" (${article.pub_date || 'unknown date'})\n${article.body_text || article.description || ''}`;
 
-    const prompt = fillPrompt(TIMELINE_CHECK_PROMPT, {
-      STORY_TOPIC: article.title,
-      PREVIOUS_ARTICLES: previousText,
-      CURRENT_ARTICLE: currentText,
+    const timelinePrompt = getPrompt('bias-radar-timeline');
+    const prompt = renderPrompt(timelinePrompt.user_prompt, {
+      storyTopic: article.title,
+      previousArticles: previousText,
+      currentArticle: currentText,
     });
 
     const messages = [
-      { role: 'system', content: 'You are a media analysis assistant. Respond only with valid JSON.' },
+      { role: 'system', content: timelinePrompt.system_message || 'You are a media analysis assistant. Respond only with valid JSON.' },
       { role: 'user', content: prompt },
     ];
 

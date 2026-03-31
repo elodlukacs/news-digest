@@ -1,41 +1,9 @@
 const express = require('express');
 const { callLLM } = require('../lib/llm');
 const db = require('../db');
+const { getPrompt } = require('../lib/promptManager');
 
 const router = express.Router();
-
-const COMPARE_COVERAGE_PROMPT = `You are a media bias analyst specializing in comparative framing analysis across political spectrum outlets.
-
-Compare how different news outlets cover the same story. You will receive either a URL or a topic/headline to analyze.
-
-Rules:
-1. Identify key narrative framings used by outlets across the political spectrum (Far Left | Left | Center-Left | Center | Center-Right | Right | Far Right)
-2. Extract common facts shared across all coverage
-3. Highlight what each outlet emphasizes or omits
-4. Rate the political bias of each outlet's coverage
-5. Generate a "framing comparison" summary explaining how narratives diverge
-6. Calculate a "Narrative Divergence" score (0-100) indicating how differently outlets framed the story
-
-Return JSON:
-{
-  "topic": "string (the story/topic being covered)",
-  "outlets": [
-    {
-      "name": "string (e.g., MSNBC, CNN, Fox News, Breitbart, The Intercept, Reason)",
-      "bias": "Far Left | Left | Center-Left | Center | Center-Right | Right | Far Right",
-      "headline": "string (how they framed the headline)",
-      "keyQuotes": ["string (1-3 notable quotes)"],
-      "framing": "string (the main narrative frame they used)",
-      "emphasized": ["string (what they focused on)"],
-      "omitted": ["string (what they left out)"],
-      "tone": "string (factual, inflammatory, neutral, opinionated, etc.)"
-    }
-  ],
-  "commonFacts": ["string (facts reported consistently across outlets)"],
-  "framingDifferences": "string (explanation of how framing varied)",
-  "narrativeDivergenceScore": number (0-100),
-  "summary": "string (overall analysis)"
-}`;
 
 // POST /api/compare/coverage — compare coverage across outlets
 router.post('/coverage', async (req, res) => {
@@ -49,9 +17,11 @@ router.post('/coverage', async (req, res) => {
   const inputType = url ? 'URL' : 'topic';
 
   try {
+    const comparePrompt = getPrompt('compare-coverage');
+
     const result = await callLLM(
       [
-        { role: 'system', content: COMPARE_COVERAGE_PROMPT },
+        { role: 'system', content: comparePrompt.user_prompt },
         { role: 'user', content: `Analyze coverage of this ${inputType}: ${input}` }
       ],
       { purpose: 'compare_coverage', temperature: 0.3, response_format: { type: 'json_object' }, providerId: provider || null, db }

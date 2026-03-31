@@ -1,30 +1,9 @@
 const express = require('express');
 const db = require('../db');
 const { callLLM } = require('../lib/llm');
+const { getPrompt } = require('../lib/promptManager');
 
 const router = express.Router();
-
-const SOS_PROMPT = `You are a communication coach specializing in Monica Guzman's "Fearless Curiosity."
-
-Analyze the provided information diet (list of news sources) and viewpoints to detect SOS patterns (Sorting, Othering, Siloing).
-
-Rules:
-1. Identify the Sorting pattern: How are sources categorizing the other side as "different"?
-2. Identify the Othering pattern: Where are opposing views being dehumanized?
-3. Identify the Siloing pattern: How exclusive are the information sources?
-4. Generate 3 "How" questions that uncover the Deep Story (experiences behind the views).
-5. Avoid "Why" questions that trigger defensiveness.
-6. Identify shared core values (from Schwartz's 10 universal values).
-
-Return JSON:
-{
-  "siloing_score": number (0-10),
-  "sorting_examples": ["string"],
-  "othering_examples": ["string"],
-  "siloing_examples": ["string"],
-  "how_questions": ["string"],
-  "shared_values": [{"value": "string", "explanation": "string"}]
-}`;
 
 const VALUES_QUIZ = [
   { id: 'universalism', name: 'Universalism', description: 'Understanding and protection for all people and nature.' },
@@ -49,14 +28,16 @@ router.post('/audit', async (req, res) => {
   const uid = userId || 'default';
 
   try {
-    const prompt = viewpoints
+    const promptText = viewpoints
       ? `Sources: ${sources.join(', ')}\nViewpoints to analyze: ${viewpoints}`
       : `Information sources: ${sources.join(', ')}`;
 
+    const sosPrompt = getPrompt('sos-audit');
+
     const result = await callLLM(
       [
-        { role: 'system', content: SOS_PROMPT },
-        { role: 'user', content: prompt }
+        { role: 'system', content: sosPrompt.user_prompt },
+        { role: 'user', content: promptText }
       ],
       { purpose: 'bridge_audit', temperature: 0.3, response_format: { type: 'json_object' }, db }
     );
@@ -88,25 +69,11 @@ router.post('/bridge', async (req, res) => {
   if (!viewA || !viewB) return res.status(400).json({ error: 'Both viewpoints required' });
 
   try {
+    const bridgePrompt = getPrompt('bridge-builder');
+
     const result = await callLLM(
       [
-        { role: 'system', content: `You are a communication coach specializing in Monica Guzman's "Fearless Curiosity."
-
-Analyze the disagreement between two viewpoints and generate bridge-building questions.
-
-Rules:
-1. Identify how each side is "Sorting" the other as different.
-2. Generate 3 "How" questions that uncover the personal experiences behind each view.
-3. Avoid "Why" questions that trigger defensiveness.
-4. Identify one shared core value both sides likely prioritize.
-
-Return JSON:
-{
-  "sorting_analysis": "string",
-  "how_questions": ["string"],
-  "shared_value": "string",
-          "bridge_summary": "string"
-}` },
+        { role: 'system', content: bridgePrompt.user_prompt },
         { role: 'user', content: `View A: ${viewA}\nView B: ${viewB}` }
       ],
       { purpose: 'bridge_builder', temperature: 0.4, response_format: { type: 'json_object' }, db }
@@ -153,26 +120,7 @@ router.get('/audits', (req, res) => {
   res.json(rows);
 });
 
-const INFORMATION_DIET_PROMPT = `You are a media bias analyst specializing in information diet assessment.
-
-Analyze these news sources for political bias and information diversity:
-
-Rules:
-1. Rate each source on bias spectrum (Far Left | Left | Center-Left | Center | Center-Right | Right | Far Right)
-2. Identify echo-chamber patterns (sources reinforcing same narratives)
-3. Suggest diverse alternatives for balanced information diet
-4. Calculate diversity score (0-100 based on political spectrum spread and source variety)
-5. Identify dominant bias quadrant
-
-Return JSON:
-{
-  "sources": [{"name": "string", "bias": "string", "frequency": "high|medium|low", "url": "string"}],
-  "diversityScore": number (0-100),
-  "dominantBias": "string",
-  "echoChamberRisk": "low|medium|high",
-  "recommendations": ["string"],
-  "biasDistribution": {"farLeft": number, "left": number, "centerLeft": number, "center": number, "centerRight": number, "right": number, "farRight": number}
-}`;
+const INFORMATION_DIET_PROMPT_SLUG = 'information-diet';
 
 // POST /api/bridge/information-diet — analyze user's feed sources for echo-chamber effects
 router.post('/information-diet', async (req, res) => {
@@ -187,9 +135,11 @@ router.post('/information-diet', async (req, res) => {
   try {
     const sourceList = sources.map(s => typeof s === 'string' ? s : `${s.name} (${s.url || 'unknown'})`).join(', ');
 
+    const dietPrompt = getPrompt(INFORMATION_DIET_PROMPT_SLUG);
+
     const result = await callLLM(
       [
-        { role: 'system', content: INFORMATION_DIET_PROMPT },
+        { role: 'system', content: dietPrompt.user_prompt },
         { role: 'user', content: `Analyze these news sources: ${sourceList}` }
       ],
       { purpose: 'information_diet', temperature: 0.3, response_format: { type: 'json_object' }, db }

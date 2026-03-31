@@ -1,26 +1,9 @@
 const express = require('express');
 const db = require('../db');
 const { callLLM } = require('../lib/llm');
+const { getPrompt } = require('../lib/promptManager');
 
 const router = express.Router();
-
-const FORENSIC_PROMPT = `You are a senior forensic sub-editor trained in David Robert Grimes' logical fallacy taxonomy and Dan Ariely's "Funnel of Misbelief."
-
-Analyze the provided text for cognitive vulnerabilities. Be educational and non-judgmental. Do not rewrite the text.
-
-Rules:
-1. Identify Fallacies: Explicitly search for Ad Hominem, False Dichotomy, Appeal to Nature, Post Hoc, Appeal to Emotion, Straw Man, Bandwagon, Slippery Slope, Appeal to Authority, Red Herring.
-2. Map the Funnel of Misbelief: Identify elements of Stress exploitation, Confirmation Bias, Pattern Seeking, or Social Exclusion.
-3. Quantitative Scoring: Provide a 0-10 score for "Emotional Intensity."
-
-Return JSON:
-{
-  "fallacies": [{"name": "string", "evidence": "string", "explanation": "string"}],
-  "funnel_stage": "string",
-  "emotional_intensity": number,
-  "bias_score": number,
-  "summary": "string"
-}`;
 
 // POST /api/forensics — analyze text
 router.post('/', async (req, res) => {
@@ -29,9 +12,11 @@ router.post('/', async (req, res) => {
   const trimmed = text.trim().slice(0, 5000);
 
   try {
+    const forensicPrompt = getPrompt('forensic-analysis');
+
     const result = await callLLM(
       [
-        { role: 'system', content: FORENSIC_PROMPT },
+        { role: 'system', content: forensicPrompt.user_prompt },
         { role: 'user', content: `Analyze this text:\n\n${trimmed}` }
       ],
       { purpose: 'forensic_analysis', temperature: 0.2, response_format: { type: 'json_object' }, providerId: provider || null, db }
@@ -84,9 +69,11 @@ router.post('/stream', async (req, res) => {
   try {
     sendEvent('status', { step: 'analyzing', message: 'Analyzing text for cognitive vulnerabilities...' });
 
+    const forensicPrompt = getPrompt('forensic-analysis');
+
     const result = await callLLM(
       [
-        { role: 'system', content: FORENSIC_PROMPT },
+        { role: 'system', content: forensicPrompt.user_prompt },
         { role: 'user', content: `Analyze this text:\n\n${trimmed}` }
       ],
       { purpose: 'forensic_analysis_stream', temperature: 0.2, response_format: { type: 'json_object' }, providerId: provider || null, db }
@@ -125,34 +112,6 @@ router.get('/history', (req, res) => {
   res.json(rows);
 });
 
-const STUDY_PROMPT = `You are a senior research methodology analyst specializing in evaluating scientific studies reported in news headlines.
-
-Analyze the provided headline about a research study for methodological quality and reporting accuracy.
-
-Rules:
-1. Sample Size Assessment: Is the sample size adequate? Flag if suspiciously small.
-2. Control Groups: Does the study appear to have proper controls?
-3. Conflicts of Interest: Look for funding sources or author affiliations that may introduce bias.
-4. Statistical Significance: Note if significance is claimed but sample is small.
-5. Peer Review Status: Is it clear if this is peer-reviewed?
-6. Effect Size: Evaluate if the effect size is meaningful or inflated.
-7. Headline vs Study: Identify any mismatch between headline claims and actual findings.
-
-Return JSON:
-{
-  "sampleSize": {"score": number, "label": "string", "reasoning": "string"},
-  "hasControlGroup": {"present": boolean, "unclear": boolean, "reasoning": "string"},
-  "conflictOfInterest": {"hasConflict": boolean, "unclear": boolean, "details": "string"},
-  "peerReviewed": {"likely": boolean, "unclear": boolean, "reasoning": "string"},
-  "effectSize": {"meaningful": boolean, "inflated": boolean, "reasoning": "string"},
-  "methodologyIssues": ["string"],
-  "overallScore": number,
-  "issues": ["string"],
-  "strengths": ["string"],
-  "headlineVsStudy": "string",
-  "summary": "string"
-}`;
-
 router.post('/study', async (req, res) => {
   const { headline, userId, provider } = req.body;
   if (!headline || headline.trim().length < 10) {
@@ -161,9 +120,11 @@ router.post('/study', async (req, res) => {
   const trimmed = headline.trim().slice(0, 2000);
 
   try {
+    const studyPrompt = getPrompt('study-analysis');
+
     const result = await callLLM(
       [
-        { role: 'system', content: STUDY_PROMPT },
+        { role: 'system', content: studyPrompt.user_prompt },
         { role: 'user', content: `Analyze this research headline:\n\n${trimmed}` }
       ],
       { purpose: 'study_analysis', temperature: 0.2, response_format: { type: 'json_object' }, providerId: provider || null, db }

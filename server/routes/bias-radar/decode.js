@@ -1,7 +1,7 @@
 const express = require('express');
-const { TECHNIQUE_DETECTION_PROMPT, fillPrompt } = require('../../lib/bias-radar/prompts');
 const { callLLM } = require('../../lib/llm');
 const db = require('../../db');
+const { getPrompt, renderPrompt } = require('../../lib/promptManager');
 
 const router = express.Router();
 
@@ -15,9 +15,10 @@ router.post('/', async (req, res) => {
     }
 
     const cappedContent = content.slice(0, 4000);
-    const prompt = fillPrompt(TECHNIQUE_DETECTION_PROMPT, {
-      HEADLINE: headline,
-      CONTENT: cappedContent,
+    const decodePrompt = getPrompt('bias-radar-decode');
+    const prompt = renderPrompt(decodePrompt.user_prompt, {
+      headline: headline,
+      content: cappedContent,
     });
 
     const messages = [{ role: 'user', content: prompt }];

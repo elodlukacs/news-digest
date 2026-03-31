@@ -1,7 +1,7 @@
 const express = require('express');
 const db = require('../../db');
 const { callLLM } = require('../../lib/llm');
-const { STEELMAN_PROMPT, fillPrompt } = require('../../lib/bias-radar/prompts');
+const { getPrompt, renderPrompt } = require('../../lib/promptManager');
 
 const router = express.Router();
 
@@ -14,9 +14,10 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'userPosition and articleContext required' });
     }
 
-    const prompt = fillPrompt(STEELMAN_PROMPT, {
-      USER_POSITION: userPosition.trim(),
-      ARTICLE: articleContext.slice(0, 1500),
+    const steelmanPrompt = getPrompt('bias-radar-steelman');
+    const prompt = renderPrompt(steelmanPrompt.user_prompt, {
+      userPosition: userPosition.trim(),
+      article: articleContext.slice(0, 1500),
     });
 
     const messages = [{ role: 'user', content: prompt }];

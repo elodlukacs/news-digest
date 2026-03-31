@@ -34,6 +34,7 @@ app.use('/api/scientist', require('./routes/scientist'));
 app.use('/api/bridge', require('./routes/bridge'));
 app.use('/api/cognitive', require('./routes/narrative'));
 app.use('/api/cognitive/prompts', require('./routes/prompts'));
+app.use('/api/prompts', require('./routes/prompts-manager'));
 app.use('/api/cognitive', require('./routes/disinfo'));
 app.use('/api/compare', require('./routes/compare'));
 app.use('/api/spectrum', require('./routes/spectrum'));

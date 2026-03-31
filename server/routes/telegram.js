@@ -3,6 +3,7 @@ const { escTg, splitTgMessage } = require('../lib/telegram');
 const { parser } = require('../lib/rss');
 const { callLLM: rawCallLLM } = require('../lib/llm');
 const db = require('../db');
+const { buildMessages } = require('../lib/promptManager');
 
 const callLLM = (messages, opts) => rawCallLLM(messages, { ...opts, db });
 const router = express.Router();
@@ -130,22 +131,10 @@ router.post('/digest', async (req, res) => {
 
     const lang = categories[0]?.language || 'English';
 
-    const result = await callLLM([
-      { role: 'system', content: 'You are an editor-in-chief writing a comprehensive daily news digest.' },
-      { role: 'user', content: `Create a detailed daily news digest from the following articles, organized by topic. Write in ${lang}.
-
-Rules:
-- Organize by topic/category using **bold section headers**
-- For each topic, write 2-4 sentences summarizing the key stories and developments
-- Mention source names in parentheses where relevant
-- Cover all topics provided — don't skip any category
-- Be informative but concise — this is a digest, not full articles
-- No greeting or sign-off — start directly with the first topic
-- Use plain text with Telegram-compatible Markdown (*bold*, _italic_)
-
-Articles by topic:
-${articleText}` },
-    ], { purpose: 'telegram-digest' });
+    const result = await callLLM(
+      buildMessages('telegram-digest', { lang, articles: articleText }),
+      { purpose: 'telegram-digest' }
+    );
 
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const header = `📰 *The Daily Digest*\n_${escTg(today)} — ${escTg(allArticles.length + ' articles from ' + feedsWithCategories.length + ' sources')}_`;

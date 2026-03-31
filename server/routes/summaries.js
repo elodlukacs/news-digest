@@ -4,6 +4,7 @@ const { parser } = require('../lib/rss');
 const { callLLM: rawCallLLM } = require('../lib/llm');
 const validateId = require('../middleware/validateId');
 const { extractKeywords } = require('../lib/bias-radar/topicCluster');
+const { buildMessages } = require('../lib/promptManager');
 
 const router = express.Router();
 
@@ -144,30 +145,14 @@ router.post('/:id/refresh', validateId, async (req, res) => {
 
     const customPrompt = category.custom_prompt?.trim();
     const lang = category.language || 'English';
-    const prompt = `You are a news analyst. Summarize the most important news from the "${category.name}" category.
+    const customPromptSection = customPrompt ? `\nAdditional instructions:\n${customPrompt}\n` : '';
 
-IMPORTANT: Write your response in ${lang} ONLY.
-
-Respond ONLY with valid JSON (no markdown fences, no extra text). The root object MUST have an "articles" key. Use this exact structure:
-{"articles":[{"title":"Article Title","url":"https://example.com/article","summary":"2-3 sentences about this topic. Be direct and factual.","sentiment":"positive","tags":["tag1","tag2"]}]}
-
-Rules:
-- Include 6-8 articles (no more than 8)
-- "title": the article's original title
-- "url": the article's original URL
-- "summary": 2-3 factual sentences in ${lang}
-- "sentiment": one of "positive", "negative", "neutral", or "mixed" — classify the overall tone of the news (good news = positive, bad news = negative, both = mixed, purely informational = neutral)
-- "tags": 2-3 short topic keywords in English (e.g. "climate", "AI", "economy")
-- Never repeat information across articles
-- No intro, no conclusion, no commentary
-${customPrompt ? `\nAdditional instructions:\n${customPrompt}\n` : ''}
-Articles to summarize:
-${articleText}`;
-
-    const messages = [
-      { role: 'system', content: 'You are a professional news analyst. Provide thorough, well-structured summaries with depth and context. Always respond with valid JSON only.' },
-      { role: 'user', content: prompt },
-    ];
+    const messages = buildMessages('category-summary', {
+      category: category.name,
+      lang,
+      customPrompt: customPromptSection,
+      articles: articleText,
+    });
 
     const { provider: selectedProvider } = req.body || {};
     const result = await callLLM(messages, { purpose: 'summary', categoryId: Number(req.params.id), providerId: selectedProvider || null });

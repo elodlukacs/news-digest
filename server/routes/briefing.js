@@ -2,6 +2,7 @@ const express = require('express');
 const { parser } = require('../lib/rss');
 const { callLLM: rawCallLLM } = require('../lib/llm');
 const db = require('../db');
+const { buildMessages } = require('../lib/promptManager');
 
 const callLLM = (messages, opts) => rawCallLLM(messages, { ...opts, db });
 const router = express.Router();
@@ -54,22 +55,10 @@ router.post('/generate', async (req, res) => {
       .map((a, i) => `[${i + 1}] ${a.title} (${a.source})\n${a.description}\nLink: ${a.link}`)
       .join('\n\n');
 
-    const result = await callLLM([
-      { role: 'system', content: 'You are an editor-in-chief writing a brief morning news briefing.' },
-      { role: 'user', content: `Create a very concise morning briefing from the following news articles. Write in ${lang}.
-
-Rules:
-- Create a bullet-point list with **bold titles** for each story
-- Each bullet point: 1-2 sentences maximum
-- Include the source name in parentheses after each bullet
-- Highlight the most important 3-5 stories first, then other notable stories
-- Be extremely concise — this is a brief aggregation, not a detailed summary
-- No intro text like "Good morning" — start directly with the first story
-- No horizontal rules or section headers needed
-
-Articles:
-${articleText}` },
-    ], { purpose: 'briefing', providerId: selectedProvider || null });
+    const result = await callLLM(
+      buildMessages('morning-briefing', { lang, articles: articleText }),
+      { purpose: 'briefing', providerId: selectedProvider || null }
+    );
 
     const generated_at = new Date().toISOString();
     const dateKey = generated_at.split('T')[0];

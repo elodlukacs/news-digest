@@ -1,7 +1,7 @@
 const express = require('express');
 const db = require('../../db');
 const { callLLM } = require('../../lib/llm');
-const { MISSING_STORY_PROMPT, fillPrompt } = require('../../lib/bias-radar/prompts');
+const { getPrompt, renderPrompt } = require('../../lib/promptManager');
 
 const router = express.Router();
 
@@ -36,10 +36,11 @@ router.post('/', async (req, res) => {
       .join('\n')
       .slice(0, 8000);
 
-    const prompt = fillPrompt(MISSING_STORY_PROMPT, { HEADLINES: headlineList });
+    const missingStoryPrompt = getPrompt('bias-radar-missing-story');
+    const prompt = renderPrompt(missingStoryPrompt.user_prompt, { headlines: headlineList });
 
     const messages = [
-      { role: 'system', content: 'You are a media analysis assistant. Respond only with valid JSON.' },
+      { role: 'system', content: missingStoryPrompt.system_message || 'You are a media analysis assistant. Respond only with valid JSON.' },
       { role: 'user', content: prompt },
     ];
 
