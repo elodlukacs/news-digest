@@ -49,9 +49,15 @@ const LEVELS = ['trolling', 'emotional', 'amplification', 'escalation'];
 const LEVEL_ICONS: Record<string, string> = {
   trolling: '🎭', emotional: '🔥', amplification: '📢', escalation: '⚡',
 };
+const LEVEL_LABELS: Record<string, string> = {
+  trolling: 'Trolling',
+  emotional: 'Emotional',
+  amplification: 'Amplification',
+  escalation: 'Escalation',
+};
 const LEVEL_DESCRIPTIONS: Record<string, string> = {
-  trolling: 'Identify deliberate provocation, whataboutism, and insults designed to derail discussion.',
-  emotional: 'Spot high-outrage, fear-inducing language designed to bypass rational thinking.',
+  trolling: 'Spot deliberate provocation and insults designed to derail conversations.',
+  emotional: 'Catch fear-inducing, outrage-driven language that bypasses rational thinking.',
   amplification: 'Detect fake consensus, bandwagon appeals, and artificial social proof.',
   escalation: 'Recognize advanced multi-layered manipulation combining all tactics.',
 };
@@ -243,12 +249,13 @@ export function InoculationPanel() {
   const accuracy = roundsPlayed > 0 ? Math.round((correctCount / roundsPlayed) * 100) : 0;
 
   return (
-    <Card className="p-4 md:p-5 h-full flex flex-col gap-3">
+    <Card className="p-5 md:p-6 h-full flex flex-col gap-5">
       {/* Header */}
       <FeaturePanelHeader
-        icon={<Shield size={17} className="text-outrage shrink-0" />}
-        title="Inoculation Lab"
-        infoTitle="Inoculation Lab"
+        icon={<Shield size={22} className="text-outrage shrink-0" />}
+        title="Spot the Trick"
+        subtitle="Can you tell which headline has been manipulated? Pick a topic, and we'll test your instincts."
+        infoTitle="Spot the Trick"
         researcher="Sander van der Linden · Cambridge University"
         summary="Like a vaccine, you're exposed to a weakened dose of manipulation so your mind builds immunity before encountering the real thing in the wild."
         sections={[
@@ -265,15 +272,15 @@ export function InoculationPanel() {
           { heading: 'The Levels', content: 'Trolling → Emotional Manipulation → Artificial Amplification → Escalation. Each level adds complexity and builds on the resistance you developed in the previous round.' },
         ]}
         right={
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             {roundsPlayed > 0 && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="flex items-center gap-1.5 text-[12px] text-curiosity font-semibold cursor-help">
-                    <Trophy size={13} /> {optimisticScore}
+                  <span className="flex items-center gap-1.5 text-sm text-curiosity font-bold cursor-help">
+                    <Trophy size={15} /> {optimisticScore}
                   </span>
                 </TooltipTrigger>
-                <TooltipContent className="text-[11px]">
+                <TooltipContent className="text-xs">
                   {roundsPlayed} rounds · {accuracy}% accuracy
                 </TooltipContent>
               </Tooltip>
@@ -283,153 +290,149 @@ export function InoculationPanel() {
                 <TooltipTrigger asChild>
                   <button
                     onClick={resetSession}
-                    className="p-1.5 rounded hover:bg-paper-dark transition-colors cursor-pointer text-ink-muted hover:text-ink"
+                    className="p-1.5 rounded-md hover:bg-paper-dark transition-colors cursor-pointer text-ink-muted hover:text-ink"
                     aria-label="Reset session"
                   >
-                    <RotateCcw size={14} />
+                    <RotateCcw size={15} />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent className="text-[11px]">Reset session</TooltipContent>
+                <TooltipContent className="text-xs">Reset session</TooltipContent>
               </Tooltip>
             )}
           </div>
         }
       />
 
-      {/* Mode tabs */}
-      <div className="flex gap-1 p-0.5 bg-paper-dark rounded-md">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              onClick={() => setMode('detective')}
-              className={`flex-1 py-1.5 text-[12px] font-medium uppercase tracking-wider rounded transition-all cursor-pointer flex items-center justify-center gap-1.5 ${mode === 'detective' ? 'bg-masthead text-white' : 'text-ink-muted hover:text-ink'}`}
-            >
-              <Eye size={13} /> Detective
-            </button>
-          </TooltipTrigger>
-          <TooltipContent className="text-[11px]">Spot the manipulation tactic in AI-generated headlines</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              onClick={() => setMode('cdo')}
-              className={`flex-1 py-1.5 text-[12px] font-medium uppercase tracking-wider rounded transition-all cursor-pointer flex items-center justify-center gap-1.5 ${mode === 'cdo' ? 'bg-outrage text-white' : 'text-ink-muted hover:text-ink'}`}
-            >
-              <Shield size={13} /> CDO Mode
-            </button>
-          </TooltipTrigger>
-          <TooltipContent className="text-[11px]">Play the manipulator — craft disinformation to understand it from the inside</TooltipContent>
-        </Tooltip>
+      {/* Mode switch */}
+      <div className="flex rounded-lg border border-rule overflow-hidden">
+        <button
+          onClick={() => setMode('detective')}
+          className={`flex-1 py-2.5 text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 ${
+            mode === 'detective'
+              ? 'bg-ink text-paper'
+              : 'bg-paper text-ink-muted hover:text-ink hover:bg-paper-dark'
+          }`}
+        >
+          <Eye size={15} /> Catch It
+        </button>
+        <button
+          onClick={() => setMode('cdo')}
+          className={`flex-1 py-2.5 text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 border-l border-rule ${
+            mode === 'cdo'
+              ? 'bg-ink text-paper'
+              : 'bg-paper text-ink-muted hover:text-ink hover:bg-paper-dark'
+          }`}
+        >
+          <Shield size={15} /> Write It Yourself
+        </button>
       </div>
 
       {/* ─── Detective mode ─── */}
       {mode === 'detective' && (
         <>
-          <p className="text-[13px] text-ink-muted leading-relaxed -mt-1">
-            Build "mental antibodies" — identify the manipulation tactic used in each headline.
-          </p>
-
           {/* Level progress */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
+          <div className="space-y-3">
+            <div className="flex items-center gap-1">
               {LEVELS.map((lvl, i) => {
                 const reached = i <= levelIdx;
+                const isCurrent = i === levelIdx;
                 return (
                   <Tooltip key={lvl}>
                     <TooltipTrigger asChild>
-                      <div className={`flex items-center gap-1 text-[11px] uppercase tracking-wider font-medium cursor-help transition-all ${reached ? 'text-ink' : 'text-ink-muted/40'}`}>
-                        <span>{LEVEL_ICONS[lvl]}</span>
-                        <span className="hidden sm:inline">{lvl}</span>
+                      <div
+                        className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold cursor-help transition-all ${
+                          isCurrent
+                            ? 'bg-ink text-paper'
+                            : reached
+                              ? 'bg-paper-dark text-ink'
+                              : 'text-ink-muted/40'
+                        }`}
+                      >
+                        <span className="text-sm">{LEVEL_ICONS[lvl]}</span>
+                        <span className="hidden sm:inline">{LEVEL_LABELS[lvl]}</span>
                       </div>
                     </TooltipTrigger>
-                    <TooltipContent className="max-w-[200px] text-[11px]">{LEVEL_DESCRIPTIONS[lvl]}</TooltipContent>
+                    <TooltipContent className="max-w-[220px] text-xs">{LEVEL_DESCRIPTIONS[lvl]}</TooltipContent>
                   </Tooltip>
                 );
               })}
             </div>
-            <div className="h-2 bg-paper-dark rounded-full overflow-hidden border border-rule/50">
-              <div
-                className="h-full rounded-full transition-all duration-700"
-                style={{ width: `${((levelIdx + 1) / LEVELS.length) * 100}%`, backgroundColor: 'var(--color-outrage)' }}
-              />
-            </div>
           </div>
 
+          {/* Topic input */}
           <div className="flex gap-2">
             <Input
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
-              placeholder="Topic (e.g., vaccines, climate)..."
-              className="text-[13px] flex-1 border-ink/20 focus:border-masthead h-10"
+              placeholder="Enter a topic — e.g. vaccines, climate, elections..."
+              className="text-sm flex-1 h-11"
               onKeyDown={(e) => e.key === 'Enter' && generate()}
             />
-            <Button onClick={generate} disabled={loading || !topic.trim()} className="gap-1.5 text-[13px] shrink-0 h-10">
-              {loading ? <Loader2 size={15} className="animate-spin" /> : <Zap size={15} />}
-              {session ? 'New' : 'Start'}
+            <Button onClick={generate} disabled={loading || !topic.trim()} className="gap-2 text-sm shrink-0 h-11 px-5">
+              {loading ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
+              {session ? 'New Round' : 'Start'}
             </Button>
           </div>
 
           {error && (
-            <div className="p-3 bg-outrage-muted rounded-md text-[13px] text-outrage flex items-center gap-2 border border-outrage/20">
-              <AlertTriangle size={14} /> {error}
+            <div className="p-3.5 bg-outrage-muted rounded-lg text-sm text-outrage flex items-center gap-2.5 border border-outrage/20">
+              <AlertTriangle size={16} /> {error}
             </div>
           )}
 
           {session && (
-            <div className="space-y-2.5 flex-1 overflow-y-auto">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold">Level</span>
+            <div className="space-y-3 flex-1 overflow-y-auto">
+              {/* Round info bar */}
+              <div className="flex items-center justify-between py-2 border-b border-rule">
+                <div className="flex items-center gap-3">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span className="text-[13px] font-bold text-ink cursor-help">
-                        {LEVEL_ICONS[session.level] || '🎯'} {session.level}
+                      <span className="text-sm font-semibold text-ink cursor-help">
+                        {LEVEL_ICONS[session.level]} {LEVEL_LABELS[session.level]}
                       </span>
                     </TooltipTrigger>
-                    <TooltipContent className="max-w-[200px] text-[11px]">{LEVEL_DESCRIPTIONS[session.level]}</TooltipContent>
+                    <TooltipContent className="max-w-[220px] text-xs">{LEVEL_DESCRIPTIONS[session.level]}</TooltipContent>
                   </Tooltip>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold">Score</span>
-                    <span className="text-[13px] font-bold text-curiosity transition-all">{optimisticScore}</span>
-                  </div>
                   {roundsPlayed > 0 && (
-                    <Badge variant="outline" className="text-[11px] px-1.5">{accuracy}%</Badge>
+                    <Badge variant="outline" className="text-xs">{accuracy}% accuracy</Badge>
                   )}
                 </div>
+                <span className="text-sm font-bold text-curiosity">{optimisticScore} pts</span>
               </div>
 
-              <p className="text-[12px] text-ink-muted italic">
-                Find the headline using: <span className="font-semibold text-outrage">{session.targetTactic}</span>
+              {/* Instruction */}
+              <p className="text-sm text-ink-muted leading-relaxed">
+                Which headline uses <span className="font-bold text-outrage">{session.targetTactic}</span>?
               </p>
 
+              {/* Feedback */}
               {feedback && (
-                <div className={`p-3 rounded-md text-[13px] border ${feedback.correct ? 'bg-observation-muted border-observation/20' : 'bg-outrage-muted border-outrage/20'}`}>
-                  <div className="flex items-center gap-2 mb-1">
+                <div className={`p-4 rounded-lg text-sm border ${feedback.correct ? 'bg-curiosity-muted border-curiosity/30' : 'bg-outrage-muted border-outrage/30'}`}>
+                  <div className="flex items-center gap-2.5 mb-1.5">
                     {feedback.correct
-                      ? <CheckCircle size={15} className="text-curiosity" />
-                      : <XCircle size={15} className="text-outrage" />}
-                    <span className="font-semibold text-ink">
-                      {feedback.correct ? 'Correct! +10 points' : 'Not quite — it was:'}
+                      ? <CheckCircle size={18} className="text-curiosity shrink-0" />
+                      : <XCircle size={18} className="text-outrage shrink-0" />}
+                    <span className="font-bold text-ink text-base">
+                      {feedback.correct ? 'Correct! +10 points' : 'Not quite'}
                     </span>
-                    {!feedback.correct && <span className="text-outrage font-bold">{feedback.targetTactic}</span>}
+                    {!feedback.correct && <span className="text-outrage font-semibold">— it was {feedback.targetTactic}</span>}
                   </div>
-                  <p className="text-[12px] text-ink-muted">{feedback.explanation}</p>
+                  <p className="text-sm text-ink-muted leading-relaxed">{feedback.explanation}</p>
                   {feedback.nextLevel && (
-                    <p className="text-[12px] text-curiosity font-semibold mt-1.5">
-                      Level up! {LEVEL_ICONS[feedback.nextLevel]} {feedback.nextLevel}
+                    <p className="text-sm text-curiosity font-bold mt-2">
+                      Level up! {LEVEL_ICONS[feedback.nextLevel]} {LEVEL_LABELS[feedback.nextLevel]}
                     </p>
                   )}
                 </div>
               )}
 
+              {/* Headline cards */}
               {session.headlines.map((h: InoculationHeadline, i: number) => (
                 <button
                   key={i}
                   onClick={() => handleSelect(i)}
                   disabled={selected !== null}
-                  className={`w-full text-left p-3 rounded-md border transition-all duration-200 ${
+                  className={`w-full text-left p-4 rounded-lg border-2 transition-all duration-200 ${
                     selected === i
                       ? feedback?.correct
                         ? 'border-curiosity bg-curiosity-muted'
@@ -437,18 +440,18 @@ export function InoculationPanel() {
                       : selected !== null
                         ? i === session.targetIndex
                           ? 'border-curiosity bg-curiosity-muted'
-                          : 'border-rule bg-paper-dark opacity-40'
-                        : 'border-rule hover:border-observation hover:bg-observation-muted/50 cursor-pointer'
+                          : 'border-rule/50 bg-paper-dark opacity-40'
+                        : 'border-rule hover:border-ink hover:shadow-sm cursor-pointer'
                   }`}
                 >
-                  <span className="text-[11px] uppercase tracking-wider font-semibold text-outrage">{h.tactic}</span>
-                  <p className="text-[13px] font-medium text-ink mt-1 leading-relaxed">{h.headline}</p>
+                  <span className="text-xs font-semibold text-outrage uppercase tracking-wide">{h.tactic}</span>
+                  <p className="text-base font-serif font-semibold text-ink mt-1.5 leading-snug">{h.headline}</p>
                 </button>
               ))}
 
               {selected !== null && (
-                <Button onClick={playAgain} className="w-full gap-2 text-[13px] h-10 mt-1">
-                  <Zap size={15} /> Next Round
+                <Button onClick={playAgain} className="w-full gap-2 text-sm h-11 mt-1">
+                  <Zap size={16} /> Next Round
                 </Button>
               )}
             </div>
@@ -458,83 +461,84 @@ export function InoculationPanel() {
 
       {/* ─── CDO mode ─── */}
       {mode === 'cdo' && (
-        <div className="flex flex-col flex-1 overflow-y-auto gap-3">
-          <div className="p-3 rounded-md border border-outrage/30 bg-outrage-muted text-[13px] text-ink leading-relaxed">
-            <span className="font-bold text-outrage uppercase tracking-wider text-[11px]">Chief Disinformation Officer</span>
-            <p className="mt-1 text-ink-muted">You are now a disinformation operator. Pick a topic and a tactic — see how manipulation is constructed. Understanding the craft builds immunity to it.</p>
+        <div className="flex flex-col flex-1 overflow-y-auto gap-4">
+          <div className="p-4 rounded-lg border border-rule bg-paper-dark text-sm text-ink leading-relaxed">
+            <p className="font-serif font-bold text-base text-ink mb-1">Write It Yourself</p>
+            <p className="text-ink-muted">Pick a topic and a manipulation tactic. See how a neutral headline gets weaponized — and learn to spot the red flags.</p>
           </div>
 
           <Input
             value={cdoTopic}
             onChange={(e) => setCdoTopic(e.target.value)}
-            placeholder="Topic to weaponize (e.g., vaccine safety, housing prices)..."
-            className="text-[13px] border-ink/20 focus:border-masthead h-10"
+            placeholder="Pick a topic — e.g. vaccine safety, housing prices..."
+            className="text-sm h-11"
             onKeyDown={(e) => e.key === 'Enter' && selectedTactic && craftHeadline()}
           />
 
-          <p className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold -mb-1">Choose your tactic:</p>
-          <div className="grid grid-cols-2 gap-2">
-            {cdoTactics.map((t) => (
-              <Tooltip key={t.id}>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => setSelectedTactic(prev => prev === t.id ? null : t.id)}
-                    className={`text-left p-2.5 rounded-md border text-[12px] transition-all cursor-pointer ${
-                      selectedTactic === t.id
-                        ? 'border-outrage bg-outrage-muted font-semibold text-outrage'
-                        : 'border-rule hover:border-outrage/40 text-ink-muted hover:text-ink'
-                    }`}
-                  >
-                    <span className="mr-1.5">{t.icon}</span>{t.label}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-[200px] text-[11px]">{t.description}</TooltipContent>
-              </Tooltip>
-            ))}
+          <div>
+            <p className="text-xs font-semibold text-ink-muted mb-2.5 uppercase tracking-wide">Choose a tactic</p>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {cdoTactics.map((t) => (
+                <Tooltip key={t.id}>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => setSelectedTactic(prev => prev === t.id ? null : t.id)}
+                      className={`text-left p-3 rounded-lg border-2 text-sm transition-all cursor-pointer ${
+                        selectedTactic === t.id
+                          ? 'border-ink bg-paper-dark font-semibold text-ink'
+                          : 'border-rule hover:border-ink/40 text-ink-muted hover:text-ink'
+                      }`}
+                    >
+                      <span className="mr-1.5">{t.icon}</span>{t.label}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-[220px] text-xs">{t.description}</TooltipContent>
+                </Tooltip>
+              ))}
+            </div>
           </div>
 
           <Button
             onClick={craftHeadline}
             disabled={cdoLoading || !cdoTopic.trim() || !selectedTactic}
-            className="w-full gap-2 text-[13px] h-10"
-            style={selectedTactic ? { backgroundColor: 'var(--color-outrage)' } : {}}
+            className="w-full gap-2 text-sm h-11"
           >
-            {cdoLoading ? <><Loader2 size={15} className="animate-spin" /> Crafting…</> : <><Shield size={15} /> Craft Disinformation</>}
+            {cdoLoading ? <><Loader2 size={16} className="animate-spin" /> Crafting...</> : <><Shield size={16} /> Craft Headline</>}
           </Button>
 
           {cdoError && (
-            <div className="p-3 bg-outrage-muted rounded-md text-[13px] text-outrage flex items-center gap-2 border border-outrage/20">
-              <AlertTriangle size={14} /> {cdoError}
+            <div className="p-3.5 bg-outrage-muted rounded-lg text-sm text-outrage flex items-center gap-2.5 border border-outrage/20">
+              <AlertTriangle size={16} /> {cdoError}
             </div>
           )}
 
           {craftResult && (
             <div className="space-y-3">
               {/* Side-by-side comparison */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <div className="p-3 rounded-md border border-observation bg-observation-muted">
-                  <p className="text-[10px] uppercase tracking-wider font-semibold text-observation mb-1.5">Neutral</p>
-                  <p className="text-[13px] text-ink leading-relaxed">{craftResult.neutral_headline}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-4 rounded-lg border-2 border-curiosity/40 bg-curiosity-muted">
+                  <p className="text-xs font-semibold text-curiosity mb-2 uppercase tracking-wide">Neutral</p>
+                  <p className="text-base font-serif text-ink leading-snug">{craftResult.neutral_headline}</p>
                 </div>
-                <div className="p-3 rounded-md border border-outrage bg-outrage-muted">
-                  <p className="text-[10px] uppercase tracking-wider font-semibold text-outrage mb-1.5">Weaponized ({craftResult.tactic})</p>
-                  <p className="text-[13px] text-ink leading-relaxed font-medium">{craftResult.manipulated_headline}</p>
+                <div className="p-4 rounded-lg border-2 border-outrage/40 bg-outrage-muted">
+                  <p className="text-xs font-semibold text-outrage mb-2 uppercase tracking-wide">Manipulated — {craftResult.tactic}</p>
+                  <p className="text-base font-serif font-semibold text-ink leading-snug">{craftResult.manipulated_headline}</p>
                 </div>
               </div>
 
               {/* Mechanism */}
-              <div className="p-3 rounded-md bg-paper-dark border border-rule">
-                <p className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold mb-1.5">Why it works</p>
-                <p className="text-[13px] text-ink leading-relaxed">{craftResult.mechanism}</p>
+              <div className="p-4 rounded-lg bg-paper-dark border border-rule">
+                <p className="text-xs font-semibold text-ink-muted mb-2 uppercase tracking-wide">Why this works</p>
+                <p className="text-sm text-ink leading-relaxed">{craftResult.mechanism}</p>
               </div>
 
               {/* Red flags */}
               {craftResult.red_flags?.length > 0 && (
                 <div>
-                  <p className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold mb-1.5">Red flags to spot it</p>
-                  <ul className="space-y-1.5">
+                  <p className="text-xs font-semibold text-ink-muted mb-2.5 uppercase tracking-wide">Red flags to watch for</p>
+                  <ul className="space-y-2">
                     {craftResult.red_flags.map((flag, i) => (
-                      <li key={i} className="text-[13px] text-ink pl-3 border-l-2 border-curiosity leading-relaxed">{flag}</li>
+                      <li key={i} className="text-sm text-ink pl-4 border-l-2 border-curiosity leading-relaxed">{flag}</li>
                     ))}
                   </ul>
                 </div>
@@ -543,9 +547,9 @@ export function InoculationPanel() {
               <Button
                 onClick={() => { setCraftResult(null); setSelectedTactic(null); }}
                 variant="outline"
-                className="w-full text-[13px] h-10 gap-2"
+                className="w-full text-sm h-11 gap-2"
               >
-                <Zap size={15} /> Try Another Tactic
+                <Zap size={16} /> Try Another Tactic
               </Button>
             </div>
           )}

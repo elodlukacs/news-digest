@@ -1,12 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&family=Libre+Franklin:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,200..900;1,7..72,200..900&family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&family=Inter:wght@300;400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 @plugin "tailwindcss-animate";
 
 @custom-variant dark (&:where([data-theme="evening"] *));
 
 @theme {
-  --font-serif: 'Playfair Display', Georgia, serif;
-  --font-body: 'Libre Franklin', system-ui, sans-serif;
+  --font-serif: 'Literata', Georgia, serif;
+  --font-body: 'Source Serif 4', Georgia, serif;
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-widget: 'Source Sans 3', 'Inter', system-ui, sans-serif;
   --color-ink: #2C2C2E;
@@ -83,6 +83,10 @@ body {
 ::selection {
   background: var(--color-ink);
   color: var(--color-paper);
+}
+
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .scrollbar-none {
@@ -227,15 +231,6 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   color-scheme: dark;
 }
 
-/* ─── View transition ─── */
-@keyframes fade-in {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.view-fade {
-  animation: fade-in 0.75s ease-out both;
-}
-
 /* ─── Panel slide-in ─── */
 @keyframes slide-in-right {
   from { transform: translateX(100%); }
@@ -245,8 +240,17 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   from { transform: translateX(0); }
   to { transform: translateX(100%); }
 }
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
 .panel-slide-in {
-  animation: slide-in-right 0.3s ease-out both;
+  animation: slideUp 0.25s ease-out;
+}
+@media (min-width: 768px) {
+  .panel-slide-in {
+    animation: slide-in-right 0.3s ease-out both;
+  }
 }
 .panel-slide-out {
   animation: slide-out-right 0.25s ease-in both;

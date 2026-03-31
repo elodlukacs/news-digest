@@ -7,9 +7,9 @@ export function TrainingTab() {
   return (
     <div className="space-y-6 mt-3">
       <TabHeader
-        icon={<Target size={24} className="text-curiosity md:!w-7 md:!h-7" />}
-        title="Training Suite"
-        description="Build cognitive defenses through active practice. Train your ability to spot manipulation tactics and recognize cognitive biases."
+        icon={<Target size={26} className="text-curiosity md:!w-8 md:!h-8" />}
+        title="Spot It"
+        description="Practice catching manipulation in headlines and learn why your brain falls for patterns that aren't there."
       />
 
       <InoculationPanel />

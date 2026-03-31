@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Routes, Route, Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Outlet, useNavigate } from 'react-router-dom';
 import { NavigationBar } from './components/NavigationBar';
 import { FeedManager } from './components/FeedManager';
 import { LlmStatsModal } from './components/LlmStatsModal';
@@ -27,15 +27,6 @@ import {
   MindGamesQuizRoute,
 } from './components/routes/MindGamesRoutes';
 import type { AppOutletContext } from './types/routing';
-
-function FadeOnRouteChange({ children }: { children: React.ReactNode }) {
-  const location = useLocation();
-  return (
-    <div key={location.pathname} className="view-fade">
-      {children}
-    </div>
-  );
-}
 
 function AppLayout() {
   const { theme, setTheme } = useTheme();
@@ -97,9 +88,7 @@ function AppLayout() {
           onLlmChange={setSelectedLlm}
         />
 
-        <FadeOnRouteChange>
-          <Outlet context={outletContext} />
-        </FadeOnRouteChange>
+        <Outlet context={outletContext} />
 
         {managingId && managingCategory && (
           <FeedManager

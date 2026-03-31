@@ -130,9 +130,9 @@ export function CompareCoverage() {
   const getBiasColor = (bias: string) => BIAS_COLORS[bias] || '#6B7280';
 
   return (
-    <Card className="p-5 h-full flex flex-col gap-3">
+    <Card className="p-5 h-full flex flex-col gap-4">
       <FeaturePanelHeader
-        icon={<Scale size={17} className="text-observation shrink-0" />}
+        icon={<Scale size={20} className="text-observation shrink-0" />}
         title="Compare Coverage"
         infoTitle="Compare Coverage"
         researcher="Modelled after Ground News"
@@ -149,25 +149,25 @@ export function CompareCoverage() {
           { heading: 'Narrative Divergence Score', content: 'Measures how far apart the framings are. A high score means the outlets are presenting effectively different realities to their audiences.' },
         ]}
         right={
-          <button onClick={toggleHistory} className="flex items-center gap-1 text-[11px] text-ink-muted hover:text-ink transition-colors cursor-pointer">
-            <History size={13} />
-            {showHistory ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+          <button onClick={toggleHistory} className="flex items-center gap-1 text-xs text-ink-muted hover:text-ink transition-colors cursor-pointer">
+            <History size={14} />
+            {showHistory ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
           </button>
         }
       />
 
-      <p className="text-[13px] text-ink-muted leading-relaxed -mt-1">
+      <p className="text-sm text-ink-muted leading-relaxed">
         Compare how Left, Center, and Right outlets cover the same story. Paste a URL or topic to analyze framing differences.
       </p>
 
       <Tabs value={inputType} onValueChange={(v) => setInputType(v as 'url' | 'topic')} className="w-full">
         <TabsList className="w-full h-9">
-          <TabsTrigger value="topic" className="flex-1 text-[12px] gap-1.5">
-            <Search size={13} />
+          <TabsTrigger value="topic" className="flex-1 text-sm gap-1.5">
+            <Search size={14} />
             Topic
           </TabsTrigger>
-          <TabsTrigger value="url" className="flex-1 text-[12px] gap-1.5">
-            <Link2 size={13} />
+          <TabsTrigger value="url" className="flex-1 text-sm gap-1.5">
+            <Link2 size={14} />
             URL
           </TabsTrigger>
         </TabsList>

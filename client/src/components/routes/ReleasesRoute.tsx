@@ -6,7 +6,7 @@ export function ReleasesRoute() {
   const { releases } = useOutletContext<AppOutletContext>();
 
   return (
-    <div className="max-w-[1600px] mx-auto px-4 pb-12 view-fade">
+    <div className="max-w-[1600px] mx-auto px-4 pb-12">
       <ReleasesPage releases={releases || []} />
     </div>
   );

@@ -144,12 +144,12 @@ export function NewsSpectrum() {
     switch (reliability) {
       case 'Very High':
       case 'High':
-        return <CheckCircle size={14} className="text-green-600" />;
+        return <CheckCircle size={16} className="text-green-600" />;
       case 'Medium-High':
       case 'Medium':
-        return <MinusCircle size={14} className="text-yellow-600" />;
+        return <MinusCircle size={16} className="text-yellow-600" />;
       default:
-        return <XCircle size={14} className="text-red-600" />;
+        return <XCircle size={16} className="text-red-600" />;
     }
   };
 
@@ -157,7 +157,7 @@ export function NewsSpectrum() {
     <Card className="h-full flex flex-col">
       <CardHeader className="pb-3">
         <FeaturePanelHeader
-          icon={<Scale size={17} className="text-curiosity shrink-0" />}
+          icon={<Scale size={20} className="text-curiosity shrink-0" />}
           title="News Spectrum"
           infoTitle="News Spectrum"
           researcher="Based on media bias and credibility research"
@@ -174,7 +174,7 @@ export function NewsSpectrum() {
           ]}
           right={<Badge variant="outline" className="text-[10px]">{outlets.length} outlets</Badge>}
         />
-        <p className="text-[12px] text-ink-muted leading-relaxed -mt-1">
+        <p className="text-sm text-ink-muted leading-relaxed -mt-1">
           Compare how outlets across the political spectrum cover the same story. 
           See credibility scores, framing differences, and narrative divergence.
         </p>
@@ -187,7 +187,7 @@ export function NewsSpectrum() {
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
             placeholder="Enter a topic to compare coverage…"
-            className="flex-1 text-[13px]"
+            className="flex-1 text-sm"
             onKeyDown={(e) => e.key === 'Enter' && compareCoverage()}
           />
           <Button 
@@ -196,7 +196,7 @@ export function NewsSpectrum() {
             size="sm"
             className="gap-1.5"
           >
-            {loading ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+            {loading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
             <span className="hidden sm:inline">Compare</span>
           </Button>
         </div>
@@ -204,7 +204,7 @@ export function NewsSpectrum() {
         {/* Bias Spectrum Slider */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold">
+            <span className="text-xs uppercase tracking-wider text-ink-muted font-semibold">
               Filter by Bias
             </span>
             <span className="text-[10px] text-ink-muted">
@@ -220,7 +220,7 @@ export function NewsSpectrum() {
               step={1}
             />
           </div>
-          <div className="flex justify-between text-[9px] text-ink-muted px-1">
+          <div className="flex justify-between text-[10px] text-ink-muted px-1">
             <span>Far Left</span>
             <span>Left</span>
             <span>Center</span>
@@ -232,7 +232,7 @@ export function NewsSpectrum() {
         {/* Results */}
         {error && (
           <div className="p-3 bg-outrage-muted rounded-md text-[13px] text-outrage flex items-center gap-2 border border-outrage/20">
-            <AlertCircle size={14} /> {error}
+            <AlertCircle size={16} /> {error}
           </div>
         )}
 
@@ -252,7 +252,7 @@ export function NewsSpectrum() {
               <h4 className="font-serif text-base font-bold text-ink mb-1">
                 {spectrumData.topic}
               </h4>
-              <p className="text-[11px] text-ink-muted">
+              <p className="text-xs text-ink-muted">
                 Comparing {spectrumData.outlets.length} outlets across the spectrum
               </p>
             </div>
@@ -260,7 +260,7 @@ export function NewsSpectrum() {
             {/* Narrative Divergence Score */}
             <div className="bg-paper-dark rounded-lg p-3 border border-rule">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold">
+                <span className="text-xs uppercase tracking-wider text-ink-muted font-semibold">
                   Narrative Divergence
                 </span>
                 <span className={`text-lg font-bold ${
@@ -298,10 +298,10 @@ export function NewsSpectrum() {
                 onClick={() => setExpandedSection(expandedSection === 'headlines' ? 'analysis' : 'headlines')}
                 className="flex items-center justify-between w-full text-left"
               >
-                <span className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold">
+                <span className="text-xs uppercase tracking-wider text-ink-muted font-semibold">
                   Headline Comparison
                 </span>
-                {expandedSection === 'headlines' ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                {expandedSection === 'headlines' ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
               </button>
               
               {expandedSection === 'headlines' && (
@@ -316,10 +316,10 @@ export function NewsSpectrum() {
                           style={{ borderLeftColor: biasColor, borderLeftWidth: '3px' }}
                         >
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-[11px] font-bold text-ink">{item.outlet}</span>
+                            <span className="text-xs font-bold text-ink">{item.outlet}</span>
                             <Badge 
                               variant="outline" 
-                              className="text-[9px] px-1.5"
+                              className="text-[10px] px-1.5"
                               style={{ 
                                 borderColor: biasColor, 
                                 color: biasColor,
@@ -337,7 +337,7 @@ export function NewsSpectrum() {
                           </p>
                           <div className="mt-2 flex gap-1.5 flex-wrap">
                             {item.emphasis.slice(0, 2).map((e, i) => (
-                              <span key={i} className="text-[9px] px-1.5 py-0.5 bg-observation/10 text-observation rounded">
+                              <span key={i} className="text-[10px] px-1.5 py-0.5 bg-observation/10 text-observation rounded">
                                 +{e}
                               </span>
                             ))}
@@ -356,16 +356,16 @@ export function NewsSpectrum() {
                 onClick={() => setExpandedSection(expandedSection === 'facts' ? 'analysis' : 'facts')}
                 className="flex items-center justify-between w-full text-left"
               >
-                <span className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold">
+                <span className="text-xs uppercase tracking-wider text-ink-muted font-semibold">
                   Common Facts Across Outlets
                 </span>
-                {expandedSection === 'facts' ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                {expandedSection === 'facts' ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
               </button>
               
               {expandedSection === 'facts' && (
                 <div className="bg-paper-dark rounded-lg p-3 space-y-1.5">
                   {spectrumData.commonFacts.map((fact, idx) => (
-                    <div key={idx} className="flex items-start gap-2 text-[11px]">
+                    <div key={idx} className="flex items-start gap-2 text-xs">
                       <CheckCircle size={12} className="text-green-600 mt-0.5 shrink-0" />
                       <span className="text-ink-light">{fact}</span>
                     </div>
@@ -377,7 +377,7 @@ export function NewsSpectrum() {
             {/* Framing Differences */}
             {spectrumData.framingDifferences && spectrumData.framingDifferences.length > 0 && (
               <div className="space-y-2">
-                <span className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold">
+                <span className="text-xs uppercase tracking-wider text-ink-muted font-semibold">
                   Framing Dimensions
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -399,7 +399,7 @@ export function NewsSpectrum() {
 
             {/* Summary */}
             <div className="bg-paper-dark rounded-lg p-3 border border-rule">
-              <span className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold">
+              <span className="text-xs uppercase tracking-wider text-ink-muted font-semibold">
                 Analysis Summary
               </span>
               <p className="text-[12px] text-ink-light leading-relaxed mt-1.5">
@@ -409,7 +409,7 @@ export function NewsSpectrum() {
 
             {/* Outlet Details Section */}
             <div className="space-y-2">
-              <span className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold">
+              <span className="text-xs uppercase tracking-wider text-ink-muted font-semibold">
                 Outlet Details
               </span>
               <div className="space-y-2">
@@ -439,10 +439,10 @@ export function NewsSpectrum() {
                           <p className={`text-[14px] font-bold ${getCredibilityColor(outlet.credibility)}`}>
                             {outlet.credibility}
                           </p>
-                          <p className="text-[9px] text-ink-muted">credibility</p>
+                          <p className="text-[10px] text-ink-muted">credibility</p>
                         </div>
                         {getReliabilityIcon(outlet.reliability)}
-                        {showOutletDetails === outlet.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        {showOutletDetails === outlet.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                       </div>
                     </button>
                     
@@ -450,13 +450,13 @@ export function NewsSpectrum() {
                       <div className="px-3 pb-3 pt-0 border-t border-rule/50 space-y-2.5">
                         <div className="pt-2.5 grid grid-cols-2 gap-3">
                           <div>
-                            <span className="text-[9px] uppercase tracking-wider text-ink-muted font-semibold">
+                            <span className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">
                               Fact-Check Grade
                             </span>
                             <p className="text-[13px] font-bold text-ink mt-0.5">{outlet.factCheckGrade}</p>
                           </div>
                           <div>
-                            <span className="text-[9px] uppercase tracking-wider text-ink-muted font-semibold">
+                            <span className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">
                               Reliability
                             </span>
                             <p className="text-[13px] font-bold text-ink mt-0.5">{outlet.reliability}</p>
@@ -464,21 +464,21 @@ export function NewsSpectrum() {
                         </div>
                         
                         <div>
-                          <span className="text-[9px] uppercase tracking-wider text-ink-muted font-semibold">
+                          <span className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">
                             Ownership
                           </span>
-                          <p className="text-[11px] text-ink-light mt-0.5">{outlet.ownership}</p>
+                          <p className="text-xs text-ink-light mt-0.5">{outlet.ownership}</p>
                         </div>
                         
                         <div>
-                          <span className="text-[9px] uppercase tracking-wider text-ink-muted font-semibold">
+                          <span className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">
                             Coverage
                           </span>
-                          <p className="text-[11px] text-ink-light mt-0.5">{outlet.coverage}</p>
+                          <p className="text-xs text-ink-light mt-0.5">{outlet.coverage}</p>
                         </div>
                         
                         <div>
-                          <span className="text-[9px] uppercase tracking-wider text-ink-muted font-semibold">
+                          <span className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">
                             Strengths
                           </span>
                           <div className="flex flex-wrap gap-1 mt-1">
@@ -491,7 +491,7 @@ export function NewsSpectrum() {
                         </div>
                         
                         <div>
-                          <span className="text-[9px] uppercase tracking-wider text-ink-muted font-semibold">
+                          <span className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">
                             Weaknesses
                           </span>
                           <div className="flex flex-wrap gap-1 mt-1">
@@ -514,7 +514,7 @@ export function NewsSpectrum() {
                           href={outlet.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-[11px] text-curiosity hover:text-curiosity/80 transition-colors"
+                          className="inline-flex items-center gap-1 text-xs text-curiosity hover:text-curiosity/80 transition-colors"
                         >
                           Visit site <ExternalLink size={10} />
                         </a>
@@ -530,7 +530,7 @@ export function NewsSpectrum() {
         {/* Default State - Show Outlet Grid */}
         {!spectrumData && !loading && outlets.length > 0 && (
           <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
-            <span className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold">
+            <span className="text-xs uppercase tracking-wider text-ink-muted font-semibold">
               Outlet Database ({filteredOutlets.length} shown)
             </span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -542,14 +542,14 @@ export function NewsSpectrum() {
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <div 
-                        className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-bold"
+                        className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold"
                         style={{ backgroundColor: BIAS_COLORS[outlet.bias] || '#22C55E' }}
                       >
                         {outlet.name.slice(0, 2).toUpperCase()}
                       </div>
                       <div>
-                        <p className="text-[11px] font-bold text-ink">{outlet.name}</p>
-                        <p className="text-[9px] text-ink-muted">{outlet.bias}</p>
+                        <p className="text-xs font-bold text-ink">{outlet.name}</p>
+                        <p className="text-[10px] text-ink-muted">{outlet.bias}</p>
                       </div>
                     </div>
                     <div className="text-right">
@@ -559,7 +559,7 @@ export function NewsSpectrum() {
                       <p className="text-[8px] text-ink-muted">credibility</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 text-[9px] text-ink-muted">
+                  <div className="flex items-center gap-2 text-[10px] text-ink-muted">
                     <span className="px-1.5 py-0.5 bg-paper rounded border border-rule">
                       {outlet.factCheckGrade}
                     </span>

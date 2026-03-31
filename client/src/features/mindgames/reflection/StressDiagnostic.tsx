@@ -143,7 +143,7 @@ export function StressDiagnostic({ open, onOpenChange }: Props) {
         <DialogHeader className="text-left pb-2">
           <div className="flex items-center gap-2 mb-1">
             <Brain size={20} className="text-masthead" />
-            <DialogTitle className="font-serif text-xl">Stress & Bias Check</DialogTitle>
+            <DialogTitle className="font-serif text-xl">How Sharp Is Your Guard Today?</DialogTitle>
           </div>
           <DialogDescription className="text-[11px]">
             Based on research by Taber & Lodge (motivated reasoning) and Stanovich (cognitive reflection).
@@ -301,7 +301,7 @@ export function StressDiagnostic({ open, onOpenChange }: Props) {
           <div className="space-y-4 py-2">
             {/* Risk Score Display */}
             <div className="text-center py-4 border-y border-rule">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-ink-muted mb-2">Motivated Reasoning Risk</p>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-ink-muted mb-2">Reading Guard</p>
               <div className="flex items-center justify-center gap-3">
                 <span
                   className="text-4xl font-serif font-black"
@@ -319,7 +319,7 @@ export function StressDiagnostic({ open, onOpenChange }: Props) {
                 className="mt-2 text-[10px]"
                 style={{ borderColor: getRiskColor(level), color: getRiskColor(level) }}
               >
-                {level === 'Low' ? 'OK to proceed with awareness' : level === 'Medium' ? 'Proceed with caution' : 'Consider taking a break first'}
+                {level === 'Low' ? 'OK to proceed with awareness' : level === 'Medium' ? 'Moderate — worth being aware' : 'Consider taking a break first'}
               </Badge>
             </div>
 
@@ -390,7 +390,7 @@ export function StressDiagnosticTrigger({ onClick }: { onClick: () => void }) {
       className="text-[11px] gap-1.5 text-ink-muted hover:text-ink"
     >
       <Brain size={13} />
-      Stress Check
+      Reading Mood
     </Button>
   );
 }

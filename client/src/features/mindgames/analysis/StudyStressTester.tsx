@@ -30,10 +30,10 @@ interface DiagnosticCardProps {
 
 function DiagnosticCard({ title, icon, children }: DiagnosticCardProps) {
   return (
-    <div className="p-3 bg-paper-dark rounded-md border border-rule">
+    <div className="p-3.5 bg-paper-dark rounded-lg border border-rule">
       <div className="flex items-center gap-1.5 mb-2">
         {icon}
-        <span className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold">{title}</span>
+        <span className="text-xs uppercase tracking-wider text-ink-muted font-semibold">{title}</span>
       </div>
       {children}
     </div>
@@ -48,9 +48,9 @@ interface IndicatorBadgeProps {
 
 function IndicatorBadge({ label, status, tooltip }: IndicatorBadgeProps) {
   const icons = {
-    yes: <CheckCircle2 size={12} className="text-observation" />,
-    no: <XCircle size={12} className="text-outrage" />,
-    unclear: <HelpCircle size={12} className="text-curiosity" />,
+    yes: <CheckCircle2 size={13} className="text-observation" />,
+    no: <XCircle size={13} className="text-outrage" />,
+    unclear: <HelpCircle size={13} className="text-curiosity" />,
   };
   const bgColors = {
     yes: 'bg-observation/10 border-observation/30',
@@ -60,7 +60,7 @@ function IndicatorBadge({ label, status, tooltip }: IndicatorBadgeProps) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded border text-[11px] font-medium cursor-help ${bgColors[status]}`}>
+        <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded border text-xs font-medium cursor-help ${bgColors[status]}`}>
           {icons[status]}
           <span className="text-ink">{label}</span>
         </div>

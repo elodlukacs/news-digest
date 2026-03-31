@@ -8,7 +8,7 @@ export function HomeRoute() {
   const { briefs: homepageBriefs, loading: homepageLoading, refreshing: homepageRefreshing, refresh: homepageRefresh } = useHomepage();
 
   return (
-    <div className="max-w-[1600px] mx-auto px-4 pb-12 view-fade">
+    <div className="max-w-[1600px] mx-auto px-4 pb-12">
       <NewspaperHome
         briefs={homepageBriefs}
         loading={homepageLoading}

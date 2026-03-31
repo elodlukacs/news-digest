@@ -116,17 +116,17 @@ export function ForensicPanel() {
     FALLACY_DEFINITIONS[Object.keys(FALLACY_DEFINITIONS).find(k => name.toLowerCase().includes(k.toLowerCase())) || ''] || '';
 
   return (
-    <Card className="p-4 md:p-5 h-full flex flex-col gap-3">
+    <Card className="p-5 md:p-6 h-full flex flex-col gap-4">
       <FeaturePanelHeader
         icon={
           activeTab === 'forensic' ? (
-            <Search size={17} className="text-observation shrink-0" />
+            <Search size={20} className="text-observation shrink-0" />
           ) : (
-            <FlaskConical size={17} className="text-curiosity shrink-0" />
+            <FlaskConical size={20} className="text-curiosity shrink-0" />
           )
         }
-        title="Cognitive Forensic Engine"
-        infoTitle="Cognitive Forensic Engine"
+        title="Take Apart This Article"
+        infoTitle="Take Apart This Article"
         researcher="David Robert Grimes · Dan Ariely"
         summary="Paste any article or headline and watch AI deconstruct it — mapping logical fallacies and psychological manipulation stages in real time, with a 0–10 emotional intensity score."
         sections={[
@@ -150,25 +150,25 @@ export function ForensicPanel() {
             <button
               onClick={() => setActiveTab('forensic')}
               aria-label="Forensic analysis"
-              className={`flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium transition-colors ${
+              className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
                 activeTab === 'forensic'
-                  ? 'bg-masthead text-white'
+                  ? 'bg-ink text-paper'
                   : 'text-ink-muted hover:text-ink'
               }`}
             >
-              <Search size={12} />
-              <span className="hidden sm:inline">Forensic</span>
+              <Search size={13} />
+              <span className="hidden sm:inline">Analyze</span>
             </button>
             <button
               onClick={() => setActiveTab('study')}
               aria-label="Study analysis"
-              className={`flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium transition-colors ${
+              className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
                 activeTab === 'study'
-                  ? 'bg-masthead text-white'
+                  ? 'bg-ink text-paper'
                   : 'text-ink-muted hover:text-ink'
               }`}
             >
-              <FlaskConical size={12} />
+              <FlaskConical size={13} />
               <span className="hidden sm:inline">Study</span>
             </button>
           </div>
@@ -177,22 +177,22 @@ export function ForensicPanel() {
 
       {activeTab === 'forensic' ? (
         <>
-          <p className="text-[13px] text-ink-muted leading-relaxed -mt-1">
+          <p className="text-sm text-ink-muted leading-relaxed">
             Paste an article or headline to detect logical fallacies, emotional manipulation, and cognitive vulnerabilities.
           </p>
 
           {/* History */}
           {showHistory && (
-            <div className="max-h-[150px] overflow-y-auto space-y-1.5 border border-rule rounded-md p-2.5 bg-paper-dark">
+            <div className="max-h-[150px] overflow-y-auto space-y-1.5 border border-rule rounded-lg p-2.5 bg-paper-dark">
               <p className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold mb-1.5">Recent Analyses</p>
-              {historyLoading && <p className="text-[12px] text-ink-muted">Loading…</p>}
-              {!historyLoading && history.length === 0 && <p className="text-[12px] text-ink-muted">No history yet.</p>}
+              {historyLoading && <p className="text-sm text-ink-muted">Loading…</p>}
+              {!historyLoading && history.length === 0 && <p className="text-sm text-ink-muted">No history yet.</p>}
               {history.map(h => (
                 <button key={h.id} onClick={() => { setText(h.raw_text); setShowHistory(false); }}
                   className="w-full text-left p-2 rounded hover:bg-paper border border-rule/50 cursor-pointer transition-colors">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[12px] text-ink truncate flex-1">{h.raw_text.slice(0, 70)}…</span>
-                    <span className="text-[11px] text-ink-muted shrink-0 font-medium">bias {h.bias_score}/10</span>
+                    <span className="text-sm text-ink truncate flex-1">{h.raw_text.slice(0, 70)}…</span>
+                    <span className="text-xs text-ink-muted shrink-0 font-medium">bias {h.bias_score}/10</span>
                   </div>
                   <span className="text-[10px] text-ink-muted">{new Date(h.created_at).toLocaleDateString()}</span>
                 </button>
@@ -227,7 +227,7 @@ export function ForensicPanel() {
               {/* Emotional intensity */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold">Emotional Intensity</span>
+                  <span className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold">Emotional charge</span>
                   <span className="text-[13px] font-bold text-ink">{result.emotional_intensity}/10</span>
                 </div>
                 <div className="h-2 bg-paper-dark rounded-full overflow-hidden border border-rule/50">
@@ -241,7 +241,7 @@ export function ForensicPanel() {
               {result.funnel_stage && (
                 <div className="flex items-center gap-2">
                   <Brain size={13} className="text-curiosity" />
-                  <span className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold">Funnel Stage:</span>
+                  <span className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold">Persuasion technique:</span>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <span><Badge variant="outline" className="text-[11px] cursor-help px-2">{result.funnel_stage}</Badge></span>

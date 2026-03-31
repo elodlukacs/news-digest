@@ -8,9 +8,9 @@ export function AnalysisTab() {
   return (
     <div className="space-y-6 mt-3">
       <TabHeader
-        icon={<Search size={24} className="text-observation md:!w-7 md:!h-7" />}
-        title="Analysis Suite"
-        description="Deconstruct content with critical frameworks. Analyze fallacies, evaluate research quality, and compare media coverage."
+        icon={<Search size={26} className="text-observation md:!w-8 md:!h-8" />}
+        title="Dissect"
+        description="Pull apart an article to find logical fallacies, compare how different outlets cover the same story, and see where sources sit on the bias spectrum."
       />
 
       <ForensicPanel />

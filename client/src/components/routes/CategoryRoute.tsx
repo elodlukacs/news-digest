@@ -31,7 +31,7 @@ export function CategoryRoute() {
   }, [ctx, categoryId, navigate]);
 
   return (
-    <div className="max-w-7xl mx-auto px-6 pb-20 flex gap-8 view-fade">
+    <div className="max-w-7xl mx-auto px-6 pb-20 flex gap-8">
       <LeftSidebar
         hackerNews={ctx.hackerNews}
         dates={dates}

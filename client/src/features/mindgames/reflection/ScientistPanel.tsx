@@ -18,12 +18,12 @@ interface Props {
 
 type ThinkingMode = 'scientist' | 'preacher' | 'prosecutor' | 'politician' | 'unknown';
 
-const THINKING_MODES: Record<ThinkingMode, { label: string; color: string; description: string }> = {
-  scientist: { label: 'Scientist', color: 'var(--color-observation)', description: 'Searching for reality. Questioning assumptions, iterating on data, and embracing doubt.' },
-  preacher: { label: 'Preacher', color: 'var(--color-outrage)', description: 'Defending the Truth. Delivering sermons to protect ideals and ignoring contradictions.' },
-  prosecutor: { label: 'Prosecutor', color: 'var(--color-outrage)', description: "Winning the Argument. Marshalling evidence only to prove the opponent's flaws." },
-  politician: { label: 'Politician', color: 'var(--color-curiosity)', description: 'Gaining Approval. Campaigning for support, often by flip-flopping.' },
-  unknown: { label: 'Enter a claim', color: 'var(--color-ink-muted)', description: '' },
+const THINKING_MODES: Record<ThinkingMode, { label: string; color: string; description: string; shortLabel: string }> = {
+  scientist: { label: 'Scientist', color: 'var(--color-observation)', description: 'Searching for reality. Questioning assumptions, iterating on data, and embracing doubt.', shortLabel: 'Open to evidence' },
+  preacher: { label: 'Preacher', color: 'var(--color-outrage)', description: 'Defending the Truth. Delivering sermons to protect ideals and ignoring contradictions.', shortLabel: 'Certain of the truth' },
+  prosecutor: { label: 'Prosecutor', color: 'var(--color-outrage)', description: "Winning the Argument. Marshalling evidence only to prove the opponent's flaws.", shortLabel: 'Attacking the other side' },
+  politician: { label: 'Politician', color: 'var(--color-curiosity)', description: 'Gaining Approval. Campaigning for support, often by flip-flopping.', shortLabel: 'Seeking approval' },
+  unknown: { label: 'Enter a claim', color: 'var(--color-ink-muted)', description: '', shortLabel: '' },
 };
 
 function detectThinkingMode(claim: string, confidence: number): ThinkingMode {
@@ -142,11 +142,11 @@ export function ScientistPanel({ selectedLlm }: Props) {
   const modeInfo = THINKING_MODES[thinkingMode];
 
   return (
-    <Card className="p-4 md:p-5 h-full flex flex-col gap-3">
+    <Card className="p-5 md:p-6 h-full flex flex-col gap-4">
       {/* Header */}
       <div className="space-y-1.5">
           <FeaturePanelHeader
-            icon={<Microscope size={17} className="text-curiosity shrink-0" />}
+            icon={<Microscope size={20} className="text-curiosity shrink-0" />}
             title="Scientist's Sandbox"
             infoTitle="Scientist's Sandbox"
             researcher="Adam Grant · Think Again"
@@ -163,30 +163,30 @@ export function ScientistPanel({ selectedLlm }: Props) {
               { heading: 'Rethinking Journal', content: 'Track your confidence before and after each debate. The change in confidence is the learning. Grant\'s insight: detaching opinions from identity is crucial — define yourself by your values, not your current beliefs.' },
               { heading: 'Counterintuitive Finding', content: 'When experts admit uncertainty, they become MORE persuasive — people pay more attention to the substance of arguments rather than dismissing them.' },
             ]}
-            right={<button onClick={toggleJournal} aria-label="Toggle journal history" className="flex items-center gap-1 text-[11px] text-ink-muted hover:text-ink transition-colors cursor-pointer px-1">
-              <History size={13} />
-              {showJournal ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+            right={<button onClick={toggleJournal} aria-label="Toggle journal history" className="flex items-center gap-1 text-xs text-ink-muted hover:text-ink transition-colors cursor-pointer px-1">
+              <History size={14} />
+              {showJournal ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
             </button>}
           />
       </div>
 
-      <p className="text-[13px] text-ink-muted leading-relaxed -mt-1">
+      <p className="text-sm text-ink-muted leading-relaxed">
         Enter a belief, set your confidence, then see three AI personas challenge it — like Adam Grant's "Think Again."
       </p>
 
       {/* Journal */}
       {showJournal && (
-        <div className="max-h-[180px] overflow-y-auto space-y-1.5 border border-rule rounded-md p-2.5 bg-paper-dark">
+        <div className="max-h-[180px] overflow-y-auto space-y-1.5 border border-rule rounded-lg p-2.5 bg-paper-dark">
           <p className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold mb-1.5">Rethinking Journal</p>
-          {journalLoading && <p className="text-[12px] text-ink-muted">Loading…</p>}
-          {!journalLoading && journal.length === 0 && <p className="text-[12px] text-ink-muted">No entries yet. Complete a debate to record belief shifts.</p>}
+          {journalLoading && <p className="text-sm text-ink-muted">Loading…</p>}
+          {!journalLoading && journal.length === 0 && <p className="text-sm text-ink-muted">No entries yet. Complete a debate to record belief shifts.</p>}
           {journal.map(j => {
             const shifted = j.final_confidence !== j.initial_confidence;
             const direction = j.final_confidence > j.initial_confidence ? 'up' : j.final_confidence < j.initial_confidence ? 'down' : 'same';
             return (
-              <div key={j.id} className="p-2 rounded border border-rule/50 text-[12px]">
+              <div key={j.id} className="p-2 rounded border border-rule/50 text-sm">
                 <p className="text-ink font-medium truncate">{j.topic}</p>
-                <div className="flex items-center gap-2 mt-0.5 text-[11px] text-ink-muted">
+                <div className="flex items-center gap-2 mt-0.5 text-xs text-ink-muted">
                   <span>{j.initial_confidence}% {direction === 'up' ? '↑' : direction === 'down' ? '↓' : '→'} {j.final_confidence}%</span>
                   {shifted && <Badge variant="outline" className="text-[10px] px-1.5" style={{ borderColor: 'var(--color-observation)' }}>shifted</Badge>}
                   {j.mode && <Badge variant="outline" className="text-[10px] px-1.5">{j.mode}</Badge>}
@@ -199,7 +199,7 @@ export function ScientistPanel({ selectedLlm }: Props) {
       )}
 
       <Tabs defaultValue="debate" className="flex-1 flex flex-col">
-        <TabsList className="h-8 p-1 gap-1">
+        <TabsList className="h-9 p-1 gap-1">
           <TabsTrigger value="debate" className="text-[11px] h-7 px-3 gap-1.5">
             <MessageSquare size={12} /> Debate
           </TabsTrigger>
@@ -234,6 +234,9 @@ export function ScientistPanel({ selectedLlm }: Props) {
                 <span className="font-bold uppercase tracking-wider text-[11px]" style={{ color: modeInfo.color }}>
                   {modeInfo.label} Mode
                 </span>
+                {modeInfo.shortLabel && (
+                  <span className="text-[11px] text-ink-muted">{modeInfo.shortLabel}</span>
+                )}
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span className="cursor-help text-ink-muted"><Info size={12} /></span>

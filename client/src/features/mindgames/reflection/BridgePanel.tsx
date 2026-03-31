@@ -176,10 +176,10 @@ export function BridgePanel() {
   const isLoading = loading || bridgeLoading;
 
   return (
-    <Card className="p-4 md:p-5 h-full flex flex-col gap-3">
+    <Card className="p-5 md:p-6 h-full flex flex-col gap-4">
       {/* Header */}
       <FeaturePanelHeader
-        icon={<Heart size={17} className="text-curiosity shrink-0" />}
+        icon={<Heart size={20} className="text-curiosity shrink-0" />}
         title="Bridge Builder"
         infoTitle="Bridge Builder"
         researcher="Monica Guzman · I Never Thought of It That Way"
@@ -195,44 +195,44 @@ export function BridgePanel() {
           { heading: 'SOS Audit', content: 'Analyse your information diet for echo-chamber patterns. Enter your news sources and the AI measures the degree of siloing — how many genuinely different perspectives you are actually being exposed to.' },
         ]}
         right={
-          <button onClick={toggleHistory} aria-label="Toggle audit history" className="flex items-center gap-1 text-[11px] text-ink-muted hover:text-ink transition-colors cursor-pointer px-1">
-            <History size={13} />
-            {showHistory ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+          <button onClick={toggleHistory} aria-label="Toggle audit history" className="flex items-center gap-1 text-xs text-ink-muted hover:text-ink transition-colors cursor-pointer px-1">
+            <History size={14} />
+            {showHistory ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
           </button>
         }
       />
 
       {/* Tab switcher */}
-      <div className="flex gap-1 p-0.5 bg-paper-dark rounded-md">
+      <div className="flex rounded-lg border border-rule overflow-hidden">
         <button
           onClick={() => setTab('audit')}
-          className={`flex-1 py-1.5 text-[11px] md:text-[12px] font-medium uppercase tracking-wider rounded transition-all cursor-pointer ${tab === 'audit' ? 'bg-masthead text-white' : 'text-ink-muted hover:text-ink'}`}
+          className={`flex-1 py-2.5 text-sm font-semibold transition-all cursor-pointer ${tab === 'audit' ? 'bg-ink text-paper' : 'bg-paper text-ink-muted hover:text-ink hover:bg-paper-dark'}`}
         >
-          <span className="md:hidden">SOS</span>
-          <span className="hidden md:inline">SOS Audit</span>
+          <span className="md:hidden">Echo</span>
+          <span className="hidden md:inline">Echo Chamber Check</span>
         </button>
         <button
           onClick={() => setTab('bridge')}
-          className={`flex-1 py-1.5 text-[11px] md:text-[12px] font-medium uppercase tracking-wider rounded transition-all cursor-pointer ${tab === 'bridge' ? 'bg-masthead text-white' : 'text-ink-muted hover:text-ink'}`}
+          className={`flex-1 py-2.5 text-sm font-semibold border-l border-rule transition-all cursor-pointer ${tab === 'bridge' ? 'bg-ink text-paper' : 'bg-paper text-ink-muted hover:text-ink hover:bg-paper-dark'}`}
         >
-          <span className="md:hidden">Bridge</span>
-          <span className="hidden md:inline">Bridge Views</span>
+          <span className="md:hidden">Common Ground</span>
+          <span className="hidden md:inline">Find Common Ground</span>
         </button>
         <button
           onClick={() => setTab('diet')}
-          className={`flex-1 py-1.5 text-[11px] md:text-[12px] font-medium uppercase tracking-wider rounded transition-all cursor-pointer ${tab === 'diet' ? 'bg-masthead text-white' : 'text-ink-muted hover:text-ink'}`}
+          className={`flex-1 py-2.5 text-sm font-semibold border-l border-rule transition-all cursor-pointer ${tab === 'diet' ? 'bg-ink text-paper' : 'bg-paper text-ink-muted hover:text-ink hover:bg-paper-dark'}`}
         >
-          <span className="md:hidden">Diet</span>
-          <span className="hidden md:inline">Info Diet</span>
+          <span className="md:hidden">Sources</span>
+          <span className="hidden md:inline">My News Sources</span>
         </button>
       </div>
 
       {/* History */}
       {showHistory && (
-        <div className="max-h-[150px] overflow-y-auto space-y-1.5 border border-rule rounded-md p-2.5 bg-paper-dark">
+        <div className="max-h-[150px] overflow-y-auto space-y-1.5 border border-rule rounded-lg p-2.5 bg-paper-dark">
           <p className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold mb-1.5">Past Audits</p>
-          {historyLoading && <p className="text-[12px] text-ink-muted">Loading…</p>}
-          {!historyLoading && history.length === 0 && <p className="text-[12px] text-ink-muted">No audits yet.</p>}
+          {historyLoading && <p className="text-sm text-ink-muted">Loading…</p>}
+          {!historyLoading && history.length === 0 && <p className="text-sm text-ink-muted">No audits yet.</p>}
           {history.map(h => {
             let srcList: string[] = [];
             try { srcList = JSON.parse(h.sources); } catch { /* ignore */ }
@@ -241,7 +241,7 @@ export function BridgePanel() {
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-ink truncate flex-1">{srcList.join(', ')}</span>
                   <Badge variant="outline" className="text-[11px] px-1.5 shrink-0">
-                    Silo: {h.siloing_score}/10
+                    Echo: {h.siloing_score}/10
                   </Badge>
                 </div>
                 <span className="text-[11px] text-ink-muted">{new Date(h.created_at).toLocaleDateString()}</span>
@@ -299,7 +299,7 @@ export function BridgePanel() {
             <div className="space-y-3 flex-1 overflow-y-auto">
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold">Siloing Score</span>
+                  <span className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold">Echo score</span>
                   <span className="text-[13px] font-bold text-ink">{audit.siloing_score}/10</span>
                 </div>
                 <div className="h-2 bg-paper-dark rounded-full overflow-hidden border border-rule/50">
