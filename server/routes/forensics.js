@@ -1,7 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const { callLLM } = require('../lib/llm');
-const { getPrompt } = require('../lib/promptManager');
+const { getPrompt, buildMessages } = require('../lib/promptManager');
 const { parseJSON } = require('../lib/parseJSON');
 
 const router = express.Router();
@@ -13,24 +13,35 @@ router.post('/', async (req, res) => {
   const trimmed = text.trim().slice(0, 5000);
 
   try {
-    const forensicPrompt = getPrompt('forensic-analysis');
+    const messages = buildMessages('forensic-analysis', { text: trimmed });
 
     const result = await callLLM(
-      [
-        { role: 'system', content: forensicPrompt.user_prompt },
-        { role: 'user', content: `Analyze this text:\n\n${trimmed}` }
-      ],
+      messages,
       { purpose: 'forensic_analysis', temperature: 0.2, response_format: { type: 'json_object' }, providerId: provider || null, db }
     );
 
-    const parsed = parseJSON(result.content, { fallacies: [], funnel_stage: 'unknown', emotional_intensity: 5, bias_score: 5, summary: 'Analysis parsing failed' });
+    const fallback = {
+      fallacies: [],
+      misbelief_funnel: { primary_stage: 'unknown', psychological_hook: '', entry_point_explanation: '' },
+      emotional_intensity: 5,
+      bias_score: 5,
+      executive_summary: 'Analysis parsing failed',
+    };
+    const parsed = parseJSON(result.content, fallback);
 
     const uid = userId || 'default';
     db.prepare(
       'INSERT INTO forensic_history (user_id, raw_text, fallacy_data, bias_score, emotional_intensity, funnel_stage) VALUES (?,?,?,?,?,?)'
-    ).run(uid, text.substring(0, 5000), JSON.stringify(parsed.fallacies || []), parsed.bias_score || 0, parsed.emotional_intensity || 0, parsed.funnel_stage || '');
+    ).run(uid, text.substring(0, 5000), JSON.stringify(parsed.fallacies || []), parsed.scores?.bias_score ?? parsed.bias_score ?? 0, parsed.scores?.emotional_intensity ?? parsed.emotional_intensity ?? 0, parsed.misbelief_funnel?.primary_stage || parsed.funnel_stage || '');
 
-    res.json({ ...parsed, provider: result.provider });
+    res.json({
+      fallacies: parsed.fallacies || [],
+      misbelief_funnel: parsed.misbelief_funnel || fallback.misbelief_funnel,
+      emotional_intensity: parsed.scores?.emotional_intensity ?? parsed.emotional_intensity ?? 5,
+      bias_score: parsed.scores?.bias_score ?? parsed.bias_score ?? 5,
+      executive_summary: parsed.executive_summary || parsed.summary || '',
+      provider: result.provider,
+    });
   } catch (err) {
     console.error('Forensics error:', err);
     res.status(500).json({ error: err.message || 'Analysis failed' });
@@ -60,13 +71,10 @@ router.post('/stream', async (req, res) => {
   try {
     sendEvent('status', { step: 'analyzing', message: 'Analyzing text for cognitive vulnerabilities...' });
 
-    const forensicPrompt = getPrompt('forensic-analysis');
+    const messages = buildMessages('forensic-analysis', { text: trimmed });
 
     const result = await callLLM(
-      [
-        { role: 'system', content: forensicPrompt.user_prompt },
-        { role: 'user', content: `Analyze this text:\n\n${trimmed}` }
-      ],
+      messages,
       { purpose: 'forensic_analysis_stream', temperature: 0.2, response_format: { type: 'json_object' }, providerId: provider || null, db }
     );
 
@@ -74,14 +82,14 @@ router.post('/stream', async (req, res) => {
     const parsed = parseJSON(result.content, { fallacies: [], emotional_intensity: 5, bias_score: 5 });
 
     sendEvent('fallacies', { fallacies: parsed.fallacies || [] });
-    sendEvent('intensity', { emotional_intensity: parsed.emotional_intensity || 0 });
-    sendEvent('funnel', { funnel_stage: parsed.funnel_stage || '' });
-    sendEvent('done', { summary: parsed.summary || '', bias_score: parsed.bias_score || 0, provider: result.provider });
+    sendEvent('intensity', { emotional_intensity: parsed.scores?.emotional_intensity ?? parsed.emotional_intensity ?? 0 });
+    sendEvent('funnel', { misbelief_funnel: parsed.misbelief_funnel || { primary_stage: parsed.funnel_stage || '', psychological_hook: '', entry_point_explanation: '' } });
+    sendEvent('done', { executive_summary: parsed.executive_summary || parsed.summary || '', bias_score: parsed.scores?.bias_score ?? parsed.bias_score ?? 0, provider: result.provider });
 
     const streamUserId = req.body.userId || 'default';
     db.prepare(
       'INSERT INTO forensic_history (user_id, raw_text, fallacy_data, bias_score, emotional_intensity, funnel_stage) VALUES (?,?,?,?,?,?)'
-    ).run(streamUserId, trimmed, JSON.stringify(parsed.fallacies || []), parsed.bias_score || 0, parsed.emotional_intensity || 0, parsed.funnel_stage || '');
+    ).run(streamUserId, trimmed, JSON.stringify(parsed.fallacies || []), parsed.scores?.bias_score ?? parsed.bias_score ?? 0, parsed.scores?.emotional_intensity ?? parsed.emotional_intensity ?? 0, parsed.misbelief_funnel?.primary_stage || parsed.funnel_stage || '');
 
     res.end();
   } catch (err) {

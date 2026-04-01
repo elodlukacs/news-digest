@@ -305,18 +305,32 @@ export function ForensicPanel({ sections = [], categoryName = '' }: ForensicPane
                     </div>
                   </div>
 
-                  {/* Misbelief stage */}
-                  {result.funnel_stage && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold">Funnel stage:</span>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span><Badge variant="outline" className="text-[11px] cursor-help px-2">{result.funnel_stage}</Badge></span>
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-[280px] text-[11px]">
-                          Ariely's Funnel of Misbelief progression: emotional stress → cognitive shortcuts → pattern-seeking → social isolation in echo chambers.
-                        </TooltipContent>
-                      </Tooltip>
+                  {/* Misbelief funnel */}
+                  {result.misbelief_funnel?.primary_stage && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold">Primary stage:</span>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span><Badge variant="outline" className="text-[11px] cursor-help px-2">{result.misbelief_funnel.primary_stage}</Badge></span>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-[280px] text-[11px]">
+                            The primary stage of Ariely's Funnel of Misbelief this text targets.
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      {result.misbelief_funnel.psychological_hook && (
+                        <div className="pl-3 border-l-2" style={{ borderColor: 'var(--color-curiosity)' }}>
+                          <span className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">Psychological hook</span>
+                          <p className="text-[12px] text-ink-light mt-0.5">{result.misbelief_funnel.psychological_hook}</p>
+                        </div>
+                      )}
+                      {result.misbelief_funnel.entry_point_explanation && (
+                        <div className="pl-3 border-l-2" style={{ borderColor: 'var(--color-curiosity)' }}>
+                          <span className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">Entry point</span>
+                          <p className="text-[12px] text-ink-light mt-0.5">{result.misbelief_funnel.entry_point_explanation}</p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -352,17 +366,17 @@ export function ForensicPanel({ sections = [], categoryName = '' }: ForensicPane
                             )}
                           </div>
                           {f.evidence && <p className="text-ink-muted italic mb-0.5">"{f.evidence}"</p>}
-                          {f.explanation && <p className="text-ink-light">{f.explanation}</p>}
+                          {f.rationality_gap && <p className="text-ink-light">{f.rationality_gap}</p>}
                         </div>
                       );
                     })}
                   </div>
                 )}
 
-                {result.summary && (
+                {result.executive_summary && (
                   <div className="pt-3 border-t border-rule/50 space-y-1.5">
-                    <span className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold">Summary</span>
-                    <p className="text-[13px] text-ink-light leading-relaxed">{result.summary}</p>
+                    <span className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold">Executive Summary</span>
+                    <p className="text-[13px] text-ink-light leading-relaxed">{result.executive_summary}</p>
                   </div>
                 )}
               </div>

@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { Input } from './ui/input';
 import { Alert, AlertDescription } from './ui/alert';
-import { Save, Check, Search, ArrowRightLeft, Briefcase, Brain, Newspaper } from 'lucide-react';
+import { Save, Check, Search, ArrowRightLeft, Briefcase, Brain, Newspaper, MapPin } from 'lucide-react';
 
 interface Prompt {
   id: number;
@@ -32,6 +32,31 @@ const CATEGORY_CONFIG: { id: string; label: string; shortLabel: string; icon: Re
   { id: 'mindgames', label: 'MindGames', shortLabel: 'Mind', icon: <Brain size={18} /> },
   { id: 'news', label: 'News', shortLabel: 'News', icon: <Newspaper size={18} /> },
 ];
+
+const PROMPT_LOCATIONS: Record<string, string> = {
+  'bias-radar-decode': 'Bias Radar → Decode',
+  'bias-radar-missing-story': 'Bias Radar → Missing Story (server-only)',
+  'bias-radar-steelman': 'Bias Radar → Steelman',
+  'bias-radar-timeline': 'Bias Radar → Timeline Check (unused)',
+  'bridge-builder': 'MindGames → Think Harder → Bridge Builder',
+  'information-diet': 'MindGames → Think Harder → Information Diet',
+  'sos-audit': 'MindGames → Think Harder → Echo Chamber Check',
+  'job-filter': 'Jobs',
+  'compare-coverage': 'MindGames → Dissect → Compare Coverage',
+  'disinfo-map': 'MindGames → Playbook → Disinfo Influencer Map',
+  'forensic-analysis': 'MindGames → Dissect → Take Apart A Specific Article',
+  'inoculation-cdo': 'MindGames → Spot It → Spot the Trick → Write It Yourself',
+  'inoculation-twister': 'MindGames → Spot It → Spot the Trick → Catch It',
+  'narrative-map': 'MindGames → Playbook → Narrative Map',
+  'scientist-institutionalist': 'MindGames → Think Harder → Scientist\'s Sandbox',
+  'scientist-moralist': 'MindGames → Think Harder → Scientist\'s Sandbox',
+  'scientist-skeptic': 'MindGames → Think Harder → Scientist\'s Sandbox',
+  'study-analysis': 'MindGames → Dissect → Study Stress-Tester',
+  'category-summary': 'News → Category Summary',
+  'chat': 'News → Summary Chat',
+  'morning-briefing': 'News → Morning Briefing',
+  'telegram-digest': 'News → Morning Briefing → Telegram',
+};
 
 export function PromptManager() {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
@@ -248,6 +273,12 @@ function PromptCard({
             className="text-xs text-ink-muted border-none shadow-none p-0 h-auto mt-0.5 bg-transparent focus-visible:ring-0"
             placeholder="Description"
           />
+          {PROMPT_LOCATIONS[prompt.slug] && (
+            <div className="flex items-center gap-1 mt-1 text-[11px] text-ink-muted">
+              <MapPin size={11} className="shrink-0" />
+              <span>{PROMPT_LOCATIONS[prompt.slug]}</span>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {saved && (

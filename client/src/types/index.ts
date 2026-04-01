@@ -174,15 +174,21 @@ export interface HomepageBrief {
 export interface ForensicFallacy {
   name: string;
   evidence: string;
-  explanation: string;
+  rationality_gap: string;
+}
+
+export interface MisbeliefFunnel {
+  primary_stage: string;
+  psychological_hook: string;
+  entry_point_explanation: string;
 }
 
 export interface ForensicResult {
   fallacies: ForensicFallacy[];
-  funnel_stage: string;
+  misbelief_funnel: MisbeliefFunnel;
   emotional_intensity: number;
   bias_score: number;
-  summary: string;
+  executive_summary: string;
   provider?: string;
 }
 
