@@ -1,10 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Card } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Textarea } from '../../../components/ui/textarea';
 import { Badge } from '../../../components/ui/badge';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../../../components/ui/tooltip';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '../../../components/ui/dropdown-menu';
 import { Search, Loader2, AlertTriangle, Brain, History, ChevronDown, ChevronUp, Info, FlaskConical, PenLine } from 'lucide-react';
 import { FeaturePanelHeader } from '../common';
 import { API_BASE } from '../../../config';
@@ -148,7 +146,7 @@ export function ForensicPanel({ sections = [], categoryName = '' }: ForensicPane
   };
 
   return (
-    <Card className="p-0 md:p-6 flex flex-col gap-5">
+    <div className="flex flex-col gap-5">
       <FeaturePanelHeader
         icon={
           activeTab === 'forensic' ? (
@@ -220,25 +218,17 @@ export function ForensicPanel({ sections = [], categoryName = '' }: ForensicPane
                 Articles in {categoryName}
               </label>
               <div className="flex gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild disabled={loading}>
-                    <button className="flex-1 h-10 px-3 text-sm text-left border border-ink/20 rounded-md bg-paper text-ink hover:bg-paper-dark focus:border-masthead focus:outline-none focus:ring-1 focus:ring-masthead/30 disabled:opacity-50 cursor-pointer flex items-center justify-between">
-                      <span className="truncate">
-                        {selectedIdx >= 0 && selectedIdx < sections.length
-                          ? truncateTitle(sections[selectedIdx].title)
-                          : 'Choose an article…'}
-                      </span>
-                      <ChevronDown size={14} className="shrink-0 ml-2 text-ink-muted" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-[50dvh] overflow-y-auto">
-                    {sections.map((s, i) => (
-                      <DropdownMenuItem key={i} onClick={() => handleSelectArticle(i)}>
-                        {truncateTitle(s.title)}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <select
+                  value={selectedIdx}
+                  onChange={(e) => handleSelectArticle(Number(e.target.value))}
+                  disabled={loading}
+                  className="flex-1 h-10 px-3 text-sm border border-ink/20 rounded-md bg-paper text-ink focus:border-masthead focus:outline-none focus:ring-1 focus:ring-masthead/30 disabled:opacity-50 cursor-pointer appearance-none truncate"
+                >
+                  <option value={-1}>Choose an article…</option>
+                  {sections.map((s, i) => (
+                    <option key={i} value={i}>{truncateTitle(s.title)}</option>
+                  ))}
+                </select>
                 <Button
                   type="button"
                   onClick={() => { if (text.trim().length >= 20) analyze(); }}
@@ -386,6 +376,6 @@ export function ForensicPanel({ sections = [], categoryName = '' }: ForensicPane
           <span>{showHistory ? 'Hide History' : 'Show History'}</span>
         </button>
       )}
-    </Card>
+    </div>
   );
 }
