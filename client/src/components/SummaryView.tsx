@@ -301,12 +301,7 @@ export function SummaryView({
             <article key={idx} className="-mx-6 px-6 py-1.5 border-y border-rule/60 bg-paper-dark/70 md:mx-0 md:px-0 md:py-0 md:bg-transparent md:border-y-0">
               <Card className="border-0 bg-transparent md:bg-paper-dark md:border md:border-rule">
                 <CardHeader className="pb-0 px-0 md:px-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <CardTitle className="text-lg md:text-xl">{section.title}</CardTitle>
-                    {section.sentiment && (
-                      <SentimentBadge sentiment={section.sentiment} />
-                    )}
-                  </div>
+                  <CardTitle className="text-lg md:text-xl">{section.title}</CardTitle>
                 </CardHeader>
                 <CardContent className="px-0 md:px-5">
                   <p className="text-[16px] leading-[1.8] text-ink font-[family-name:var(--font-body)]">
@@ -314,6 +309,9 @@ export function SummaryView({
                   </p>
                 </CardContent>
                 <CardFooter className="px-0 md:px-5 gap-2">
+                  {section.sentiment && (
+                    <SentimentBadge sentiment={section.sentiment} />
+                  )}
                   {section.url && (
                     <Button variant="outline" size="sm" className="gap-2" asChild>
                       <a href={section.url} target="_blank" rel="noopener noreferrer">
