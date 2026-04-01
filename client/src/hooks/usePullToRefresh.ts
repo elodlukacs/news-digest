@@ -30,6 +30,8 @@ export function usePullToRefresh({ onRefresh, threshold = 80 }: UsePullToRefresh
 
     const handleTouchStart = (e: TouchEvent) => {
       if (window.scrollY === 0) {
+        const target = e.target as HTMLElement;
+        if (target.closest('[data-no-pull-refresh]')) return;
         startYRef.current = e.touches[0].clientY;
         isPullingRef.current = true;
       }

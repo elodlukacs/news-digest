@@ -1,3 +1,4 @@
+import { useRef, useCallback, useState } from 'react';
 import { X, Brain, Search } from 'lucide-react';
 import { ForensicPanel } from '../features/mindgames/analysis';
 import type { ParsedSection } from './SummaryView';
@@ -10,6 +11,33 @@ interface Props {
 }
 
 export function MindToolsRibbon({ open, onOpenChange, sections, categoryName }: Props) {
+  const [dragY, setDragY] = useState(0);
+  const dragStartRef = useRef<number | null>(null);
+  const draggingRef = useRef(false);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    dragStartRef.current = e.touches[0].clientY;
+    draggingRef.current = false;
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (dragStartRef.current === null) return;
+    const diff = e.touches[0].clientY - dragStartRef.current;
+    if (diff > 0) {
+      draggingRef.current = true;
+      setDragY(diff);
+    }
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (dragY > 80) {
+      onOpenChange(false);
+    }
+    setDragY(0);
+    dragStartRef.current = null;
+    draggingRef.current = false;
+  }, [dragY, onOpenChange]);
+
   return (
     <>
       {/* Desktop: vertical ribbon on right edge */}
@@ -48,14 +76,22 @@ export function MindToolsRibbon({ open, onOpenChange, sections, categoryName }: 
       />
 
       <div
+        data-no-pull-refresh
         className={`fixed z-50 bg-paper shadow-2xl border-rule flex flex-col
           inset-x-0 bottom-0 h-[50dvh] rounded-t-2xl border-t
           md:inset-y-0 md:right-0 md:left-auto md:bottom-auto md:h-full
           md:w-[min(720px,90vw)] md:rounded-none md:border-t-0
-          transition-transform duration-300 ease-out
+          ${dragY > 0 ? '' : 'transition-transform duration-300 ease-out'}
           ${open ? 'translate-y-0 md:translate-y-0' : 'translate-y-full md:translate-y-0 md:translate-x-full'}`}
+        style={open && dragY > 0 ? { transform: `translateY(${dragY}px)` } : undefined}
       >
-        <div className="md:hidden flex justify-center pt-3 pb-1">
+        {/* Drag handle — swipe-to-dismiss only from here */}
+        <div
+          className="md:hidden flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing touch-none"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
           <div className="w-10 h-1 rounded-full bg-rule" />
         </div>
         <div className="flex items-center justify-between px-6 py-4 border-b border-rule shrink-0">
