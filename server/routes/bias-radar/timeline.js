@@ -8,12 +8,20 @@ const router = express.Router();
 
 router.get('/', async (req, res) => {
   try {
-    const articleId = Number(req.query.articleId);
-    if (!articleId || isNaN(articleId)) {
-      return res.status(400).json({ error: 'articleId query param is required (numeric)' });
+    const rawId = req.query.articleId;
+    if (!rawId) {
+      return res.status(400).json({ error: 'articleId query param is required' });
     }
 
-    const article = db.prepare('SELECT * FROM articles WHERE id = ?').get(articleId);
+    // Support both numeric IDs and URL lookups
+    const numericId = Number(rawId);
+    let article;
+    if (!isNaN(numericId) && numericId > 0) {
+      article = db.prepare('SELECT * FROM articles WHERE id = ?').get(numericId);
+    }
+    if (!article) {
+      article = db.prepare('SELECT * FROM articles WHERE link = ? ORDER BY id DESC LIMIT 1').get(rawId);
+    }
     if (!article) {
       return res.status(404).json({ error: 'Article not found' });
     }
