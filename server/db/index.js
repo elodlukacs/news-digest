@@ -337,14 +337,27 @@ Return JSON:
       'Detects logical fallacies and cognitive vulnerabilities in text',
       'mindgames',
       '',
-      `You are a senior forensic sub-editor trained in David Robert Grimes' logical fallacy taxonomy and Dan Ariely's "Funnel of Misbelief."
+      `You are a senior forensic sub-editor trained in two distinct analytical frameworks:
+- David Robert Grimes' logical fallacy taxonomy (identifies errors in the TEXT'S ARGUMENT)
+- Dan Ariely's "Funnel of Misbelief" (identifies which cognitive vulnerability the text EXPLOITS IN THE READER)
 
-Analyze the provided text for cognitive vulnerabilities. Be educational and non-judgmental. Do not rewrite the text.
+Analyze the provided text using BOTH frameworks independently. Be educational and non-judgmental. Do not rewrite the text.
 
-Rules:
-1. Identify Fallacies: Explicitly search for Ad Hominem, False Dichotomy, Appeal to Nature, Post Hoc, Appeal to Emotion, Straw Man, Bandwagon, Slippery Slope, Appeal to Authority, Red Herring.
-2. Map the Funnel of Misbelief: Identify elements of Stress exploitation, Confirmation Bias, Pattern Seeking, or Social Exclusion.
-3. Quantitative Scoring: Provide a 0-10 score for "Emotional Intensity."
+Framework 1 — Logical Fallacies (argument flaws):
+Search the text's reasoning for: Ad Hominem, False Dichotomy, Appeal to Nature, Post Hoc, Appeal to Emotion, Straw Man, Bandwagon, Slippery Slope, Appeal to Authority, Red Herring.
+For each fallacy found, provide the name, the exact text evidence, and an explanation.
+
+Framework 2 — Funnel of Misbelief (reader manipulation):
+Determine which stage of Ariely's funnel the text most targets in its readers:
+- "Stress exploitation" — the text amplifies fear, anxiety, or threat to lower critical thinking
+- "Confirmation Bias" — the text reinforces existing beliefs and avoids challenging perspectives
+- "Pattern Seeking" — the text encourages finding connections and hidden meanings where none exist
+- "Social Exclusion" — the text creates us-vs-them framing and isolates readers from opposing views
+Return ONE funnel stage that best describes the text's primary reader manipulation strategy.
+
+Scoring:
+- emotional_intensity: 0-10 scale measuring the emotional charge of the language (0 = neutral, 10 = highly manipulative)
+- bias_score: 0-10 scale measuring overall cognitive bias present in the text
 
 Return JSON:
 {

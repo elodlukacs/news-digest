@@ -3,7 +3,7 @@ import { Button } from '../../../components/ui/button';
 import { Textarea } from '../../../components/ui/textarea';
 import { Badge } from '../../../components/ui/badge';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../../../components/ui/tooltip';
-import { Search, Loader2, AlertTriangle, Brain, History, ChevronDown, ChevronUp, Info, FlaskConical, PenLine } from 'lucide-react';
+import { Search, Loader2, AlertTriangle, Brain, History, ChevronDown, ChevronUp, Info, FlaskConical, PenLine, BookOpen } from 'lucide-react';
 import { FeaturePanelHeader } from '../common';
 import { API_BASE } from '../../../config';
 import type { ForensicResult, ForensicFallacy, ForensicEntry } from '../../../types';
@@ -275,39 +275,67 @@ export function ForensicPanel({ sections = [], categoryName = '' }: ForensicPane
 
             {/* Results */}
             {result && (
-              <div className="space-y-3">
-                {/* Emotional intensity */}
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold">Emotional charge</span>
-                    <span className="text-[13px] font-bold text-ink">{result.emotional_intensity}/10</span>
-                  </div>
-                  <div className="h-2 bg-paper-dark rounded-full overflow-hidden border border-rule/50">
-                    <div className="h-full rounded-full transition-all duration-500" style={{
-                      width: `${result.emotional_intensity * 10}%`,
-                      backgroundColor: result.emotional_intensity > 7 ? 'var(--color-outrage)' : result.emotional_intensity > 4 ? 'var(--color-curiosity)' : 'var(--color-observation)',
-                    }} />
-                  </div>
-                </div>
-
-                {result.funnel_stage && (
-                  <div className="flex items-center gap-2">
+              <div className="space-y-4">
+                {/* Framework 1: Reader Manipulation (Ariely) */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-1.5 pb-1.5 border-b border-rule/50">
                     <Brain size={13} className="text-curiosity" />
-                    <span className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold">Persuasion technique:</span>
+                    <span className="text-[11px] uppercase tracking-wider font-semibold text-curiosity">Reader Manipulation</span>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <span><Badge variant="outline" className="text-[11px] cursor-help px-2">{result.funnel_stage}</Badge></span>
+                        <span className="cursor-help text-ink-muted ml-0.5"><Info size={11} /></span>
                       </TooltipTrigger>
-                      <TooltipContent className="max-w-[240px] text-[11px]">
-                        Ariely's Funnel of Misbelief: Emotional stress → cognitive shortcuts → pattern-seeking → social isolation in echo chambers.
+                      <TooltipContent className="max-w-[260px] text-[11px]">
+                        Dan Ariely's Funnel of Misbelief — how this text exploits cognitive vulnerabilities in its readers.
                       </TooltipContent>
                     </Tooltip>
                   </div>
-                )}
 
+                  {/* Emotional intensity */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold">Emotional charge</span>
+                      <span className="text-[13px] font-bold text-ink">{result.emotional_intensity}/10</span>
+                    </div>
+                    <div className="h-2 bg-paper-dark rounded-full overflow-hidden border border-rule/50">
+                      <div className="h-full rounded-full transition-all duration-500" style={{
+                        width: `${result.emotional_intensity * 10}%`,
+                        backgroundColor: result.emotional_intensity > 7 ? 'var(--color-outrage)' : result.emotional_intensity > 4 ? 'var(--color-curiosity)' : 'var(--color-observation)',
+                      }} />
+                    </div>
+                  </div>
+
+                  {/* Misbelief stage */}
+                  {result.funnel_stage && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold">Funnel stage:</span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span><Badge variant="outline" className="text-[11px] cursor-help px-2">{result.funnel_stage}</Badge></span>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-[280px] text-[11px]">
+                          Ariely's Funnel of Misbelief progression: emotional stress → cognitive shortcuts → pattern-seeking → social isolation in echo chambers.
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  )}
+                </div>
+
+                {/* Framework 2: Logical Fallacies (Grimes) */}
                 {result.fallacies.length > 0 && (
-                  <div className="space-y-2">
-                    <span className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold">Detected Fallacies</span>
+                  <div className="space-y-2 pt-1">
+                    <div className="flex items-center gap-1.5 pb-1.5 border-b border-rule/50">
+                      <BookOpen size={13} className="text-outrage" />
+                      <span className="text-[11px] uppercase tracking-wider font-semibold text-outrage">Logical Fallacies</span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="cursor-help text-ink-muted ml-0.5"><Info size={11} /></span>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-[260px] text-[11px]">
+                          David Robert Grimes' fallacy taxonomy — errors in the text's reasoning and argumentation.
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
                     {result.fallacies.map((f: ForensicFallacy, i: number) => {
                       const tooltip = getFallacyTooltip(f.name);
                       return (
@@ -331,7 +359,12 @@ export function ForensicPanel({ sections = [], categoryName = '' }: ForensicPane
                   </div>
                 )}
 
-                {result.summary && <p className="text-[13px] text-ink-light leading-relaxed">{result.summary}</p>}
+                {result.summary && (
+                  <div className="pt-3 border-t border-rule/50 space-y-1.5">
+                    <span className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold">Summary</span>
+                    <p className="text-[13px] text-ink-light leading-relaxed">{result.summary}</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
