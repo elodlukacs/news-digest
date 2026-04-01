@@ -7,7 +7,6 @@ const callLLM = (messages, opts) => rawCallLLM(messages, { ...opts, db });
 
 const router = express.Router();
 
-let lastJobFetch = 0;
 
 function upsertJobs(jobs) {
   const stmt = db.prepare(`
@@ -74,19 +73,14 @@ router.get('/', (req, res) => {
 });
 
 router.post('/fetch', async (req, res) => {
-  const now = Date.now();
-  if (now - lastJobFetch < 30 * 60 * 1000) {
-    const cached = db.prepare('SELECT COUNT(*) as count FROM jobs').get();
-    if (cached.count > 0) {
-      return res.json({ fetched: cached.count, sources: [], cached: true });
-    }
-  }
-
   try {
     console.log('[Jobs] Fetching from all sources...');
     const { jobs, sources } = await fetchAllSources();
+    db.transaction(() => {
+      db.prepare('DELETE FROM ai_filtered_jobs').run();
+      db.prepare('DELETE FROM jobs').run();
+    })();
     if (jobs.length > 0) upsertJobs(jobs);
-    lastJobFetch = Date.now();
     console.log(`[Jobs] Fetched ${jobs.length} jobs from ${sources.filter(s => !s.error).length} sources`);
     res.json({ fetched: jobs.length, sources });
   } catch (error) {
