@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { Routes, Route, Outlet, useNavigate } from 'react-router-dom';
 import { NavigationBar } from './components/NavigationBar';
 import { FeedManager } from './components/FeedManager';
@@ -6,7 +6,6 @@ import { LlmStatsModal } from './components/LlmStatsModal';
 import { PullToRefreshIndicator } from './components/PullToRefresh';
 import { useCategories, useFeeds } from './hooks/useApi';
 import { useModels } from './hooks/useModels';
-import { cleanupOldData } from './utils/trackReading';
 import { slugify } from './utils/slugify';
 import { useTheme } from './hooks/useTheme';
 import type { Theme } from './hooks/useTheme';
@@ -113,10 +112,6 @@ function AppLayout() {
 }
 
 function App() {
-  useEffect(() => {
-    cleanupOldData();
-  }, []);
-
   return (
     <Routes>
       <Route element={<AppLayout />}>

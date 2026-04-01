@@ -1,12 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { FocusTrap } from 'focus-trap-react';
-import { Search, X, ChevronDown } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import BiasRadarCompare from './BiasRadarCompare';
 import BiasRadarDecode from './BiasRadarDecode';
-import BiasRadarTimeline from './BiasRadarTimeline';
 import BiasRadarSteelman from './BiasRadarSteelman';
-import DietReport from './DietReport';
 import type { SourceArticle } from '../../../types/lens';
 
 interface BiasRadarPanelProps {
@@ -18,18 +16,13 @@ interface BiasRadarPanelProps {
   onClose: () => void;
 }
 
-type Tab = 'compare' | 'decode' | 'steelman' | 'timeline' | 'diet';
+type Tab = 'compare' | 'decode' | 'steelman';
 
 const TAB_LABELS: Record<Tab, string> = {
   compare: 'Compare',
   decode: 'Decode',
   steelman: 'Steelman',
-  timeline: 'Timeline',
-  diet: 'Diet Report',
 };
-
-const PRIMARY_TABS: Tab[] = ['compare', 'decode', 'steelman'];
-const SECONDARY_TABS: Tab[] = ['timeline', 'diet'];
 
 export default function BiasRadarPanel({
   headline,
@@ -40,8 +33,6 @@ export default function BiasRadarPanel({
   onClose,
 }: BiasRadarPanelProps) {
   const [activeTab, setActiveTab] = useState<Tab>('compare');
-  const [moreOpen, setMoreOpen] = useState(false);
-  const moreRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -57,18 +48,6 @@ export default function BiasRadarPanel({
       document.body.style.overflow = '';
     };
   }, []);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
-        setMoreOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const isSecondaryActive = SECONDARY_TABS.includes(activeTab);
 
   return createPortal(
     <>
@@ -115,7 +94,7 @@ export default function BiasRadarPanel({
           </div>
 
           <div className="flex border-b border-rule" role="tablist">
-            {PRIMARY_TABS.map((tab) => (
+            {(Object.keys(TAB_LABELS) as Tab[]).map((tab) => (
               <button
                 key={tab}
                 id={`bias-radar-tab-${tab}`}
@@ -123,7 +102,7 @@ export default function BiasRadarPanel({
                 aria-selected={activeTab === tab}
                 aria-controls={`bias-radar-panel-${tab}`}
                 tabIndex={activeTab === tab ? 0 : -1}
-                onClick={() => { setActiveTab(tab); setMoreOpen(false); }}
+                onClick={() => setActiveTab(tab)}
                 className={`flex-1 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
                   activeTab === tab
                     ? 'border-b-2 border-ink text-ink'
@@ -133,39 +112,6 @@ export default function BiasRadarPanel({
                 {TAB_LABELS[tab]}
               </button>
             ))}
-
-            <div className="relative" ref={moreRef}>
-              <button
-                role="tab"
-                aria-selected={isSecondaryActive}
-                onClick={() => setMoreOpen(!moreOpen)}
-                className={`flex items-center gap-1 py-3 px-4 text-sm font-medium transition-colors whitespace-nowrap ${
-                  isSecondaryActive
-                    ? 'border-b-2 border-ink text-ink'
-                    : 'text-ink-muted hover:text-ink'
-                }`}
-              >
-                {isSecondaryActive ? TAB_LABELS[activeTab] : 'More'}
-                <ChevronDown size={14} className={`transition-transform ${moreOpen ? 'rotate-180' : ''}`} />
-              </button>
-              {moreOpen && (
-                <div className="absolute right-0 top-full mt-1 bg-paper border border-rule rounded-lg shadow-lg z-10 min-w-[140px]">
-                  {SECONDARY_TABS.map((tab) => (
-                    <button
-                      key={tab}
-                      onClick={() => { setActiveTab(tab); setMoreOpen(false); }}
-                      className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
-                        activeTab === tab
-                          ? 'text-ink font-medium bg-paper-dark'
-                          : 'text-ink-muted hover:text-ink hover:bg-paper-dark'
-                      }`}
-                    >
-                      {TAB_LABELS[tab]}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto">
@@ -197,22 +143,6 @@ export default function BiasRadarPanel({
               style={{ display: activeTab === 'steelman' ? 'contents' : 'none' }}
             >
               <BiasRadarSteelman headline={headline} content={content} language={language} />
-            </div>
-            <div
-              id="bias-radar-panel-timeline"
-              aria-labelledby="bias-radar-tab-timeline"
-              role="tabpanel"
-              style={{ display: activeTab === 'timeline' ? 'contents' : 'none' }}
-            >
-              <BiasRadarTimeline articleId={currentArticle.id} />
-            </div>
-            <div
-              id="bias-radar-panel-diet"
-              aria-labelledby="bias-radar-tab-diet"
-              role="tabpanel"
-              style={{ display: activeTab === 'diet' ? 'contents' : 'none' }}
-            >
-              <DietReport />
             </div>
           </div>
         </div>

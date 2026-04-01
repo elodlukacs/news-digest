@@ -2,8 +2,6 @@ export { default as BiasRadarPanel } from './BiasRadarPanel';
 export { default as BiasRadarCompare } from './BiasRadarCompare';
 export { default as BiasRadarDecode } from './BiasRadarDecode';
 export { default as BiasRadarSteelman } from './BiasRadarSteelman';
-export { default as BiasRadarTimeline } from './BiasRadarTimeline';
-export { default as DietReport } from './DietReport';
 export { default as TechniquePicker } from './TechniquePicker';
 export { default as TechniqueCard } from './TechniqueCard';
 export { default as GutCheck } from './GutCheck';
