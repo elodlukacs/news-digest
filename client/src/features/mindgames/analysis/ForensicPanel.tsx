@@ -36,9 +36,11 @@ const FALLACY_DEFINITIONS: Record<string, string> = {
 interface ForensicPanelProps {
   sections?: ParsedSection[];
   categoryName?: string;
+  headline?: string;
+  content?: string;
 }
 
-export function ForensicPanel({ sections = [], categoryName = '' }: ForensicPanelProps) {
+export function ForensicPanel({ sections = [], categoryName = '', headline = '', content = '' }: ForensicPanelProps) {
   const [activeTab, setActiveTab] = useState<'forensic' | 'study'>('forensic');
   const [selectedIdx, setSelectedIdx] = useState<number>(-1);
   const [showCustomInput, setShowCustomInput] = useState(false);
@@ -179,13 +181,30 @@ export function ForensicPanel({ sections = [], categoryName = '' }: ForensicPane
 
       {activeTab === 'forensic' ? (
         <>
-          <p className="text-sm text-ink-muted leading-relaxed px-5 md:px-0">
+          <p className="text-sm text-ink-muted leading-relaxed px-5">
             Select an article to detect logical fallacies, emotional manipulation, and cognitive vulnerabilities.
           </p>
 
-          {/* Article selector + Analyze */}
-          {sections.length > 0 && (
-            <div className="px-5 md:px-0">
+          {/* Headline mode (from Bias Radar) or article selector */}
+          {headline ? (
+            <div className="px-5 space-y-2">
+              <label className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold mb-1.5 block">
+                Article
+              </label>
+              <p className="text-sm text-ink leading-relaxed">{headline}</p>
+              <Button
+                type="button"
+                onClick={() => analyzeWithText(content)}
+                disabled={loading || content.trim().length < 20}
+                className="w-full gap-1.5 text-sm h-10"
+              >
+                {loading
+                  ? <><Loader2 size={15} className="animate-spin" /> Analyzing…</>
+                  : <><Search size={15} /> Analyze</>}
+              </Button>
+            </div>
+          ) : sections.length > 0 && (
+            <div className="px-5">
               <label htmlFor="forensic-article-select" className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold mb-1.5 block">
                 Articles in {categoryName}
               </label>
@@ -220,7 +239,7 @@ export function ForensicPanel({ sections = [], categoryName = '' }: ForensicPane
           {!result && !loading && (
             <button
               onClick={() => setShowCustomInput(v => !v)}
-              className="flex items-center gap-1.5 text-[11px] text-ink-muted hover:text-ink transition-colors cursor-pointer px-5 md:px-0"
+              className="flex items-center gap-1.5 text-[11px] text-ink-muted hover:text-ink transition-colors cursor-pointer px-5"
             >
               <PenLine size={12} />
               {showCustomInput ? 'Hide custom input' : 'Paste custom text to analyze'}
@@ -229,7 +248,7 @@ export function ForensicPanel({ sections = [], categoryName = '' }: ForensicPane
 
           {/* Custom text input (collapsible) */}
           {showCustomInput && (
-            <div className="px-5 md:px-0 space-y-3">
+            <div className="px-5 space-y-3">
               {/* History */}
               {showHistory && (
                 <div className="max-h-[150px] overflow-y-auto space-y-1.5 border border-rule rounded-lg p-2.5 bg-paper-dark">
@@ -264,7 +283,7 @@ export function ForensicPanel({ sections = [], categoryName = '' }: ForensicPane
             </div>
           )}
 
-          <div className="px-5 md:px-0 space-y-3">
+          <div className="px-5 space-y-3">
             {streamStep && <p className="text-sm text-observation animate-pulse">{streamStep}</p>}
 
             {error && (
@@ -390,7 +409,7 @@ export function ForensicPanel({ sections = [], categoryName = '' }: ForensicPane
       )}
 
       {activeTab === 'forensic' && showCustomInput && !result && !loading && (
-        <button onClick={toggleHistory} className="flex items-center justify-center gap-1 text-[11px] text-ink-muted hover:text-ink transition-colors cursor-pointer py-1 px-5 md:px-0">
+        <button onClick={toggleHistory} className="flex items-center justify-center gap-1 text-[11px] text-ink-muted hover:text-ink transition-colors cursor-pointer py-1 px-5">
           <History size={13} />
           {showHistory ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
           <span>{showHistory ? 'Hide History' : 'Show History'}</span>

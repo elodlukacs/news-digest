@@ -61,7 +61,7 @@ const BIAS_LABELS = {
   center: 'Center',
   'lean-right': 'Lean Right',
   right: 'Right',
-  unknown: 'Unknown',
+  unknown: 'Unrated',
 };
 
 const BIAS_COLORS = {
@@ -78,14 +78,18 @@ function getBiasRating(url) {
   try {
     const urlObj = new URL(url);
     let domain = urlObj.hostname.replace('www.', '').toLowerCase();
-    
-    if (domain.includes('bbc.co.uk')) {
-      domain = 'bbc.co.uk';
-    } else if (domain.includes('wsj.com') || domain.includes('wallstreetjournal.com')) {
-      domain = 'wsj.com';
+
+    // Exact match first
+    if (ratings[domain]) return ratings[domain];
+
+    // Subdomain fallback: try parent domains (e.g. edition.cnn.com → cnn.com)
+    const parts = domain.split('.');
+    for (let i = 1; i < parts.length - 1; i++) {
+      const parent = parts.slice(i).join('.');
+      if (ratings[parent]) return ratings[parent];
     }
 
-    return ratings[domain] || 'unknown';
+    return 'unknown';
   } catch {
     return 'unknown';
   }

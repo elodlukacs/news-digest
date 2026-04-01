@@ -7,6 +7,15 @@ const STOPWORDS = new Set([
   'that', 'this', 'it', 'its', 'be', 'have', 'has', 'had', 'not',
   'over', 'after', 'before', 'says', 'said', 'will', 'would', 'could',
   'should', 'must', 'may', 'might', 'can', 'just', 'them', 'their',
+  // Common headline words that are too generic for topic matching
+  'former', 'family', 'death', 'claim', 'leads', 'react', 'calls',
+  'gets', 'take', 'make', 'back', 'also', 'like', 'only', 'come',
+  'give', 'find', 'much', 'still', 'very', 'well', 'even', 'know',
+  'want', 'need', 'been', 'here', 'them', 'then', 'than', 'when',
+  'each', 'what', 'your', 'more', 'some', 'about', 'which', 'their',
+  'first', 'after', 'being', 'could', 'other', 'these', 'where',
+  'those', 'while', 'under', 'using', 'every', 'between', 'during',
+  'before', 'since', 'through', 'against', 'without', 'because',
 ]);
 
 const HUNGARIAN_STOPWORDS = new Set([
@@ -59,22 +68,29 @@ function buildSmartQuery(title) {
 
 async function searchGDELT(title, language = 'English') {
   if (!title) return [];
-  
+
   const [exactQuery, orQuery] = buildSmartQuery(title);
   if (!exactQuery) return [];
 
   const urlsToTry = [
-    `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent('"' + exactQuery + '"')}&mode=artlist&maxrecords=15&format=json&sort=DateDesc`,
-    `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(orQuery)}&mode=artlist&maxrecords=15&format=json&sort=DateDesc`,
+    { url: `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent('"' + exactQuery + '"')}&mode=artlist&maxrecords=15&format=json&sort=DateDesc`, label: 'exact' },
+    { url: `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(orQuery)}&mode=artlist&maxrecords=15&format=json&sort=DateDesc`, label: 'or' },
   ];
 
-  for (const gdeltUrl of urlsToTry) {
+  for (const { url: gdeltUrl, label } of urlsToTry) {
     try {
-      const response = await fetch(gdeltUrl, { timeout: 15000 });
-      if (!response.ok) continue;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      const response = await fetch(gdeltUrl, { signal: controller.signal });
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        console.warn(`[GDELT] ${label} query returned ${response.status}`);
+        continue;
+      }
 
       const data = await response.json();
-      
+
       if (data.articles && data.articles.length > 0) {
         return data.articles
           .filter(a => a.url && a.title)
@@ -82,14 +98,15 @@ async function searchGDELT(title, language = 'English') {
             title: a.title,
             url: a.url,
             source: a.domain || 'Unknown',
-            biasRating: getBiasRating(a.url) || 'center',
+            biasRating: getBiasRating(a.url) || 'unknown',
             publishedAt: a.seendate || '',
             excerpt: a.socialimage || '',
             matchType: 'gdelt',
           }))
           .slice(0, 10);
       }
-    } catch {
+    } catch (err) {
+      console.warn(`[GDELT] ${label} query failed:`, err.message);
       continue;
     }
   }
@@ -112,8 +129,11 @@ async function searchGoogleNews(title, language = 'English') {
       const parsed = await parser.parseURL(url);
 
       if (!parsed.items || parsed.items.length === 0) {
+        console.warn('[GoogleNews] No results for query:', query);
         continue;
       }
+
+      console.log('[GoogleNews] Got', parsed.items.length, 'items for query:', query);
 
       return parsed.items
         .slice(0, 10)
@@ -121,18 +141,24 @@ async function searchGoogleNews(title, language = 'English') {
         .map((item) => {
           let source = 'Google News';
           try {
-            const url = new URL(item.link);
-            const paths = url.pathname.split('/').filter(Boolean);
-            if (paths.length > 0 && paths[0] !== 'rss' && paths[0] !== 'search') {
-              source = paths[0];
+            // Google News RSS includes the original publisher in item.source
+            if (item.source?.title) {
+              source = item.source.title;
+            } else if (item.source?.url) {
+              const sourceUrl = new URL(item.source.url);
+              source = sourceUrl.hostname.replace('www.', '');
             }
           } catch {}
-          
+
+          // For bias rating, use the source URL if available (actual publisher domain),
+          // otherwise fall back to the article link (may be a Google News redirect)
+          const ratingUrl = item.source?.url || item.link;
+
           return {
             title: item.title?.replace(/^.*? - /, '') || item.title,
             url: item.link,
             source,
-            biasRating: getBiasRating(item.link) || 'center',
+            biasRating: getBiasRating(ratingUrl) || 'unknown',
             publishedAt: item.pubDate || '',
             excerpt: item.contentSnippet?.slice(0, 200) || '',
             matchType: 'google',
@@ -148,6 +174,8 @@ async function searchGoogleNews(title, language = 'English') {
 
 async function searchAllSources(title, excludeSource = null, language = 'English') {
   console.log('[NewsSearch] Searching for:', title, 'language:', language, 'excluding:', excludeSource);
+
+  const searchKeywords = extractKeywords(title, language);
 
   const [gdeltResults, googleResults] = await Promise.all([
     searchGDELT(title, language),
@@ -168,6 +196,19 @@ async function searchAllSources(title, excludeSource = null, language = 'English
     filtered = results.filter(
       a => !a.source.toLowerCase().includes(excludeSource.toLowerCase())
     );
+  }
+
+  // Relevance filter: require at least one keyword overlap with search title
+  if (searchKeywords.length > 0) {
+    const relevant = filtered.filter((a) => {
+      const articleTitle = (a.title || '').toLowerCase();
+      return searchKeywords.some(kw => articleTitle.includes(kw));
+    });
+    // Only use filtered results if we have enough; otherwise keep originals
+    if (relevant.length >= 3) {
+      console.log('[NewsSearch] Relevance filter:', filtered.length, '→', relevant.length);
+      filtered = relevant;
+    }
   }
 
   const seen = new Map();

@@ -11,7 +11,7 @@ export const BIAS_LABELS: Record<BiasRating, string> = {
   center: 'Center',
   'lean-right': 'Lean Right',
   right: 'Right',
-  unknown: 'Unknown',
+  unknown: 'Unrated',
 };
 
 export const BIAS_COLORS: Record<BiasRating, string> = {
@@ -78,12 +78,19 @@ const ratings: Record<string, BiasRating> = {
 export function getBiasRating(url: string): BiasRating {
   try {
     const urlObj = new URL(url);
-    let domain = urlObj.hostname.replace('www.', '').toLowerCase();
+    const domain = urlObj.hostname.replace('www.', '').toLowerCase();
 
-    if (domain.includes('bbc.co.uk')) domain = 'bbc.co.uk';
-    else if (domain.includes('wsj.com') || domain.includes('wallstreetjournal.com')) domain = 'wsj.com';
+    // Exact match first
+    if (ratings[domain]) return ratings[domain];
 
-    return ratings[domain] || 'unknown';
+    // Subdomain fallback: try parent domains (e.g. edition.cnn.com → cnn.com)
+    const parts = domain.split('.');
+    for (let i = 1; i < parts.length - 1; i++) {
+      const parent = parts.slice(i).join('.');
+      if (ratings[parent]) return ratings[parent];
+    }
+
+    return 'unknown';
   } catch {
     return 'unknown';
   }

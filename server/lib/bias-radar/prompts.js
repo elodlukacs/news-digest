@@ -95,6 +95,12 @@ The counter-argument must:
 - Avoid caricature, exaggeration, or bad faith framing
 - Be 3-4 sentences maximum
 
+CRITICAL FACTUALITY RULES:
+- Ground your counter-argument ONLY in the article context provided below. Do NOT introduce external facts, statistics, studies, or claims not present in the article.
+- Do NOT fabricate citations, data points, quotes, or references to make the argument sound stronger.
+- If the article does not provide enough material for a strong counter-argument, reason through the logic honestly rather than inventing supporting evidence.
+- Present your argument as logical inference and reasoning from the article, not as made-up empirical claims.
+
 Respond in this exact format:
 Counter-argument: [your response]
 Question: [One open question the user should sit with — a question that doesn't have an easy answer]

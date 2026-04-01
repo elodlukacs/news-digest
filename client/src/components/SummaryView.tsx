@@ -374,6 +374,9 @@ export function SummaryView({
           }}
           sourceName={categoryName}
           onClose={() => setRadarSection(null)}
+          initialTab="decode"
+          sections={sections}
+          categoryName={categoryName}
         />
       )}
     </div>

@@ -14,7 +14,7 @@ interface FeaturePanelHeaderProps {
 
 export function FeaturePanelHeader({ icon, title, subtitle, infoTitle, researcher, summary, sections, howToPlaySections, right }: FeaturePanelHeaderProps) {
   return (
-    <div className="space-y-2 px-5 md:px-0">
+    <div className="space-y-2 px-5 pt-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2.5">
           <div className="shrink-0">{icon}</div>

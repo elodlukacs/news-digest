@@ -440,6 +440,9 @@ Scoring:
 - emotional_intensity: 0-10 scale measuring the emotional charge of the language (0 = neutral, 10 = highly manipulative)
 - bias_score: 0-10 scale measuring overall cognitive bias present in the text
 
+TEXT TO ANALYZE:
+{{text}}
+
 Return JSON:
 {
   "fallacies": [{"name": "string", "evidence": "string", "explanation": "string"}],
@@ -737,6 +740,12 @@ The counter-argument must:
 - Present the best available evidence and logic for the opposing view
 - Avoid caricature, exaggeration, or bad faith framing
 - Be 3-4 sentences maximum
+
+CRITICAL FACTUALITY RULES:
+- Ground your counter-argument ONLY in the article context provided below. Do NOT introduce external facts, statistics, studies, or claims not present in the article.
+- Do NOT fabricate citations, data points, quotes, or references to make the argument sound stronger.
+- If the article does not provide enough material for a strong counter-argument, reason through the logic honestly rather than inventing supporting evidence.
+- Present your argument as logical inference and reasoning from the article, not as made-up empirical claims.
 
 Respond in this exact format:
 Counter-argument: [your response]

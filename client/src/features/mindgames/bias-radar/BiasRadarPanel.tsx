@@ -6,6 +6,7 @@ import BiasRadarCompare from './BiasRadarCompare';
 import BiasRadarDecode from './BiasRadarDecode';
 import BiasRadarSteelman from './BiasRadarSteelman';
 import type { SourceArticle } from '../../../types/lens';
+import type { ParsedSection } from '../../../components/SummaryView';
 
 interface BiasRadarPanelProps {
   headline: string;
@@ -14,6 +15,9 @@ interface BiasRadarPanelProps {
   sourceName: string;
   language?: string;
   onClose: () => void;
+  initialTab?: Tab;
+  sections?: ParsedSection[];
+  categoryName?: string;
 }
 
 type Tab = 'compare' | 'decode' | 'steelman';
@@ -31,8 +35,11 @@ export default function BiasRadarPanel({
   sourceName,
   language = 'English',
   onClose,
+  initialTab = 'compare',
+  sections = [],
+  categoryName = '',
 }: BiasRadarPanelProps) {
-  const [activeTab, setActiveTab] = useState<Tab>('compare');
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -134,7 +141,7 @@ export default function BiasRadarPanel({
               role="tabpanel"
               style={{ display: activeTab === 'decode' ? 'contents' : 'none' }}
             >
-              <BiasRadarDecode headline={headline} content={content} language={language} />
+              <BiasRadarDecode headline={headline} content={content} sections={sections} categoryName={categoryName} />
             </div>
             <div
               id="bias-radar-panel-steelman"

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import GutCheck from './GutCheck';
 import SourceCard from './SourceCard';
 import type { SourceArticle, GutCheckReaction } from '../../../types/lens';
@@ -17,24 +17,41 @@ export default function BiasRadarCompare({ currentArticle, searchTitle, excludeS
   const [gutReaction, setGutReaction] = useState<GutCheckReaction | null>(null);
   const [related, setRelated] = useState<SourceArticle[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const abortRef = useRef<AbortController | null>(null);
 
   const fetchRelated = useCallback(async () => {
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+    setLoading(true);
+    setError('');
+
     try {
       const params = new URLSearchParams({
         articleId: searchTitle,
         source: excludeSource || '',
         language: language,
       });
-      const r = await fetch(`${API_BASE}/bias-radar/related?${params}`);
+      const r = await fetch(`${API_BASE}/bias-radar/related?${params}`, { signal: ctrl.signal });
+      if (!r.ok) throw new Error(`Server returned ${r.status}`);
       const data = await r.json();
-      setRelated(data.articles ?? []);
+      if (!ctrl.signal.aborted) {
+        setRelated(data.articles ?? []);
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return;
+      if (!ctrl.signal.aborted) {
+        setError(err instanceof Error ? err.message : 'Failed to load related articles');
+      }
     } finally {
-      setLoading(false);
+      if (!ctrl.signal.aborted) setLoading(false);
     }
   }, [searchTitle, excludeSource, language]);
 
   useEffect(() => {
     fetchRelated();
+    return () => abortRef.current?.abort();
   }, [fetchRelated]);
 
   if (!gutDone) {
@@ -52,7 +69,7 @@ export default function BiasRadarCompare({ currentArticle, searchTitle, excludeS
     <div className="px-4 py-4 space-y-4">
       {gutReaction && (
         <p className="text-xs text-ink-muted">
-          You felt <strong>{gutReaction}</strong>. Now let as see how different outlets covered this.
+          You felt <strong>{gutReaction}</strong>. Now let's see how different outlets covered this.
         </p>
       )}
 
@@ -62,7 +79,25 @@ export default function BiasRadarCompare({ currentArticle, searchTitle, excludeS
         <p className="text-sm text-ink-muted text-center py-6">Finding other perspectives...</p>
       )}
 
-      {!loading && related.length === 0 && (
+      {!loading && error && (
+        <div className="rounded-lg border px-4 py-3 text-center" style={{ backgroundColor: 'var(--accent-error-bg)', borderColor: 'var(--accent-error-border)' }}>
+          <p className="text-sm mb-2" style={{ color: 'var(--accent-error-text-strong)' }}>
+            Could not find related articles.
+          </p>
+          <p className="text-xs mb-3" style={{ color: 'var(--accent-error-text)' }}>
+            {error}
+          </p>
+          <button
+            onClick={fetchRelated}
+            className="text-xs underline"
+            style={{ color: 'var(--accent-error-text)' }}
+          >
+            Try again
+          </button>
+        </div>
+      )}
+
+      {!loading && !error && related.length === 0 && (
         <p className="text-sm text-ink-muted text-center py-6">
           No other sources found covering this story.
         </p>
