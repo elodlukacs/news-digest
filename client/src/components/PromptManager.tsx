@@ -135,9 +135,11 @@ export function PromptManager() {
   return (
     <>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 pb-24 md:pb-8">
-        <div className="mb-8">
-          <h2 className="font-serif text-2xl font-bold text-ink tracking-tight">AI Prompt Manager</h2>
-          <p className="text-sm text-ink-muted mt-1">
+        <div className="pt-6 md:pt-8 mb-6 border-b border-rule pb-4">
+          <h1 className="font-serif text-2xl sm:text-3xl md:text-4xl font-black text-masthead leading-none">
+            AI Prompt Manager
+          </h1>
+          <p className="text-xs sm:text-[13px] text-ink-muted mt-1.5 sm:mt-2 font-[family-name:var(--font-body)]">
             Edit the prompts used by AI features. Use <code className="bg-paper-dark px-1 rounded text-xs">{'{{variable}}'}</code> placeholders for dynamic content.
           </p>
         </div>

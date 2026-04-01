@@ -2,7 +2,7 @@ import { useParams, useOutletContext, useNavigate } from 'react-router-dom';
 import { useState, useCallback } from 'react';
 import { SummaryView } from '../SummaryView';
 import { LeftSidebar } from '../LeftSidebar';
-import { ForensicPanel } from '../../features/mindgames/analysis';
+import { MindToolsRibbon } from '../MindToolsRibbon';
 import { useSummary, useSummaryHistory, useChat } from '../../hooks/useApi';
 import { slugify } from '../../utils/slugify';
 import type { AppOutletContext } from '../../types/routing';
@@ -12,6 +12,7 @@ export function CategoryRoute() {
   const ctx = useOutletContext<AppOutletContext>();
   const navigate = useNavigate();
   const [selectedSnapshotId, setSelectedSnapshotId] = useState<number | null>(null);
+  const [toolsOpen, setToolsOpen] = useState(false);
 
   const category = ctx.categories.find((c) => slugify(c.name) === categoryName);
 
@@ -31,42 +32,40 @@ export function CategoryRoute() {
   }, [ctx, categoryId, navigate]);
 
   return (
-    <div className="max-w-[1920px] mx-auto px-6 pb-20 flex flex-col lg:flex-row gap-8">
-      <LeftSidebar
-        dates={dates}
-        selectedSnapshotId={selectedSnapshotId}
-        onSelectSnapshot={setSelectedSnapshotId}
-        showHistory={!!category}
-      />
+    <>
+      <div className="max-w-7xl mx-auto px-6 pb-20 flex gap-8">
+        <LeftSidebar
+          dates={dates}
+          selectedSnapshotId={selectedSnapshotId}
+          onSelectSnapshot={setSelectedSnapshotId}
+          showHistory={!!category}
+        />
 
-      <main className="flex-1 min-w-0">
-        {category ? (
-          <SummaryView
-            categoryId={category.id}
-            categoryName={category.name}
-            summary={summary}
-            loading={loading}
-            refreshing={refreshing}
-            error={error}
-            onRefresh={handleRefresh}
-            onManageFeeds={() => ctx.onManageFeeds(category.id)}
-            onDelete={handleDelete}
-            chatMessages={chatMessages}
-            chatSending={chatSending}
-            onChatSend={chatSend}
-          />
-        ) : (
-          <div className="py-24 text-center">
-            <p className="font-serif text-xl text-ink-muted italic">Category not found</p>
-          </div>
-        )}
-      </main>
+        <main className="flex-1 min-w-0">
+          {category ? (
+            <SummaryView
+              categoryId={category.id}
+              categoryName={category.name}
+              summary={summary}
+              loading={loading}
+              refreshing={refreshing}
+              error={error}
+              onRefresh={handleRefresh}
+              onManageFeeds={() => ctx.onManageFeeds(category.id)}
+              onDelete={handleDelete}
+              chatMessages={chatMessages}
+              chatSending={chatSending}
+              onChatSend={chatSend}
+            />
+          ) : (
+            <div className="py-24 text-center">
+              <p className="font-serif text-xl text-ink-muted italic">Category not found</p>
+            </div>
+          )}
+        </main>
+      </div>
 
-      <aside className="hidden md:block lg:w-[42rem] lg:shrink-0 lg:pt-8 pt-0">
-        <div className="sticky top-8">
-          <ForensicPanel />
-        </div>
-      </aside>
-    </div>
+      <MindToolsRibbon open={toolsOpen} onOpenChange={setToolsOpen} />
+    </>
   );
 }

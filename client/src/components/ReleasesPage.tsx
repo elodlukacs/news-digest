@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Film, Tv, Star, Clock, ExternalLink, Play, Calendar, Search, X } from 'lucide-react';
+import { Film, Tv, Star, Clock, ExternalLink, Play, Calendar, Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { API_BASE } from '../config';
 import { formatShortDate } from '../utils/date';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
@@ -8,7 +8,7 @@ import { ScrollArea } from './ui/scroll-area';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Skeleton } from './ui/skeleton';
-import type { UpcomingRelease, ReleaseDetail } from '../types';
+import type { UpcomingRelease, ReleaseDetail, ReleasesResponse } from '../types';
 
 interface Props {
   releases: UpcomingRelease[];
@@ -33,8 +33,11 @@ export function ReleasesPage({ releases: defaultReleases }: Props) {
   // Releases fetched by date range (null = use default prop)
   const [fetchedReleases, setFetchedReleases] = useState<UpcomingRelease[] | null>(null);
   const [fetchingReleases, setFetchingReleases] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
-  // Fetch new releases when date range changes
+  // Fetch new releases when date range or page changes
   useEffect(() => {
     if (!dateFrom && !dateTo) {
       setFetchedReleases(null);
@@ -44,15 +47,27 @@ export function ReleasesPage({ releases: defaultReleases }: Props) {
     const params = new URLSearchParams();
     if (dateFrom) params.set('from', dateFrom);
     if (dateTo) params.set('to', dateTo);
+    params.set('page', String(page));
 
     setFetchingReleases(true);
     fetch(`${API_BASE}/widgets/releases?${params}`, { signal: controller.signal })
       .then(r => r.json())
-      .then(data => { setFetchedReleases(data); setFetchingReleases(false); })
+      .then((data: ReleasesResponse | UpcomingRelease[]) => {
+        if (Array.isArray(data)) {
+          setFetchedReleases(data);
+          setTotal(data.length);
+          setTotalPages(1);
+        } else {
+          setFetchedReleases(data.items);
+          setTotal(data.total);
+          setTotalPages(data.totalPages);
+        }
+        setFetchingReleases(false);
+      })
       .catch(err => { if (err.name !== 'AbortError') setFetchingReleases(false); });
 
     return () => controller.abort();
-  }, [dateFrom, dateTo]);
+  }, [dateFrom, dateTo, page]);
 
   // Use fetched releases if we have a date filter, otherwise use default prop
   const releases = fetchedReleases ?? defaultReleases;
@@ -107,19 +122,25 @@ export function ReleasesPage({ releases: defaultReleases }: Props) {
   return (
     <div className="py-6">
       {/* Header */}
-      <div className="text-center mb-8">
-        <p className="text-[10px] uppercase tracking-[0.3em] font-semibold text-masthead/60 mb-2">
-          This Week in Entertainment
-        </p>
-        <h1 className="font-serif text-3xl md:text-4xl font-black">
-          Upcoming Releases
-        </h1>
-        {dateRange && (
-          <p className="text-sm text-ink-muted mt-1.5 flex items-center justify-center gap-1.5">
-            <Calendar size={13} />
-            {dateRange}
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 pt-6 md:pt-8 mb-6 border-b border-rule pb-4">
+        <div>
+          <h1 className="font-serif text-2xl sm:text-3xl md:text-4xl font-black text-masthead leading-none">
+            Upcoming Releases
+          </h1>
+          <p className="text-xs sm:text-[13px] text-ink-muted mt-1.5 sm:mt-2 font-[family-name:var(--font-body)]">
+            {dateRange ? (
+              <span className="flex items-center gap-1.5">
+                <Calendar size={12} />
+                {dateRange}
+              </span>
+            ) : (
+              'This week in entertainment'
+            )}
           </p>
-        )}
+        </div>
+        <div className="text-[11px] text-ink-muted font-medium shrink-0 self-start sm:self-auto">
+          {fetchedReleases ? `${filtered.length} of ${total} releases` : `${filtered.length} of ${releases.length} releases`}
+        </div>
       </div>
 
       {/* Filters */}
@@ -148,9 +169,9 @@ export function ReleasesPage({ releases: defaultReleases }: Props) {
           <DateRangeFilter
             dateFrom={dateFrom}
             dateTo={dateTo}
-            onDateFromChange={setDateFrom}
-            onDateToChange={setDateTo}
-            onClear={() => { setDateFrom(null); setDateTo(null); }}
+            onDateFromChange={v => { setDateFrom(v); setPage(1); }}
+            onDateToChange={v => { setDateTo(v); setPage(1); }}
+            onClear={() => { setDateFrom(null); setDateTo(null); setPage(1); }}
           />
 
           <div className="flex-1 min-w-0" />
@@ -167,10 +188,6 @@ export function ReleasesPage({ releases: defaultReleases }: Props) {
             />
           </div>
 
-          {/* Result count */}
-          <span className="text-[11px] text-ink-muted font-medium shrink-0">
-            {filtered.length}/{releases.length}
-          </span>
         </div>
       </div>
 
@@ -239,6 +256,35 @@ export function ReleasesPage({ releases: defaultReleases }: Props) {
               </div>
             </button>
           ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {fetchedReleases && totalPages > 1 && (
+        <div className="flex items-center justify-center gap-3 py-6">
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={page <= 1}
+            onClick={() => setPage(p => p - 1)}
+            className="text-[11px] uppercase tracking-[0.1em] font-semibold"
+          >
+            <ChevronLeft size={14} />
+            Previous
+          </Button>
+          <span className="text-[11px] text-ink-muted font-medium">
+            Page {page} of {totalPages}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={page >= totalPages}
+            onClick={() => setPage(p => p + 1)}
+            className="text-[11px] uppercase tracking-[0.1em] font-semibold"
+          >
+            Next
+            <ChevronRight size={14} />
+          </Button>
         </div>
       )}
 

@@ -23,7 +23,7 @@ export function useWidgets() {
       fetch(`${API_BASE}/widgets/headlines`, { signal: controller.signal }).then(r => { if (!r.ok) return null; return r.json(); }).catch(() => null),
       fetch(`${API_BASE}/widgets/crypto`, { signal: controller.signal }).then(r => { if (!r.ok) return null; return r.json(); }).catch(() => null),
       fetch(`${API_BASE}/widgets/hackernews`, { signal: controller.signal }).then(r => { if (!r.ok) return null; return r.json(); }).catch(() => null),
-      fetch(`${API_BASE}/widgets/releases`, { signal: controller.signal }).then(r => { if (!r.ok) return null; return r.json(); }).catch(() => null),
+      fetch(`${API_BASE}/widgets/releases`, { signal: controller.signal }).then(r => { if (!r.ok) return null; return r.json(); }).then(d => d?.items ?? d).catch(() => null),
       fetch(`${API_BASE}/tags/trending`, { signal: controller.signal }).then(r => { if (!r.ok) return null; return r.json(); }).catch(() => null),
     ]).then(([w, r, h, c, hn, rel, t]) => {
       if (controller.signal.aborted) return;

@@ -85,6 +85,14 @@ export interface UpcomingRelease {
   poster: string | null;
 }
 
+export interface ReleasesResponse {
+  items: UpcomingRelease[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
 export type JobStatus = 'new' | 'applied' | 'ignored';
 export type JobSource = 'remoteok' | 'weworkremotely' | 'himalayas' | 'remotive' | 'arbeitnow' | 'linkedin' | 'indeed' | 'hackernews';
 export type RemoteAssessment = 'yes' | 'no' | 'possible';

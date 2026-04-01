@@ -148,59 +148,107 @@ router.get('/hackernews', async (req, res) => {
 
 router.get('/releases', async (req, res) => {
   const apiKey = process.env.TMDB_API_KEY;
-  if (!apiKey) return res.json([]);
+  if (!apiKey) return res.json({ items: [], total: 0, page: 1, pageSize: 20, totalPages: 0 });
 
   const today = new Date();
   const defaultEnd = new Date(today);
   defaultEnd.setDate(defaultEnd.getDate() + 7);
   const from = req.query.from || today.toISOString().split('T')[0];
   const to = req.query.to || defaultEnd.toISOString().split('T')[0];
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const pageSize = Math.min(50, Math.max(1, parseInt(req.query.pageSize, 10) || 20));
   const cacheKey = `${from}|${to}`;
 
   const cached = releasesCache.get(cacheKey);
   if (cached && Date.now() - cached.fetchedAt < 30 * 60_000) {
-    return res.json(cached.data);
+    const { allReleases } = cached;
+    const total = allReleases.length;
+    const totalPages = Math.ceil(total / pageSize);
+    const start = (page - 1) * pageSize;
+    return res.json({
+      items: allReleases.slice(start, start + pageSize),
+      total,
+      page,
+      pageSize,
+      totalPages,
+    });
   }
 
   try {
-    const [moviesResp, tvResp] = await Promise.all([
-      fetchWithTimeout(`https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&primary_release_date.gte=${from}&primary_release_date.lte=${to}&sort_by=popularity.desc&page=1`),
-      fetchWithTimeout(`https://api.themoviedb.org/3/discover/tv?api_key=${apiKey}&first_air_date.gte=${from}&first_air_date.lte=${to}&sort_by=popularity.desc&page=1`),
-    ]);
+    const ALLOWED_LANGUAGES = new Set(['en', 'hu']);
+    const TMDB_PAGES = 3;
 
-    const moviesData = await moviesResp.json();
-    const tvData = await tvResp.json();
+    const moviePages = await Promise.all(
+      Array.from({ length: TMDB_PAGES }, (_, i) =>
+        fetchWithTimeout(`https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&primary_release_date.gte=${from}&primary_release_date.lte=${to}&sort_by=popularity.desc&page=${i + 1}&without_genres=16`)
+          .then(r => r.json())
+      )
+    );
+    const tvPages = await Promise.all(
+      Array.from({ length: TMDB_PAGES }, (_, i) =>
+        fetchWithTimeout(`https://api.themoviedb.org/3/discover/tv?api_key=${apiKey}&first_air_date.gte=${from}&first_air_date.lte=${to}&sort_by=popularity.desc&page=${i + 1}&without_genres=16`)
+          .then(r => r.json())
+      )
+    );
 
-    const movies = (moviesData.results || []).slice(0, 20).map(m => ({
-      id: m.id,
-      title: m.title,
-      date: m.release_date,
-      type: 'movie',
-      rating: m.vote_average || null,
-      overview: m.overview?.slice(0, 120) || '',
-      poster: m.poster_path ? `https://image.tmdb.org/t/p/w185${m.poster_path}` : null,
-    }));
+    const movies = moviePages
+      .flatMap(d => d.results || [])
+      .filter(m => ALLOWED_LANGUAGES.has(m.original_language))
+      .map(m => ({
+        id: m.id,
+        title: m.title,
+        date: m.release_date,
+        type: 'movie',
+        rating: m.vote_average || null,
+        overview: m.overview?.slice(0, 120) || '',
+        poster: m.poster_path ? `https://image.tmdb.org/t/p/w185${m.poster_path}` : null,
+      }));
 
-    const shows = (tvData.results || []).slice(0, 20).map(t => ({
-      id: t.id,
-      title: t.name,
-      date: t.first_air_date,
-      type: 'tv',
-      rating: t.vote_average || null,
-      overview: t.overview?.slice(0, 120) || '',
-      poster: t.poster_path ? `https://image.tmdb.org/t/p/w185${t.poster_path}` : null,
-    }));
+    const shows = tvPages
+      .flatMap(d => d.results || [])
+      .filter(t => ALLOWED_LANGUAGES.has(t.original_language))
+      .map(t => ({
+        id: t.id,
+        title: t.name,
+        date: t.first_air_date,
+        type: 'tv',
+        rating: t.vote_average || null,
+        overview: t.overview?.slice(0, 120) || '',
+        poster: t.poster_path ? `https://image.tmdb.org/t/p/w185${t.poster_path}` : null,
+      }));
 
-    const releases = [...movies, ...shows].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-    releasesCache.set(cacheKey, { data: releases, fetchedAt: Date.now() });
+    const allReleases = [...movies, ...shows].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    releasesCache.set(cacheKey, { allReleases, fetchedAt: Date.now() });
     if (releasesCache.size > 20) {
       const oldest = releasesCache.keys().next().value;
       releasesCache.delete(oldest);
     }
-    res.json(releases);
+
+    const total = allReleases.length;
+    const totalPages = Math.ceil(total / pageSize);
+    const start = (page - 1) * pageSize;
+    res.json({
+      items: allReleases.slice(start, start + pageSize),
+      total,
+      page,
+      pageSize,
+      totalPages,
+    });
   } catch (err) {
     console.error('TMDB error:', err);
-    if (cached) return res.json(cached.data);
+    if (cached) {
+      const { allReleases } = cached;
+      const total = allReleases.length;
+      const totalPages = Math.ceil(total / pageSize);
+      const start = (page - 1) * pageSize;
+      return res.json({
+        items: allReleases.slice(start, start + pageSize),
+        total,
+        page,
+        pageSize,
+        totalPages,
+      });
+    }
     res.status(500).json({ error: 'Failed to fetch releases' });
   }
 });
