@@ -12,42 +12,40 @@ interface Props {
 export function MindToolsRibbon({ open, onOpenChange, sections, categoryName }: Props) {
   return (
     <>
-      {!open && (
-        <>
-          {/* Desktop: vertical ribbon on right edge */}
-          <button
-            onClick={() => onOpenChange(true)}
-            className="hidden md:block fixed right-0 top-1/2 -translate-y-1/2 z-40
-              bg-masthead text-paper cursor-pointer
-              hover:bg-ink transition-colors duration-200
-              shadow-[-2px_0_8px_rgba(0,0,0,0.1)]"
-            style={{ writingMode: 'vertical-rl' }}
-          >
-            <span className="flex items-center gap-3 text-[10px] uppercase tracking-[0.2em] font-bold px-2 py-4">
-              <Search size={14} className="rotate-180" />
-              Mind Tools
-              <Brain size={14} className="rotate-180" />
-            </span>
-          </button>
-          {/* Mobile: floating button at bottom-right */}
-          <button
-            onClick={() => onOpenChange(true)}
-            className="md:hidden fixed bottom-4 right-4 z-40
-              bg-masthead text-paper cursor-pointer
-              hover:bg-ink transition-colors duration-200
-              shadow-lg rounded-full w-12 h-12 flex items-center justify-center"
-          >
-            <Brain size={20} />
-          </button>
-        </>
-      )}
+      {/* Desktop: vertical ribbon on right edge */}
+      <button
+        onClick={() => onOpenChange(true)}
+        className={`hidden md:block fixed right-0 top-1/2 -translate-y-1/2 z-40
+          bg-masthead text-paper cursor-pointer
+          hover:bg-ink transition-all duration-300
+          shadow-[-2px_0_8px_rgba(0,0,0,0.1)]
+          ${open ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+        style={{ writingMode: 'vertical-rl' }}
+      >
+        <span className="flex items-center gap-3 text-[10px] uppercase tracking-[0.2em] font-bold px-2 py-4">
+          <Search size={14} className="rotate-180" />
+          Mind Tools
+          <Brain size={14} className="rotate-180" />
+        </span>
+      </button>
+      {/* Mobile: floating button at bottom-right */}
+      <button
+        onClick={() => onOpenChange(true)}
+        className={`md:hidden fixed bottom-4 right-4 z-40
+          bg-masthead text-paper cursor-pointer
+          hover:bg-ink transition-all duration-300
+          shadow-lg rounded-full w-12 h-12 flex items-center justify-center
+          ${open ? 'opacity-0 pointer-events-none scale-75' : 'opacity-100 scale-100'}`}
+      >
+        <Brain size={20} />
+      </button>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-50 bg-black/30"
-          onClick={() => onOpenChange(false)}
-        />
-      )}
+      {/* Backdrop */}
+      <div
+        className={`fixed inset-0 z-50 bg-black/30 transition-opacity duration-300
+          ${open ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        onClick={() => onOpenChange(false)}
+      />
 
       <div
         className={`fixed z-50 bg-paper shadow-2xl border-rule flex flex-col
