@@ -99,6 +99,7 @@ No test framework is configured. Do not attempt to run tests.
 - Don't run multiple searches when one well-targeted Grep will do.
 - Don't explain what you're about to do — just do it (unless the user asks).
 - Don't repeat information already in AGENTS.md in your responses.
+- Be very concise and to the point.
 
 ## TypeScript Configuration
 
