@@ -46,12 +46,14 @@ router.post('/stream', async (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
 
   let closed = false;
-  req.on('close', () => { closed = true; });
+  req.on('close', () => { closed = true; console.log('[SSE] Client disconnected'); });
 
   const sendEvent = (event, data) => {
-    if (closed) return;
+    if (closed) { console.log(`[SSE] Skipping ${event} — client closed`); return; }
     res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
   };
 
@@ -68,6 +70,7 @@ router.post('/stream', async (req, res) => {
       { purpose: 'forensic_analysis_stream', temperature: 0.2, response_format: { type: 'json_object' }, providerId: provider || null, db }
     );
 
+    console.log('[SSE] LLM done, closed=', closed);
     const parsed = parseJSON(result.content, { fallacies: [], emotional_intensity: 5, bias_score: 5 });
 
     sendEvent('fallacies', { fallacies: parsed.fallacies || [] });

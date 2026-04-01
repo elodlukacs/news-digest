@@ -96,10 +96,10 @@ export function ForensicPanel({ sections = [], categoryName = '' }: ForensicPane
     setLoading(true);
     setError('');
     setResult(null);
-    setStreamStep('');
+    setStreamStep('Analyzing text for cognitive vulnerabilities…');
 
     try {
-      const res = await fetch(`${API_BASE}/forensics/stream`, {
+      const res = await fetch(`${API_BASE}/forensics`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: trimmed }),
@@ -107,37 +107,9 @@ export function ForensicPanel({ sections = [], categoryName = '' }: ForensicPane
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Analysis failed');
 
-      const reader = res.body?.getReader();
-      if (!reader) throw new Error('Streaming not supported');
-
-      const decoder = new TextDecoder();
-      let buffer = '';
-      const partial: Partial<ForensicResult> = { fallacies: [] };
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-        let event = '';
-        for (const line of lines) {
-          if (line.startsWith('event: ')) { event = line.slice(7); }
-          else if (line.startsWith('data: ') && event) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              if (event === 'status') setStreamStep(data.message || '');
-              if (event === 'fallacies') { partial.fallacies = data.fallacies || []; setStreamStep('Fallacies detected…'); }
-              if (event === 'intensity') { partial.emotional_intensity = data.emotional_intensity; setStreamStep('Scoring intensity…'); }
-              if (event === 'funnel') { partial.funnel_stage = data.funnel_stage; setStreamStep('Mapping funnel…'); }
-              if (event === 'done') { partial.summary = data.summary; partial.bias_score = data.bias_score; partial.provider = data.provider; setResult(partial as ForensicResult); setStreamStep(''); }
-              if (event === 'error') throw new Error(data.error);
-            } catch (e) { if (e instanceof Error && e.message !== 'Unexpected end of JSON input') throw e; }
-            event = '';
-          }
-        }
-      }
-      if (!partial.summary && partial.fallacies && partial.fallacies.length > 0) setResult(partial as ForensicResult);
+      const data = await res.json();
+      setResult(data as ForensicResult);
+      setStreamStep('');
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
       setError(err instanceof Error ? err.message : 'Analysis failed');
