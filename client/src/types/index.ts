@@ -204,9 +204,8 @@ export interface ForensicEntry {
 }
 
 export interface InoculationHeadline {
-  tactic: string;
-  headline: string;
-  flaw_explanation: string;
+  text: string;
+  is_virus: boolean;
 }
 
 export interface InoculationSession {

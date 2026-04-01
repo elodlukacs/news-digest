@@ -8,10 +8,11 @@ interface FeaturePanelHeaderProps {
   researcher?: string;
   summary: string;
   sections: { heading: string; content?: string; items?: string[] }[];
+  howToPlaySections?: { heading: string; content?: string; items?: string[] }[];
   right?: React.ReactNode;
 }
 
-export function FeaturePanelHeader({ icon, title, subtitle, infoTitle, researcher, summary, sections, right }: FeaturePanelHeaderProps) {
+export function FeaturePanelHeader({ icon, title, subtitle, infoTitle, researcher, summary, sections, howToPlaySections, right }: FeaturePanelHeaderProps) {
   return (
     <div className="space-y-2 px-5 md:px-0">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -21,6 +22,14 @@ export function FeaturePanelHeader({ icon, title, subtitle, infoTitle, researche
         </div>
         <div className="flex items-center gap-2">
           {right}
+          {howToPlaySections && (
+            <FeatureInfoDialog
+              title="How To Play"
+              summary="A quick guide to building your cognitive immunity."
+              sections={howToPlaySections}
+              buttonLabel="How to play"
+            />
+          )}
           <FeatureInfoDialog
             title={infoTitle}
             researcher={researcher}

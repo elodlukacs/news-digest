@@ -287,46 +287,55 @@ Rules:
     );
 
     insertPrompt.run(
-      'inoculation-twister',
-      'Inoculation — Twister',
-      'Generates manipulated headlines for misinformation inoculation training',
+      'foolproof_passive_inoculation',
+      'Foolproof — Passive Inoculation',
+      'Generates weakened misinformation strains as psychological vaccines (Foolproof model)',
       'mindgames',
-      '',
-      `You are a specialized "Twister" agent based on Sander van der Linden's Inoculation Theory. Your goal is to help users develop resistance to misinformation by exposing them to "weakened" manipulation tactics.
+      `You are 'The Immunizer', an AI based on Sander van der Linden's 'Foolproof'. Your goal is to generate a weakened strain of misinformation to act as a psychological vaccine. Respond ONLY in strict JSON format. Never include markdown formatting or conversational text.`,
+      `Host Vulnerability: {{bias}}
+Viral Tactic: {{tactic}}
+Dose Intensity: {{dose}} (1 = Micro-dose/Subtle, 2 = Active/Standard, 3 = Full Virus/Obvious)
+Topic: {{topic}}
 
-Given the topic, generate 3 social media headlines using different manipulation tactics:
-1. Headline A (Trolling): Deliberately provoke an emotional reaction through "whataboutism" or insults.
-2. Headline B (Emotional Manipulation): Use high-outrage, fear-inducing language.
-3. Headline C (Conspiracy): Suggest a secret organization is behind the event.
+Generate 1 manipulative headline that combines the Tactic and Vulnerability at the requested Dose.
+Generate 2 neutral/factual headlines about the topic.
 
-The tactics must be visible enough that a learning user can identify the flaw.
-
-Return JSON: [{"tactic": "string", "headline": "string", "flaw_explanation": "string"}]
-
-Level: {{level}}`
+Return JSON:
+{
+  "headlines": [
+     {"text": "string", "is_virus": true},
+     {"text": "string", "is_virus": false},
+     {"text": "string", "is_virus": false}
+  ],
+  "the_antibody": "Explain exactly HOW this headline exploits the host's vulnerability using the specific viral tactic, acting as a prebunking vaccine."
+}`
     );
 
     insertPrompt.run(
-      'inoculation-cdo',
-      'Inoculation — CDO Craft',
-      'User plays disinformation operator to understand manipulation',
+      'foolproof_active_inoculation',
+      'Foolproof — Active Inoculation',
+      'User synthesizes manipulation to build cognitive antibodies (Foolproof model)',
       'mindgames',
-      '',
-      `You are the "Twister" agent based on Sander van der Linden's Inoculation Theory. A user is playing the role of a disinformation operator to understand how manipulation works from the inside. This is a controlled educational exercise.
+      `You are 'The Immunizer', an AI based on Sander van der Linden's 'Foolproof'. The user is playing the role of a disinformation operator to build cognitive antibodies through active synthesis. Respond ONLY in strict JSON format. Never include markdown formatting or conversational text.`,
+      `You are the "Immunizer" agent based on Sander van der Linden's Inoculation Theory from 'Foolproof'. A user is playing the role of a disinformation operator to understand how manipulation works from the inside. This is a controlled educational exercise.
 
-Given a topic and a chosen manipulation tactic, you will:
+Topic: {{topic}}
+Viral Tactic: {{tactic}}
+Host Vulnerability being exploited: {{bias}}
+
+Instructions:
 1. Write a neutral, factual headline about the topic
-2. Show how that same topic gets weaponized using the chosen tactic
-3. Explain the psychological mechanism being exploited
+2. Show how that same topic gets weaponized using the chosen tactic — make the manipulation obvious and exaggerated for educational purposes
+3. Explain the psychological mechanism being exploited (the "antibody" — how to recognize this pattern in the wild)
 4. List 2-3 specific red flags a careful reader would notice
 
-The goal is that by PRODUCING manipulation the user builds resistance to it.
+The goal is that by PRODUCING manipulation the user builds stronger cognitive antibodies.
 
 Return JSON:
 {
   "neutral_headline": "string",
   "manipulated_headline": "string",
-  "mechanism": "string — what psychological button this presses and why it works",
+  "the_antibody": "how to recognize this manipulation pattern — the prebunking rationale",
   "red_flags": ["string", "string"]
 }`
     );
@@ -717,5 +726,70 @@ Jobs:
   });
   seedPrompts();
 }
+
+// Force-update Foolproof inoculation prompts on every startup
+const updateInoculationPrompts = db.transaction(() => {
+  const upsert = db.prepare(`INSERT INTO prompts (slug, name, description, category, system_message, user_prompt, created_at, updated_at)
+    VALUES (?,?,?,?,?,?,datetime('now'),datetime('now'))
+    ON CONFLICT(slug) DO UPDATE SET system_message=excluded.system_message, user_prompt=excluded.user_prompt, updated_at=datetime('now')`);
+
+  upsert.run(
+    'foolproof_passive_inoculation',
+    'Foolproof — Passive Inoculation',
+    'Generates weakened misinformation strains as psychological vaccines (Foolproof model)',
+    'mindgames',
+    `You are 'The Immunizer', an AI based on Sander van der Linden's 'Foolproof'. Your goal is to generate a weakened strain of misinformation to act as a psychological vaccine. Respond ONLY in strict JSON format. Never include markdown formatting or conversational text.`,
+    `Host Vulnerability: {{bias}}
+Viral Tactic: {{tactic}}
+Dose Intensity: {{dose}} (1 = Micro-dose/Subtle, 2 = Active/Standard, 3 = Full Virus/Obvious)
+Topic: {{topic}}
+
+Generate 1 manipulative headline that combines the Tactic and Vulnerability at the requested Dose.
+Generate 2 neutral/factual headlines about the topic.
+
+Return JSON:
+{
+  "headlines": [
+     {"text": "string", "is_virus": true},
+     {"text": "string", "is_virus": false},
+     {"text": "string", "is_virus": false}
+  ],
+  "the_antibody": "Explain exactly HOW this headline exploits the host's vulnerability using the specific viral tactic, acting as a prebunking vaccine."
+}`
+  );
+
+  upsert.run(
+    'foolproof_active_inoculation',
+    'Foolproof — Active Inoculation',
+    'User synthesizes manipulation to build cognitive antibodies (Foolproof model)',
+    'mindgames',
+    `You are 'The Immunizer', an AI based on Sander van der Linden's 'Foolproof'. The user is playing the role of a disinformation operator to build cognitive antibodies through active synthesis. Respond ONLY in strict JSON format. Never include markdown formatting or conversational text.`,
+    `You are the "Immunizer" agent based on Sander van der Linden's Inoculation Theory from 'Foolproof'. A user is playing the role of a disinformation operator to understand how manipulation works from the inside. This is a controlled educational exercise.
+
+Topic: {{topic}}
+Viral Tactic: {{tactic}}
+Host Vulnerability being exploited: {{bias}}
+
+Instructions:
+1. Write a neutral, factual headline about the topic
+2. Show how that same topic gets weaponized using the chosen tactic — make the manipulation obvious and exaggerated for educational purposes
+3. Explain the psychological mechanism being exploited (the "antibody" — how to recognize this pattern in the wild)
+4. List 2-3 specific red flags a careful reader would notice
+
+The goal is that by PRODUCING manipulation the user builds stronger cognitive antibodies.
+
+Return JSON:
+{
+  "neutral_headline": "string",
+  "manipulated_headline": "string",
+  "the_antibody": "how to recognize this manipulation pattern — the prebunking rationale",
+  "red_flags": ["string", "string"]
+}`
+  );
+});
+updateInoculationPrompts();
+
+// Clean up deprecated prompt slugs
+try { db.prepare("DELETE FROM prompts WHERE slug IN ('inoculation-twister', 'inoculation-cdo')").run(); } catch (e) {}
 
 module.exports = db;

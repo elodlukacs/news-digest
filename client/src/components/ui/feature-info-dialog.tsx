@@ -19,9 +19,10 @@ interface FeatureInfoDialogProps {
   researcher?: string;
   summary: string;
   sections: InfoSection[];
+  buttonLabel?: string;
 }
 
-export function FeatureInfoDialog({ title, researcher, summary, sections }: FeatureInfoDialogProps) {
+export function FeatureInfoDialog({ title, researcher, summary, sections, buttonLabel = 'The science' }: FeatureInfoDialogProps) {
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -30,7 +31,7 @@ export function FeatureInfoDialog({ title, researcher, summary, sections }: Feat
           aria-label={`Learn more about ${title}`}
         >
           <Info size={13} />
-          <span className="text-[11px] font-semibold uppercase tracking-wider">The science</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wider">{buttonLabel}</span>
         </button>
       </DialogTrigger>
       <DialogContent className="top-0 left-0 translate-x-0 translate-y-0 max-w-none w-full h-full rounded-none overflow-y-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-w-xl sm:w-full sm:h-auto sm:max-h-[80vh] sm:rounded-xl">

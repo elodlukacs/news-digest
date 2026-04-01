@@ -4,7 +4,7 @@ import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Badge } from '../../../components/ui/badge';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../../../components/ui/tooltip';
-import { Loader2, Shield, Zap, CheckCircle, XCircle, AlertTriangle, Trophy, Eye, RotateCcw } from 'lucide-react';
+import { Loader2, Shield, Zap, CheckCircle, XCircle, AlertTriangle, Trophy, Eye, RotateCcw, Syringe } from 'lucide-react';
 import { API_BASE } from '../../../config';
 import type { InoculationHeadline } from '../../../types';
 import { FeaturePanelHeader } from '../common';
@@ -13,85 +13,83 @@ import { FeaturePanelHeader } from '../common';
 
 interface GameSession {
   sessionId: number;
-  level: string;
+  dose: number;
   topic: string;
   headlines: InoculationHeadline[];
   targetIndex: number;
   targetTactic: string;
+  targetBias: string;
+  theAntibody: string;
   score: number;
 }
 
-interface SessionHistory {
-  id: number;
-  level: string;
-  score: number;
-  created_at: string;
-}
-
-interface CdoTactic {
+interface ViralAntigen {
   id: string;
   label: string;
   icon: string;
   description: string;
-}
-
-interface CraftResult {
-  neutral_headline: string;
-  manipulated_headline: string;
-  mechanism: string;
-  red_flags: string[];
-  tactic: string;
+  bias: string;
 }
 
 /* ─── Constants ─── */
 
-const LEVELS = ['trolling', 'emotional', 'amplification', 'escalation'];
-const LEVEL_ICONS: Record<string, string> = {
-  trolling: '🎭', emotional: '🔥', amplification: '📢', escalation: '⚡',
+const DOSE_LABELS: Record<number, string> = {
+  1: 'Micro-dose',
+  2: 'Active',
+  3: 'Full Virus',
 };
-const LEVEL_LABELS: Record<string, string> = {
-  trolling: 'Trolling',
-  emotional: 'Emotional',
-  amplification: 'Amplification',
-  escalation: 'Escalation',
+const DOSE_ICONS: Record<number, string> = {
+  1: '💧',
+  2: '💉',
+  3: '🦠',
 };
-const LEVEL_DESCRIPTIONS: Record<string, string> = {
-  trolling: 'Spot deliberate provocation and insults designed to derail conversations.',
-  emotional: 'Catch fear-inducing, outrage-driven language that bypasses rational thinking.',
-  amplification: 'Detect fake consensus, bandwagon appeals, and artificial social proof.',
-  escalation: 'Recognize advanced multi-layered manipulation combining all tactics.',
+const DOSE_DESCRIPTIONS: Record<number, string> = {
+  1: 'Subtle manipulation — can you catch the faint signal?',
+  2: 'Standard dose — the tactics are clearly present.',
+  3: 'Full-strength virus — the manipulation is obvious. Can you name the tactic?',
 };
 
 /* ─── Component ─── */
 
 export function InoculationPanel() {
-  const [mode, setMode] = useState<'detective' | 'cdo'>('detective');
+  const [mode, setMode] = useState<'passive' | 'active'>('passive');
 
-  // Detective mode state
+  // Passive mode state
   const [topic, setTopic] = useState('');
   const [session, setSession] = useState<GameSession | null>(null);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<{
     correct: boolean; points: number; targetTactic: string;
-    explanation: string; nextLevel?: string;
+    theAntibody: string;
   } | null>(null);
   const [error, setError] = useState('');
   const [roundsPlayed, setRoundsPlayed] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
-  const [highestLevel, setHighestLevel] = useState('trolling');
+  const [currentDose, setCurrentDose] = useState(1);
 
-  // CDO mode state
-  const [cdoTopic, setCdoTopic] = useState('');
-  const [cdoTactics, setCdoTactics] = useState<CdoTactic[]>([]);
+  // Immunity state
+  const [antibodyCount, setAntibodyCount] = useState(0);
+  const [needsBooster, setNeedsBooster] = useState(false);
+
+  // Active mode state
+  const [activeTopic, setActiveTopic] = useState('');
+  const [antigens, setAntigens] = useState<ViralAntigen[]>([]);
   const [selectedTactic, setSelectedTactic] = useState<string | null>(null);
-  const [craftResult, setCraftResult] = useState<CraftResult | null>(null);
-  const [cdoLoading, setCdoLoading] = useState(false);
-  const [cdoError, setCdoError] = useState('');
+  const [craftResult, setCraftResult] = useState<{
+    neutral_headline: string;
+    manipulated_headline: string;
+    the_antibody: string;
+    red_flags: string[];
+    tactic: string;
+    bias: string;
+  } | null>(null);
+  const [activeLoading, setActiveLoading] = useState(false);
+  const [activeError, setActiveError] = useState('');
 
   // useOptimistic for instant score feedback
-  const [optimisticScore, addOptimisticScore] = useOptimistic(
-    session?.score ?? 0,
+  const [optimisticAntibodies, addOptimisticAntibodies] = useOptimistic(
+    antibodyCount,
     (current: number, delta: number) => current + delta
   );
 
@@ -99,31 +97,40 @@ export function InoculationPanel() {
 
   useEffect(() => { return () => abortRef.current?.abort(); }, []);
 
-  // Load session history + CDO tactics on mount
+  // Load session history + antigens on mount
   const loadSessions = useCallback(async () => {
     try {
       const [sessRes, tacticRes] = await Promise.all([
         fetch(`${API_BASE}/inoculation/sessions`),
         fetch(`${API_BASE}/inoculation/tactics`),
       ]);
-      const data: SessionHistory[] = await sessRes.json();
-      const tactics: CdoTactic[] = await tacticRes.json();
-      setCdoTactics(tactics);
-      if (data.length > 0) {
-        const best = data.reduce(
-          (a, b) => LEVELS.indexOf(b.level) > LEVELS.indexOf(a) ? b.level : a,
-          'trolling'
+      const sessData = await sessRes.json();
+      const tactics: ViralAntigen[] = await tacticRes.json();
+      setAntigens(tactics);
+
+      // Handle new response shape { sessions, antibodyCount, needsBooster }
+      const sessions = Array.isArray(sessData) ? sessData : (sessData.sessions || []);
+      if (sessData.antibodyCount !== undefined) setAntibodyCount(sessData.antibodyCount);
+      if (sessData.needsBooster !== undefined) setNeedsBooster(sessData.needsBooster);
+
+      if (sessions.length > 0) {
+        const bestDose = sessions.reduce(
+          (best: number, s: { level: string }) => {
+            const d = parseInt(s.level, 10);
+            return (!isNaN(d) && d > best) ? d : best;
+          },
+          1
         );
-        setHighestLevel(best);
-        setRoundsPlayed(data.length);
-        setCorrectCount(data.reduce((s, d) => s + Math.floor(d.score / 10), 0));
+        setCurrentDose(bestDose);
+        setRoundsPlayed(sessions.length);
+        setCorrectCount(sessions.reduce((s: number, d: { score: number }) => s + Math.floor(d.score / 10), 0));
       }
     } catch { /* ignore */ }
   }, []);
 
   useEffect(() => { loadSessions(); }, [loadSessions]);
 
-  /* ─── Detective mode ─── */
+  /* ─── Passive mode ─── */
 
   const generate = async () => {
     if (!topic.trim()) return;
@@ -131,7 +138,6 @@ export function InoculationPanel() {
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     setLoading(true);
-    const prevSession = session;
     setSession(null);
     setSelected(null);
     setFeedback(null);
@@ -141,12 +147,15 @@ export function InoculationPanel() {
       const res = await fetch(`${API_BASE}/inoculation/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic, level: prevSession?.level }),
+        body: JSON.stringify({ topic }),
         signal: ctrl.signal,
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Failed to generate round');
       const data = await res.json();
-      setSession({ ...data, score: prevSession?.score ?? 0 });
+      setSession({ ...data, score: session?.score ?? 0 });
+      if (data.dose) setCurrentDose(data.dose);
+      if (data.needsBooster !== undefined) setNeedsBooster(data.needsBooster);
+      if (data.antibodyCount !== undefined) setAntibodyCount(data.antibodyCount);
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
       setError(err instanceof Error ? err.message : 'Failed to generate round');
@@ -163,8 +172,7 @@ export function InoculationPanel() {
     setSelected(idx);
     setError('');
 
-    // Optimistically assume correct (+10) — will revert if wrong
-    addOptimisticScore(10);
+    addOptimisticAntibodies(10);
 
     try {
       const res = await fetch(`${API_BASE}/inoculation/answer`, {
@@ -183,14 +191,11 @@ export function InoculationPanel() {
         correct: data.correct,
         points: data.points,
         targetTactic: session.targetTactic,
-        explanation: session.headlines[idx].flaw_explanation,
-        nextLevel: data.nextLevel !== session.level ? data.nextLevel : undefined,
+        theAntibody: session.theAntibody,
       });
 
-      const newLevel = data.nextLevel || session.level;
-      if (LEVELS.indexOf(newLevel) > LEVELS.indexOf(highestLevel)) setHighestLevel(newLevel);
-      // Update real score — this makes useOptimistic revert/confirm
-      setSession(prev => prev ? { ...prev, score: data.newScore, level: newLevel } : null);
+      if (data.antibodyCount !== undefined) setAntibodyCount(data.antibodyCount);
+      setSession(prev => prev ? { ...prev, score: data.newScore } : null);
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
       setError(err instanceof Error ? err.message : 'Failed to record answer');
@@ -211,41 +216,40 @@ export function InoculationPanel() {
     setFeedback(null);
     setRoundsPlayed(0);
     setCorrectCount(0);
-    setHighestLevel('trolling');
+    setCurrentDose(1);
     setError('');
   };
 
-  /* ─── CDO mode ─── */
+  /* ─── Active mode ─── */
 
   const craftHeadline = async () => {
-    if (!cdoTopic.trim() || !selectedTactic) return;
+    if (!activeTopic.trim() || !selectedTactic) return;
     abortRef.current?.abort();
     const ctrl = new AbortController();
     abortRef.current = ctrl;
-    setCdoLoading(true);
+    setActiveLoading(true);
     setCraftResult(null);
-    setCdoError('');
+    setActiveError('');
 
     try {
       const res = await fetch(`${API_BASE}/inoculation/craft`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic: cdoTopic, tactic: selectedTactic }),
+        body: JSON.stringify({ topic: activeTopic, tactic: selectedTactic }),
         signal: ctrl.signal,
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Craft failed');
       setCraftResult(await res.json());
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
-      setCdoError(err instanceof Error ? err.message : 'Craft failed');
+      setActiveError(err instanceof Error ? err.message : 'Craft failed');
     } finally {
-      setCdoLoading(false);
+      setActiveLoading(false);
     }
   };
 
   /* ─── Render ─── */
 
-  const levelIdx = LEVELS.indexOf(session?.level || highestLevel);
   const accuracy = roundsPlayed > 0 ? Math.round((correctCount / roundsPlayed) * 100) : 0;
 
   return (
@@ -253,23 +257,39 @@ export function InoculationPanel() {
       {/* Header */}
       <FeaturePanelHeader
         icon={<Shield size={22} className="text-outrage shrink-0" />}
-        title="Spot the Trick"
-        subtitle="Can you tell which headline has been manipulated? Pick a topic, and we'll test your instincts."
-        infoTitle="Spot the Trick"
-        researcher="Sander van der Linden · Cambridge University"
-        summary="Like a vaccine, you're exposed to a weakened dose of manipulation so your mind builds immunity before encountering the real thing in the wild."
+        title="Cognitive Immunity Lab"
+        subtitle="Build your psychological defense against the virus of misinformation."
+        infoTitle="Cognitive Immunity Lab"
+        researcher="Sander van der Linden · Cambridge University · 'Foolproof'"
+        summary="Misinformation is a virus. Cognitive biases are your vulnerabilities. This app is your psychological vaccine — exposing you to weakened strains so your mind builds immunity before the real thing."
         sections={[
-          { heading: 'The Science', content: 'Psychological Inoculation Theory — validated across 5,061 participants across multiple cultures. Perceived reliability of manipulative content decreases significantly post-play, regardless of age, education, or political ideology.' },
-          { heading: 'How It Works', content: 'You play the role of a Chief Disinformation Officer — crafting manipulation in a fictional social media environment. Active production is far more effective than passively reading about manipulation tactics.' },
-          { heading: 'Tactics You\'ll Master', items: [
-            'Emotional Manipulation — using fear, outrage, or anger instead of evidence',
-            'Trolling — deliberate provocation designed to trigger defensive reactions and stifle discourse',
-            'Conspiracy Construction — manufacturing secret agendas to explain complex or random events',
-            'Artificial Amplification — bots and fake engagement creating an illusion of consensus',
-            'Impersonation — fake accounts mimicking credible sources to borrow their authority',
-            'Polarisation — reframing neutral topics as divisive intergroup conflicts',
+          { heading: 'The Science', content: 'Based on Sander van der Linden\'s "Foolproof: Why Misinformation Infects Our Minds and How to Build Immunity". Validated across 5,061 participants across multiple cultures. Perceived reliability of manipulative content decreases significantly post-play.' },
+          { heading: 'Passive Inoculation', content: 'You\'re exposed to a weakened dose of a viral tactic mixed with neutral headlines. Identify which one is the "virus" — like recognizing an infection before it takes hold.' },
+          { heading: 'Active Inoculation', content: 'You step into the shoes of the manipulator and synthesize the virus yourself. Active production builds stronger cognitive antibodies than passive detection.' },
+          { heading: '6 Viral Antigens', items: [
+            'Impersonation — mimicking credible sources (exploits Authority Bias)',
+            'Emotion — fear/outrage language (exploits Emotional Reasoning)',
+            'Polarization — us-vs-them framing (exploits In-Group Bias)',
+            'Conspiracy — hidden agendas (exploits Pattern Seeking)',
+            'Discredit — attacking the source (exploits Confirmation Bias)',
+            'Trolling — deliberate provocation (exploits Emotional Reactivity)',
           ]},
-          { heading: 'The Levels', content: 'Trolling → Emotional Manipulation → Artificial Amplification → Escalation. Each level adds complexity and builds on the resistance you developed in the previous round.' },
+          { heading: 'Immune System', content: 'Your antibody count decays 10% after 7 days without training — immunity fades without booster shots. Higher antibody counts increase the dose intensity.' },
+        ]}
+        howToPlaySections={[
+          { heading: '1. Choose Your Inoculation Mode', content: 'Passive mode is like getting a vaccine — you spot the viral headline hiding among clean ones. Active mode is like cooking your own antidote — you craft the manipulation yourself from scratch. Both build immunity, but Active mode gives you superpowers.' },
+          { heading: '2. Spot the Virus (Passive)', items: [
+            'You\'ll see 3 headlines — only one is infected with a viral tactic.',
+            'Tap the headline that feels like it\'s trying to manipulate you.',
+            'Wrong? Don\'t worry — your immune system learns from infections too.',
+          ]},
+          { heading: '3. Craft the Virus (Active)', items: [
+            'You pick a topic and receive a real headline to weaponize.',
+            'Rewrite it using the viral tactic shown (impersonation, emotion, etc.).',
+            'Think like a misinformant — what would make this click? Be devious.',
+          ]},
+          { heading: '4. Collect Antibodies', content: 'Every correct identification or clever manipulation earns you antibodies. The higher your count, the harder the dose gets. Think of it as leveling up your immune system.' },
+          { heading: '5. Stay Immune', content: 'Your antibodies slowly decay after 7 days of inactivity — just like real immunity. Come back for booster shots to keep your defenses sharp.' },
         ]}
         right={
           <div className="flex items-center gap-2">
@@ -277,11 +297,11 @@ export function InoculationPanel() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="flex items-center gap-1.5 text-sm text-curiosity font-bold cursor-help">
-                    <Trophy size={15} /> {optimisticScore}
+                    <Trophy size={15} /> {optimisticAntibodies}
                   </span>
                 </TooltipTrigger>
                 <TooltipContent className="text-xs">
-                  {roundsPlayed} rounds · {accuracy}% accuracy
+                  {antibodyCount} antibodies · {roundsPlayed} rounds · {accuracy}% accuracy
                 </TooltipContent>
               </Tooltip>
             )}
@@ -303,56 +323,64 @@ export function InoculationPanel() {
         }
       />
 
+      {/* Booster warning */}
+      {needsBooster && (
+        <div className="p-3.5 bg-curiosity-muted rounded-lg text-sm text-curiosity flex items-center gap-2.5 border border-curiosity/20">
+          <Syringe size={16} className="shrink-0" />
+          <span><strong>Immunity decay detected.</strong> Your antibodies dropped 10% — it&apos;s been over 7 days. Time for a booster shot!</span>
+        </div>
+      )}
+
       {/* Mode switch */}
       <div className="flex rounded-lg border border-rule overflow-hidden">
         <button
-          onClick={() => setMode('detective')}
+          onClick={() => setMode('passive')}
           className={`flex-1 py-2.5 text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 ${
-            mode === 'detective'
+            mode === 'passive'
               ? 'bg-ink text-paper'
               : 'bg-paper text-ink-muted hover:text-ink hover:bg-paper-dark'
           }`}
         >
-          <Eye size={15} /> Catch It
+          <Eye size={15} /> Passive Inoculation
         </button>
         <button
-          onClick={() => setMode('cdo')}
+          onClick={() => setMode('active')}
           className={`flex-1 py-2.5 text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 border-l border-rule ${
-            mode === 'cdo'
+            mode === 'active'
               ? 'bg-ink text-paper'
               : 'bg-paper text-ink-muted hover:text-ink hover:bg-paper-dark'
           }`}
         >
-          <Shield size={15} /> Write It Yourself
+          <Syringe size={15} /> Active Inoculation
         </button>
       </div>
 
-      {/* ─── Detective mode ─── */}
-      {mode === 'detective' && (
+      {/* ─── Passive mode ─── */}
+      {mode === 'passive' && (
         <>
-          {/* Level progress */}
+          {/* Dose progress */}
           <div className="space-y-3">
             <div className="flex items-center gap-1">
-              {LEVELS.map((lvl, i) => {
-                const reached = i <= levelIdx;
-                const isCurrent = i === levelIdx;
+              {[1, 2, 3].map((dose) => {
+                const isActive = dose <= currentDose;
+                const isCurrent = dose === currentDose;
                 return (
-                  <Tooltip key={lvl}>
+                  <Tooltip key={dose}>
                     <TooltipTrigger asChild>
                       <div
                         className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold cursor-help transition-all ${
                           isCurrent
                             ? 'bg-ink text-paper'
-                            : reached
+                            : isActive
                               ? 'bg-paper-dark text-ink'
                               : 'text-ink-muted/40'
                         }`}
                       >
-                        <span className="text-sm">{LEVEL_ICONS[lvl]}</span>
-                        <span className="hidden sm:inline">{LEVEL_LABELS[lvl]}</span>
+                        <span className="text-sm">{DOSE_ICONS[dose]}</span>
+                        <span className="hidden sm:inline">{DOSE_LABELS[dose]}</span>
                       </div>
                     </TooltipTrigger>
-                    <TooltipContent className="max-w-[220px] text-xs">{LEVEL_DESCRIPTIONS[lvl]}</TooltipContent>
+                    <TooltipContent className="max-w-[220px] text-xs">{DOSE_DESCRIPTIONS[dose]}</TooltipContent>
                   </Tooltip>
                 );
               })}
@@ -388,21 +416,21 @@ export function InoculationPanel() {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <span className="text-sm font-semibold text-ink cursor-help">
-                        {LEVEL_ICONS[session.level]} {LEVEL_LABELS[session.level]}
+                        {DOSE_ICONS[session.dose]} {DOSE_LABELS[session.dose]} dose
                       </span>
                     </TooltipTrigger>
-                    <TooltipContent className="max-w-[220px] text-xs">{LEVEL_DESCRIPTIONS[session.level]}</TooltipContent>
+                    <TooltipContent className="max-w-[220px] text-xs">{DOSE_DESCRIPTIONS[session.dose]}</TooltipContent>
                   </Tooltip>
                   {roundsPlayed > 0 && (
                     <Badge variant="outline" className="text-xs">{accuracy}% accuracy</Badge>
                   )}
                 </div>
-                <span className="text-sm font-bold text-curiosity">{optimisticScore} pts</span>
+                <span className="text-sm font-bold text-curiosity">{optimisticAntibodies} 🛡️</span>
               </div>
 
               {/* Instruction */}
               <p className="text-sm text-ink-muted leading-relaxed">
-                Which headline uses <span className="font-bold text-outrage">{session.targetTactic}</span>?
+                Which headline is the <span className="font-bold text-outrage">virus</span>? ({session.targetBias} vulnerability)
               </p>
 
               {/* Feedback */}
@@ -413,15 +441,15 @@ export function InoculationPanel() {
                       ? <CheckCircle size={18} className="text-curiosity shrink-0" />
                       : <XCircle size={18} className="text-outrage shrink-0" />}
                     <span className="font-bold text-ink text-base">
-                      {feedback.correct ? 'Correct! +10 points' : 'Not quite'}
+                      {feedback.correct ? 'Antibody produced! +10' : 'Infection missed'}
                     </span>
                     {!feedback.correct && <span className="text-outrage font-semibold">— it was {feedback.targetTactic}</span>}
                   </div>
-                  <p className="text-sm text-ink-muted leading-relaxed">{feedback.explanation}</p>
-                  {feedback.nextLevel && (
-                    <p className="text-sm text-curiosity font-bold mt-2">
-                      Level up! {LEVEL_ICONS[feedback.nextLevel]} {LEVEL_LABELS[feedback.nextLevel]}
-                    </p>
+                  {feedback.theAntibody && (
+                    <div className="mt-2 p-3 rounded-lg bg-paper-dark border border-rule">
+                      <p className="text-xs font-semibold text-curiosity uppercase tracking-wide mb-1">The Antibody</p>
+                      <p className="text-sm text-ink leading-relaxed">{feedback.theAntibody}</p>
+                    </div>
                   )}
                 </div>
               )}
@@ -444,8 +472,7 @@ export function InoculationPanel() {
                         : 'border-rule hover:border-ink hover:shadow-sm cursor-pointer'
                   }`}
                 >
-                  <span className="text-xs font-semibold text-outrage uppercase tracking-wide">{h.tactic}</span>
-                  <p className="text-base font-serif font-semibold text-ink mt-1.5 leading-snug">{h.headline}</p>
+                  <p className="text-base font-serif font-semibold text-ink leading-snug">{h.text}</p>
                 </button>
               ))}
 
@@ -459,26 +486,26 @@ export function InoculationPanel() {
         </>
       )}
 
-      {/* ─── CDO mode ─── */}
-      {mode === 'cdo' && (
+      {/* ─── Active mode ─── */}
+      {mode === 'active' && (
         <div className="flex flex-col flex-1 overflow-y-auto gap-4">
           <div className="p-4 rounded-lg border border-rule bg-paper-dark text-sm text-ink leading-relaxed">
-            <p className="font-serif font-bold text-base text-ink mb-1">Write It Yourself</p>
-            <p className="text-ink-muted">Pick a topic and a manipulation tactic. See how a neutral headline gets weaponized — and learn to spot the red flags.</p>
+            <p className="font-serif font-bold text-base text-ink mb-1">Active Inoculation</p>
+            <p className="text-ink-muted">Pick a topic and a viral antigen. See how a neutral headline gets weaponized — and build your cognitive antibodies by understanding the mechanism.</p>
           </div>
 
           <Input
-            value={cdoTopic}
-            onChange={(e) => setCdoTopic(e.target.value)}
+            value={activeTopic}
+            onChange={(e) => setActiveTopic(e.target.value)}
             placeholder="Pick a topic — e.g. vaccine safety, housing prices..."
             className="text-sm h-11"
             onKeyDown={(e) => e.key === 'Enter' && selectedTactic && craftHeadline()}
           />
 
           <div>
-            <p className="text-xs font-semibold text-ink-muted mb-2.5 uppercase tracking-wide">Choose a tactic</p>
+            <p className="text-xs font-semibold text-ink-muted mb-2.5 uppercase tracking-wide">Choose a viral antigen</p>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-              {cdoTactics.map((t) => (
+              {antigens.map((t) => (
                 <Tooltip key={t.id}>
                   <TooltipTrigger asChild>
                     <button
@@ -492,7 +519,9 @@ export function InoculationPanel() {
                       <span className="mr-1.5">{t.icon}</span>{t.label}
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent className="max-w-[220px] text-xs">{t.description}</TooltipContent>
+                  <TooltipContent className="max-w-[220px] text-xs">
+                    <strong>{t.bias}</strong>: {t.description}
+                  </TooltipContent>
                 </Tooltip>
               ))}
             </div>
@@ -500,15 +529,15 @@ export function InoculationPanel() {
 
           <Button
             onClick={craftHeadline}
-            disabled={cdoLoading || !cdoTopic.trim() || !selectedTactic}
+            disabled={activeLoading || !activeTopic.trim() || !selectedTactic}
             className="w-full gap-2 text-sm h-11"
           >
-            {cdoLoading ? <><Loader2 size={16} className="animate-spin" /> Crafting...</> : <><Shield size={16} /> Craft Headline</>}
+            {activeLoading ? <><Loader2 size={16} className="animate-spin" /> Synthesizing...</> : <><Syringe size={16} /> Synthesize Virus</>}
           </Button>
 
-          {cdoError && (
+          {activeError && (
             <div className="p-3.5 bg-outrage-muted rounded-lg text-sm text-outrage flex items-center gap-2.5 border border-outrage/20">
-              <AlertTriangle size={16} /> {cdoError}
+              <AlertTriangle size={16} /> {activeError}
             </div>
           )}
 
@@ -517,20 +546,22 @@ export function InoculationPanel() {
               {/* Side-by-side comparison */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="p-4 rounded-lg border-2 border-curiosity/40 bg-curiosity-muted">
-                  <p className="text-xs font-semibold text-curiosity mb-2 uppercase tracking-wide">Neutral</p>
+                  <p className="text-xs font-semibold text-curiosity mb-2 uppercase tracking-wide">Healthy Cell</p>
                   <p className="text-base font-serif text-ink leading-snug">{craftResult.neutral_headline}</p>
                 </div>
                 <div className="p-4 rounded-lg border-2 border-outrage/40 bg-outrage-muted">
-                  <p className="text-xs font-semibold text-outrage mb-2 uppercase tracking-wide">Manipulated — {craftResult.tactic}</p>
+                  <p className="text-xs font-semibold text-outrage mb-2 uppercase tracking-wide">Virus — {craftResult.tactic}</p>
                   <p className="text-base font-serif font-semibold text-ink leading-snug">{craftResult.manipulated_headline}</p>
                 </div>
               </div>
 
-              {/* Mechanism */}
-              <div className="p-4 rounded-lg bg-paper-dark border border-rule">
-                <p className="text-xs font-semibold text-ink-muted mb-2 uppercase tracking-wide">Why this works</p>
-                <p className="text-sm text-ink leading-relaxed">{craftResult.mechanism}</p>
-              </div>
+              {/* The Antibody */}
+              {craftResult.the_antibody && (
+                <div className="p-4 rounded-lg bg-curiosity-muted border border-curiosity/30">
+                  <p className="text-xs font-semibold text-curiosity uppercase tracking-wide mb-2">The Antibody</p>
+                  <p className="text-sm text-ink leading-relaxed">{craftResult.the_antibody}</p>
+                </div>
+              )}
 
               {/* Red flags */}
               {craftResult.red_flags?.length > 0 && (
@@ -549,7 +580,7 @@ export function InoculationPanel() {
                 variant="outline"
                 className="w-full text-sm h-11 gap-2"
               >
-                <Zap size={16} /> Try Another Tactic
+                <Zap size={16} /> Try Another Antigen
               </Button>
             </div>
           )}

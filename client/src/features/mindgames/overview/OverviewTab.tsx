@@ -23,21 +23,25 @@ export function OverviewTab() {
 
   const loadStats = useCallback(async () => {
     try {
-      const [forensic, sessions, journal, audits] = await Promise.all([
+      const [forensic, sessionsRes, journal, audits] = await Promise.all([
         fetch(`${API_BASE}/forensics/history?limit=100`).then(r => r.json()).catch(() => []),
-        fetch(`${API_BASE}/inoculation/sessions`).then(r => r.json()).catch(() => []),
+        fetch(`${API_BASE}/inoculation/sessions`).then(r => r.json()).catch(() => ({ sessions: [] })),
         fetch(`${API_BASE}/scientist/journal`).then(r => r.json()).catch(() => []),
         fetch(`${API_BASE}/bridge/audits`).then(r => r.json()).catch(() => []),
       ]);
 
-      const levels = ['trolling', 'emotional', 'amplification', 'escalation'];
-      const bestLevelIdx = sessions.reduce((best: number, s: { level: string }) => Math.max(best, levels.indexOf(s.level)), 0);
+      const sessions = Array.isArray(sessionsRes) ? sessionsRes : (sessionsRes.sessions || []);
+      const doseLabels = ['', 'Micro-dose', 'Active', 'Full Virus'];
+      const bestDose = sessions.reduce((best: number, s: { level: string }) => {
+        const d = parseInt(s.level, 10);
+        return (!isNaN(d) && d > best) ? d : best;
+      }, 0);
 
       setStats({
         forensicCount: forensic.length,
         avgBiasScore: forensic.length > 0 ? Math.round((forensic.reduce((s: number, f: { bias_score: number }) => s + (f.bias_score || 0), 0) / forensic.length) * 10) / 10 : 0,
         inoculationSessions: sessions.length,
-        bestLevel: levels[bestLevelIdx] || 'trolling',
+        bestLevel: bestDose > 0 ? doseLabels[bestDose] : 'Not started',
         journalEntries: journal.length,
         avgShift: journal.length > 0
           ? Math.round(journal.reduce((s: number, j: { initial_confidence: number; final_confidence: number }) => s + Math.abs(j.final_confidence - j.initial_confidence), 0) / journal.length)
