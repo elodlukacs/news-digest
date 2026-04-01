@@ -217,6 +217,13 @@ export function SummaryView({
           </p>
         )}
 
+        <div className="md:hidden mt-3">
+          <Button variant="outline" size="sm" className="gap-2 w-full" onClick={onRefresh} disabled={busy}>
+            <RefreshCw size={14} className={busy ? 'animate-spin' : ''} />
+            {refreshing ? 'Fetching...' : 'Fetch fresh articles'}
+          </Button>
+        </div>
+
         {/* Desktop: labeled action buttons */}
         <div className="hidden md:flex items-center gap-2 mt-3">
           <Button variant="outline" size="sm" className="gap-2" onClick={onRefresh} disabled={busy}>
@@ -253,15 +260,6 @@ export function SummaryView({
             >
               <Trash2 size={18} className="text-accent" />
               <span className="text-[14px] font-medium text-accent">Delete category</span>
-            </button>
-            <div className="h-px bg-rule/50 mx-6 my-1" />
-            <button
-              onClick={() => { onRefresh(); setActionsOpen(false); }}
-              disabled={busy}
-              className="flex items-center gap-4 px-6 py-4 active:bg-paper-dark transition-colors mt-2"
-            >
-              <RefreshCw size={18} className={`text-masthead ${busy ? 'animate-spin' : ''}`} />
-              <span className="text-[14px] font-semibold text-masthead">{refreshing ? 'Refreshing...' : 'Refresh summary'}</span>
             </button>
           </nav>
         </DrawerContent>

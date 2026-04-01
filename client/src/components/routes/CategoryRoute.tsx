@@ -2,7 +2,7 @@ import { useParams, useOutletContext, useNavigate } from 'react-router-dom';
 import { useState, useCallback } from 'react';
 import { SummaryView } from '../SummaryView';
 import { LeftSidebar } from '../LeftSidebar';
-import { WidgetSidebar } from '../WidgetSidebar';
+import { ForensicPanel } from '../../features/mindgames/analysis';
 import { useSummary, useSummaryHistory, useChat } from '../../hooks/useApi';
 import { slugify } from '../../utils/slugify';
 import type { AppOutletContext } from '../../types/routing';
@@ -31,9 +31,8 @@ export function CategoryRoute() {
   }, [ctx, categoryId, navigate]);
 
   return (
-    <div className="max-w-7xl mx-auto px-6 pb-20 flex gap-8">
+    <div className="max-w-[1920px] mx-auto px-6 pb-20 flex flex-col lg:flex-row gap-8">
       <LeftSidebar
-        hackerNews={ctx.hackerNews}
         dates={dates}
         selectedSnapshotId={selectedSnapshotId}
         onSelectSnapshot={setSelectedSnapshotId}
@@ -63,13 +62,11 @@ export function CategoryRoute() {
         )}
       </main>
 
-      <WidgetSidebar
-        weather={ctx.weather}
-        rates={ctx.rates}
-        headlines={ctx.headlines}
-        crypto={ctx.crypto}
-        trending={ctx.trending}
-      />
+      <aside className="hidden md:block lg:w-[42rem] lg:shrink-0 lg:pt-8 pt-0">
+        <div className="sticky top-8">
+          <ForensicPanel />
+        </div>
+      </aside>
     </div>
   );
 }

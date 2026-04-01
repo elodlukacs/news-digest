@@ -1,6 +1,8 @@
-import { RefreshCw, AlertCircle } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { RefreshCw, AlertCircle, Send } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import type { Briefing } from '../types';
+import { API_BASE } from '../config';
 import { Button } from './ui/button';
 import { Alert, AlertDescription } from './ui/alert';
 import { Skeleton } from './ui/skeleton';
@@ -13,9 +15,38 @@ interface Props {
 }
 
 export function MorningBriefing({ briefing, loading, error, onGenerate }: Props) {
+  const [tgSending, setTgSending] = useState(false);
+  const [tgSent, setTgSent] = useState(false);
+  const tgTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => { if (tgTimerRef.current) clearTimeout(tgTimerRef.current); };
+  }, []);
+
+  const sendDigestToTelegram = async () => {
+    setTgSending(true);
+    setTgSent(false);
+    try {
+      const resp = await fetch(`${API_BASE}/telegram/digest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await resp.json();
+      if (data.success) {
+        setTgSent(true);
+        if (tgTimerRef.current) clearTimeout(tgTimerRef.current);
+        tgTimerRef.current = setTimeout(() => setTgSent(false), 3000);
+      }
+    } catch {
+      // silent fail
+    } finally {
+      setTgSending(false);
+    }
+  };
+
   return (
     <div>
-      <div className="flex items-end justify-between pt-8 pb-4 border-b border-rule">
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between pt-8 pb-4 border-b border-rule">
         <div>
           <h2 className="font-serif text-4xl font-bold text-masthead tracking-tight">Morning Briefing</h2>
           {briefing && (
@@ -25,10 +56,16 @@ export function MorningBriefing({ briefing, loading, error, onGenerate }: Props)
             </p>
           )}
         </div>
-        <Button variant="outline" onClick={onGenerate} disabled={loading}>
-          <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
-          {loading ? 'Generating' : 'Generate'}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={sendDigestToTelegram} disabled={tgSending || tgSent || !briefing}>
+            <Send size={12} className={tgSending ? 'animate-pulse' : ''} />
+            {tgSent ? 'Sent!' : tgSending ? 'Sending…' : 'Send to Telegram'}
+          </Button>
+          <Button variant="outline" onClick={onGenerate} disabled={loading}>
+            <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+            {loading ? 'Generating' : 'Generate'}
+          </Button>
+        </div>
       </div>
 
       {loading && !briefing && (

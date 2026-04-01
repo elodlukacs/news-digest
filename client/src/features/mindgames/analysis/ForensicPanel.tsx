@@ -125,8 +125,8 @@ export function ForensicPanel() {
             <FlaskConical size={20} className="text-curiosity shrink-0" />
           )
         }
-        title="Take Apart This Article"
-        infoTitle="Take Apart This Article"
+        title="Take Apart A Specific Article"
+        infoTitle="Take Apart A Specific Article"
         researcher="David Robert Grimes · Dan Ariely"
         summary="Paste any article or headline and watch AI deconstruct it — mapping logical fallacies and psychological manipulation stages in real time, with a 0–10 emotional intensity score."
         sections={[

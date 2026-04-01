@@ -1,6 +1,5 @@
-import { useMemo, useState, useRef, useEffect } from 'react';
-import { ExternalLink, Clock, RefreshCw, Search, Send } from 'lucide-react';
-import { API_BASE } from '../config';
+import { useMemo, useState } from 'react';
+import { ExternalLink, Clock, Search } from 'lucide-react';
 import type { CryptoPrice, HackerNewsItem, Weather, Rates, Headline } from '../types';
 import type { HomepageBrief, HomepageArticle } from '../types';
 import { timeAgo, formatDay } from '../utils/date';
@@ -24,8 +23,6 @@ function handleArticleClick(article: HomepageArticle) {
 interface Props {
   briefs: HomepageBrief[];
   loading: boolean;
-  refreshing: boolean;
-  onRefresh: () => void;
   onSelectCategory: (name: string) => void;
   weather: Weather | null;
   crypto: CryptoPrice[];
@@ -271,8 +268,6 @@ function flattenBriefs(briefs: HomepageBrief[]): CardItem[] {
 export function NewspaperHome({
   briefs,
   loading,
-  refreshing,
-  onRefresh,
   onSelectCategory,
   weather,
   crypto,
@@ -282,34 +277,6 @@ export function NewspaperHome({
 }: Props) {
   const [selectedArticle, setSelectedArticle] = useState<HomepageArticle | null>(null);
   const [selectedSource, setSelectedSource] = useState<string>('');
-  const [tgSending, setTgSending] = useState(false);
-  const [tgSent, setTgSent] = useState(false);
-  const tgTimerRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    return () => { if (tgTimerRef.current) clearTimeout(tgTimerRef.current); };
-  }, []);
-
-  const sendDigestToTelegram = async () => {
-    setTgSending(true);
-    setTgSent(false);
-    try {
-      const resp = await fetch(`${API_BASE}/telegram/digest`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      const data = await resp.json();
-      if (data.success) {
-        setTgSent(true);
-        if (tgTimerRef.current) clearTimeout(tgTimerRef.current);
-        tgTimerRef.current = setTimeout(() => setTgSent(false), 3000);
-      }
-    } catch {
-      // silent fail
-    } finally {
-      setTgSending(false);
-    }
-  };
 
   const allCards = useMemo(() => flattenBriefs(briefs), [briefs]);
 
@@ -371,36 +338,15 @@ export function NewspaperHome({
     return (
       <div className="py-32 text-center">
         <p className="font-serif text-3xl text-ink-muted italic mb-3">Your front page awaits</p>
-        <p className="text-sm text-ink-muted max-w-md mx-auto leading-relaxed mb-6">
+        <p className="text-sm text-ink-muted max-w-md mx-auto leading-relaxed">
           Add categories and feeds, then your latest news will appear here.
         </p>
-        <Button variant="outline" onClick={onRefresh} disabled={refreshing}>
-          <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
-          Load Headlines
-        </Button>
       </div>
     );
   }
 
   return (
     <div>
-      {/* ─── Reload Bar ─── */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-rule">
-        <p className="text-[10px] text-ink-muted uppercase tracking-wider">
-          Latest from {briefs.length} {briefs.length === 1 ? 'category' : 'categories'}
-        </p>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" onClick={sendDigestToTelegram} disabled={tgSending || tgSent}>
-            <Send size={11} className={tgSending ? 'animate-pulse' : ''} />
-            {tgSent ? 'Sent!' : tgSending ? 'Sending…' : 'Send full briefing to Telegram'}
-          </Button>
-          <Button variant="ghost" size="sm" onClick={onRefresh} disabled={refreshing}>
-            <RefreshCw size={11} className={refreshing ? 'animate-spin' : ''} />
-            {refreshing ? 'Refreshing' : 'Refresh'}
-          </Button>
-        </div>
-      </div>
-
       {/* ─── Above the Fold: 5-Column Grid ─── */}
       <div className="newspaper-grid">
         {/* COLUMN 1: Text-only articles from different categories */}
