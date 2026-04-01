@@ -1,12 +1,15 @@
 import { X, Brain, Search } from 'lucide-react';
 import { ForensicPanel } from '../features/mindgames/analysis';
+import type { ParsedSection } from './SummaryView';
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  sections: ParsedSection[];
+  categoryName: string;
 }
 
-export function MindToolsRibbon({ open, onOpenChange }: Props) {
+export function MindToolsRibbon({ open, onOpenChange, sections, categoryName }: Props) {
   return (
     <>
       {!open && (
@@ -34,27 +37,31 @@ export function MindToolsRibbon({ open, onOpenChange }: Props) {
       )}
 
       <div
-        className={`fixed top-0 right-0 z-50 h-full w-[min(720px,90vw)] bg-paper shadow-2xl
+        className={`fixed z-50 bg-paper shadow-2xl border-rule flex flex-col
+          inset-x-0 bottom-0 h-[50dvh] rounded-t-2xl border-t
+          md:inset-y-0 md:right-0 md:left-auto md:bottom-auto md:h-full
+          md:w-[min(720px,90vw)] md:rounded-none md:border-t-0
           transition-transform duration-300 ease-out
-          ${open ? 'translate-x-0' : 'translate-x-full'}`}
+          ${open ? 'translate-y-0 md:translate-y-0' : 'translate-y-full md:translate-y-0 md:translate-x-full'}`}
       >
-        <div className="h-full flex flex-col">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-rule shrink-0">
-            <div className="flex items-center gap-2.5">
-              <Brain size={18} className="text-masthead" />
-              <h2 className="font-serif text-xl font-bold text-ink tracking-tight">Mind Tools</h2>
-            </div>
-            <button
-              onClick={() => onOpenChange(false)}
-              className="p-2 rounded-md text-ink-muted hover:text-ink hover:bg-paper-dark transition-colors cursor-pointer"
-            >
-              <X size={20} />
-            </button>
+        <div className="md:hidden flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full bg-rule" />
+        </div>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-rule shrink-0">
+          <div className="flex items-center gap-2.5">
+            <Brain size={18} className="text-masthead" />
+            <h2 className="font-serif text-xl font-bold text-ink tracking-tight">Mind Tools</h2>
           </div>
+          <button
+            onClick={() => onOpenChange(false)}
+            className="p-2 rounded-md text-ink-muted hover:text-ink hover:bg-paper-dark transition-colors cursor-pointer"
+          >
+            <X size={20} />
+          </button>
+        </div>
 
-          <div className="flex-1 overflow-y-auto px-6 py-6">
-            <ForensicPanel />
-          </div>
+        <div className="flex-1 min-h-0 overflow-y-auto px-0 md:px-6 py-6">
+          <ForensicPanel sections={sections} categoryName={categoryName} />
         </div>
       </div>
     </>

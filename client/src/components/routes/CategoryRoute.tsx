@@ -1,6 +1,6 @@
 import { useParams, useOutletContext, useNavigate } from 'react-router-dom';
-import { useState, useCallback } from 'react';
-import { SummaryView } from '../SummaryView';
+import { useState, useCallback, useMemo } from 'react';
+import { SummaryView, parseSummaryMarkdown } from '../SummaryView';
 import { LeftSidebar } from '../LeftSidebar';
 import { MindToolsRibbon } from '../MindToolsRibbon';
 import { useSummary, useSummaryHistory, useChat } from '../../hooks/useApi';
@@ -30,6 +30,10 @@ export function CategoryRoute() {
     await ctx.deleteCategory(categoryId);
     navigate('/');
   }, [ctx, categoryId, navigate]);
+
+  const sections = useMemo(() => {
+    return summary ? parseSummaryMarkdown(summary.summary, summary.sentiment_data) : [];
+  }, [summary?.summary, summary?.sentiment_data]);
 
   return (
     <>
@@ -65,7 +69,7 @@ export function CategoryRoute() {
         </main>
       </div>
 
-      <MindToolsRibbon open={toolsOpen} onOpenChange={setToolsOpen} />
+      <MindToolsRibbon open={toolsOpen} onOpenChange={setToolsOpen} sections={sections} categoryName={categoryName || ''} />
     </>
   );
 }

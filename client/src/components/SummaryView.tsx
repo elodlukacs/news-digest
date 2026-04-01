@@ -12,14 +12,14 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from './ui/card'
 import type { Summary, ChatMessage } from '../types';
 import { BiasRadarPanel } from '../features/mindgames/bias-radar';
 
-interface ParsedSection {
+export interface ParsedSection {
   title: string;
   url: string;
   content: string;
   sentiment: 'positive' | 'negative' | 'neutral' | 'mixed' | null;
 }
 
-function parseSummaryMarkdown(markdown: string, sentimentData: Summary['sentiment_data']): ParsedSection[] {
+export function parseSummaryMarkdown(markdown: string, sentimentData: Summary['sentiment_data']): ParsedSection[] {
   const sections: ParsedSection[] = [];
   const parts = markdown.split(/\n---\n/);
 
