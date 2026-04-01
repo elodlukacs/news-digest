@@ -59,6 +59,7 @@ export function MindToolsRibbon({ open, onOpenChange, sections, categoryName }: 
       {/* Mobile: floating button at bottom-right */}
       <button
         onClick={() => onOpenChange(true)}
+        aria-label="Open Mind Tools"
         className={`md:hidden fixed bottom-4 right-4 z-40
           bg-masthead text-paper cursor-pointer
           hover:bg-ink transition-all duration-300
@@ -101,6 +102,7 @@ export function MindToolsRibbon({ open, onOpenChange, sections, categoryName }: 
           </div>
           <button
             onClick={() => onOpenChange(false)}
+            aria-label="Close Mind Tools"
             className="p-2 rounded-md text-ink-muted hover:text-ink hover:bg-paper-dark transition-colors cursor-pointer"
           >
             <X size={20} />

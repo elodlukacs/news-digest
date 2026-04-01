@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,200..900;1,7..72,200..900&family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&family=Inter:wght@300;400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 @plugin "tailwindcss-animate";
 
@@ -11,7 +10,7 @@
   --font-widget: 'Source Sans 3', 'Inter', system-ui, sans-serif;
   --color-ink: #2C2C2E;
   --color-ink-light: #4A4A4F;
-  --color-ink-muted: #78787E;
+  --color-ink-muted: #5B5B60;
   --color-paper: #F5F0E8;
   --color-paper-dark: #EDE7DB;
   --color-rule: #D4D4D8;
@@ -112,7 +111,7 @@ body {
 [data-theme="broadsheet"] {
   --color-ink: #2E2B28;
   --color-ink-light: #504B46;
-  --color-ink-muted: #7D7872;
+  --color-ink-muted: #5A5550;
   --color-paper: #FAFAF9;
   --color-paper-dark: #F5F5F4;
   --color-rule: #D6D3D1;
@@ -140,7 +139,7 @@ body {
 [data-theme="evening"] {
   --color-ink: #E8E6E3;
   --color-ink-light: #A8A29E;
-  --color-ink-muted: #78716C;
+  --color-ink-muted: #8A8480;
   --color-paper: #1A1A2E;
   --color-paper-dark: #16162A;
   --color-rule: #3D3D5C;
@@ -260,7 +259,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 [data-theme="morning"] {
   --color-ink: #2D3436;
   --color-ink-light: #4A5568;
-  --color-ink-muted: #718096;
+  --color-ink-muted: #566370;
   --color-paper: #FDF6EC;
   --color-paper-dark: #F7EDDB;
   --color-rule: #CBD5E0;

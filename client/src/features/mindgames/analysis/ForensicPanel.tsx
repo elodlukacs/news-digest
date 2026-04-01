@@ -186,11 +186,12 @@ export function ForensicPanel({ sections = [], categoryName = '' }: ForensicPane
           {/* Article selector + Analyze */}
           {sections.length > 0 && (
             <div className="px-5 md:px-0">
-              <label className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold mb-1.5 block">
+              <label htmlFor="forensic-article-select" className="text-[11px] uppercase tracking-wider text-ink-muted font-semibold mb-1.5 block">
                 Articles in {categoryName}
               </label>
               <div className="flex gap-2">
                 <select
+                  id="forensic-article-select"
                   value={selectedIdx}
                   onChange={(e) => handleSelectArticle(Number(e.target.value))}
                   disabled={loading}

@@ -204,6 +204,7 @@ export function SummaryView({
             size="icon"
             className="md:hidden ml-auto"
             onClick={() => setActionsOpen(true)}
+            aria-label="More options"
           >
             <MoreVertical size={20} />
           </Button>
