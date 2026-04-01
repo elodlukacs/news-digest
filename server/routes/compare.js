@@ -2,6 +2,7 @@ const express = require('express');
 const { callLLM } = require('../lib/llm');
 const db = require('../db');
 const { getPrompt } = require('../lib/promptManager');
+const { parseJSON } = require('../lib/parseJSON');
 
 const router = express.Router();
 
@@ -27,25 +28,14 @@ router.post('/coverage', async (req, res) => {
       { purpose: 'compare_coverage', temperature: 0.3, response_format: { type: 'json_object' }, providerId: provider || null, db }
     );
 
-    let parsed;
-    try {
-      parsed = JSON.parse(result.content);
-    } catch {
-      const cleaned = result.content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      const withCommas = cleaned.replace(/,\s*([\]}])/g, '$1');
-      try {
-        parsed = JSON.parse(withCommas);
-      } catch {
-        parsed = {
-          topic: input,
-          outlets: [],
-          commonFacts: [],
-          framingDifferences: 'Unable to parse analysis',
-          narrativeDivergenceScore: 50,
-          summary: 'Coverage analysis could not be completed due to parsing error.'
-        };
-      }
-    }
+    const parsed = parseJSON(result.content, {
+      topic: input,
+      outlets: [],
+      commonFacts: [],
+      framingDifferences: 'Unable to parse analysis',
+      narrativeDivergenceScore: 50,
+      summary: 'Coverage analysis could not be completed due to parsing error.'
+    });
 
     if (!parsed.outlets || !Array.isArray(parsed.outlets)) {
       parsed.outlets = [];

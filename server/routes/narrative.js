@@ -2,6 +2,7 @@ const express = require('express');
 const db = require('../db');
 const { callLLM } = require('../lib/llm');
 const { getPrompt } = require('../lib/promptManager');
+const { parseJSON } = require('../lib/parseJSON');
 
 const router = express.Router();
 
@@ -28,18 +29,7 @@ router.post('/narrative-map', async (req, res) => {
       { purpose: 'narrative_map', temperature: 0.3, response_format: { type: 'json_object' }, providerId: provider || null, db }
     );
 
-    let parsed;
-    try {
-      parsed = JSON.parse(result.content);
-    } catch {
-      const cleaned = result.content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      const withCommas = cleaned.replace(/,\s*([\]}])/g, '$1');
-      try {
-        parsed = JSON.parse(withCommas);
-      } catch {
-        parsed = generateFallbackNarrative(trimmed);
-      }
-    }
+    const parsed = parseJSON(result.content, generateFallbackNarrative(trimmed));
 
     if (!parsed.stages) parsed.stages = [];
     if (!parsed.platforms) parsed.platforms = PLATFORMS.map((p, i) => ({

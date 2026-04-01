@@ -2,6 +2,7 @@ const express = require('express');
 const db = require('../db');
 const { callLLM } = require('../lib/llm');
 const { getPrompt } = require('../lib/promptManager');
+const { parseJSON } = require('../lib/parseJSON');
 
 const router = express.Router();
 
@@ -20,15 +21,7 @@ router.post('/disinfo-map', async (req, res) => {
       { purpose: 'disinfo_map', temperature: 0.5, response_format: { type: 'json_object' }, db }
     );
 
-    let parsed;
-    try {
-      parsed = JSON.parse(result.content);
-    } catch {
-      const cleaned = result.content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      try { parsed = JSON.parse(cleaned); } catch {
-        return res.status(500).json({ error: 'Failed to generate disinfo map' });
-      }
-    }
+    const parsed = parseJSON(result.content);
 
     const response = {
       gatewayTopics: parsed.gatewayTopics || [],

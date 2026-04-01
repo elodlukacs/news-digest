@@ -2,6 +2,7 @@ const express = require('express');
 const db = require('../db');
 const { callLLM } = require('../lib/llm');
 const { getPrompt, renderPrompt } = require('../lib/promptManager');
+const { parseJSON } = require('../lib/parseJSON');
 
 const router = express.Router();
 
@@ -36,14 +37,8 @@ router.post('/generate', async (req, res) => {
       { purpose: 'inoculation', temperature: 0.7, response_format: { type: 'json_object' }, db }
     );
 
-    let headlines;
-    try {
-      const parsed = JSON.parse(result.content);
-      headlines = Array.isArray(parsed) ? parsed : parsed.headlines || parsed.items || [];
-    } catch {
-      const cleaned = result.content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      try { headlines = JSON.parse(cleaned); } catch { headlines = []; }
-    }
+    const parsedRaw = parseJSON(result.content, []);
+    const headlines = Array.isArray(parsedRaw) ? parsedRaw : parsedRaw.headlines || parsedRaw.items || [];
 
     if (headlines.length === 0) return res.status(500).json({ error: 'Failed to generate headlines' });
 

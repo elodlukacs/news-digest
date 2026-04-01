@@ -93,9 +93,7 @@ export function DisinfoMap() {
     setLoading(true);
     setError('');
     try {
-      const url = regenerate 
-        ? `${API_BASE}/cognitive/disinfo-map`
-        : `${API_BASE}/cognitive/disinfo-map`;
+      const url = `${API_BASE}/cognitive/disinfo-map`;
       
       const res = await fetch(url, {
         method: 'POST',

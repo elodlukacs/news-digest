@@ -12,7 +12,9 @@ router.post('/', async (req, res) => {
     if (!process.env.INTERNAL_API_SECRET) {
       return res.status(500).json({ error: 'INTERNAL_API_SECRET not configured' });
     }
-    if (secret !== process.env.INTERNAL_API_SECRET) {
+    const secretBuf = Buffer.from(secret || '');
+    const expectedBuf = Buffer.from(process.env.INTERNAL_API_SECRET);
+    if (secretBuf.length !== expectedBuf.length || !require('crypto').timingSafeEqual(secretBuf, expectedBuf)) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 

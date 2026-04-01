@@ -47,13 +47,15 @@ router.put('/:id/language', validateId, (req, res) => {
 
 router.delete('/:id', validateId, (req, res) => {
   const catId = req.params.id;
-  db.prepare('DELETE FROM chat_messages WHERE summary_id IN (SELECT id FROM summary_history WHERE category_id = ?)').run(catId);
-  db.prepare('DELETE FROM llm_usage WHERE category_id = ?').run(catId);
-  db.prepare('DELETE FROM summary_history WHERE category_id = ?').run(catId);
-  db.prepare('DELETE FROM articles WHERE category_id = ?').run(catId);
-  db.prepare('DELETE FROM summaries WHERE category_id = ?').run(catId);
-  db.prepare('DELETE FROM feeds WHERE category_id = ?').run(catId);
-  db.prepare('DELETE FROM categories WHERE id = ?').run(catId);
+  db.transaction(() => {
+    db.prepare('DELETE FROM chat_messages WHERE summary_id IN (SELECT id FROM summary_history WHERE category_id = ?)').run(catId);
+    db.prepare('DELETE FROM llm_usage WHERE category_id = ?').run(catId);
+    db.prepare('DELETE FROM summary_history WHERE category_id = ?').run(catId);
+    db.prepare('DELETE FROM articles WHERE category_id = ?').run(catId);
+    db.prepare('DELETE FROM summaries WHERE category_id = ?').run(catId);
+    db.prepare('DELETE FROM feeds WHERE category_id = ?').run(catId);
+    db.prepare('DELETE FROM categories WHERE id = ?').run(catId);
+  })();
   res.json({ ok: true });
 });
 

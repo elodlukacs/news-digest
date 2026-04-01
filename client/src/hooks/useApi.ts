@@ -42,7 +42,8 @@ export function useCategories() {
   }, [refresh]);
 
   const deleteCategory = useCallback(async (id: number) => {
-    await fetch(`${BASE}/categories/${id}`, { method: 'DELETE' });
+    const res = await fetch(`${BASE}/categories/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to delete category');
     await refresh();
   }, [refresh]);
 
@@ -90,7 +91,8 @@ export function useFeeds(categoryId: number | null) {
   }, [categoryId, refresh]);
 
   const deleteFeed = useCallback(async (id: number) => {
-    await fetch(`${BASE}/feeds/${id}`, { method: 'DELETE' });
+    const res = await fetch(`${BASE}/feeds/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to delete feed');
     await refresh();
   }, [refresh]);
 
@@ -586,8 +588,9 @@ export function useInformationDiet(sources: { name: string; url?: string }[]) {
         body: JSON.stringify({ sources }),
         signal: controller.signal,
       });
-      if (!res.ok) throw new Error((await res.json()).error || 'Analysis failed');
-      setResult(await res.json());
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Analysis failed');
+      setResult(data);
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
       setError(err instanceof Error ? err.message : 'Analysis failed');

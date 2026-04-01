@@ -2,6 +2,7 @@ const express = require('express');
 const db = require('../../db');
 const { callLLM } = require('../../lib/llm');
 const { getPrompt, renderPrompt } = require('../../lib/promptManager');
+const { parseJSON } = require('../../lib/parseJSON');
 
 const router = express.Router();
 
@@ -53,12 +54,7 @@ router.get('/', async (req, res) => {
 
     const result = await callLLM(messages, { purpose: 'bias-radar-timeline', temperature: 0.2, db });
 
-    let rawContent = (result.content || '').trim();
-    if (rawContent.startsWith('```')) {
-      rawContent = rawContent.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '').trim();
-    }
-
-    const analysis = JSON.parse(rawContent);
+    const analysis = parseJSON(result.content);
 
     const entries = historical.map(a => ({
       id: a.id,

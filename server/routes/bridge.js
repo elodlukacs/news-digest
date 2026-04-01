@@ -2,6 +2,7 @@ const express = require('express');
 const db = require('../db');
 const { callLLM } = require('../lib/llm');
 const { getPrompt } = require('../lib/promptManager');
+const { parseJSON } = require('../lib/parseJSON');
 
 const router = express.Router();
 
@@ -42,15 +43,7 @@ router.post('/audit', async (req, res) => {
       { purpose: 'bridge_audit', temperature: 0.3, response_format: { type: 'json_object' }, db }
     );
 
-    let parsed;
-    try {
-      parsed = JSON.parse(result.content);
-    } catch {
-      const cleaned = result.content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      try { parsed = JSON.parse(cleaned); } catch {
-        parsed = { siloing_score: 5, sorting_examples: [], othering_examples: [], siloing_examples: [], how_questions: [], shared_values: [] };
-      }
-    }
+    const parsed = parseJSON(result.content, { siloing_score: 5, sorting_examples: [], othering_examples: [], siloing_examples: [], how_questions: [], shared_values: [] });
 
     db.prepare(
       'INSERT INTO bridge_audits (user_id, sources, siloing_score, shared_values, questions) VALUES (?,?,?,?,?)'

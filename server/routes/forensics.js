@@ -2,6 +2,7 @@ const express = require('express');
 const db = require('../db');
 const { callLLM } = require('../lib/llm');
 const { getPrompt } = require('../lib/promptManager');
+const { parseJSON } = require('../lib/parseJSON');
 
 const router = express.Router();
 
@@ -22,19 +23,7 @@ router.post('/', async (req, res) => {
       { purpose: 'forensic_analysis', temperature: 0.2, response_format: { type: 'json_object' }, providerId: provider || null, db }
     );
 
-    let parsed;
-    try {
-      parsed = JSON.parse(result.content);
-    } catch {
-      // JSON repair attempts
-      const cleaned = result.content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      const withCommas = cleaned.replace(/,\s*([\]}])/g, '$1');
-      try {
-        parsed = JSON.parse(withCommas);
-      } catch {
-        parsed = { fallacies: [], funnel_stage: 'unknown', emotional_intensity: 5, bias_score: 5, summary: 'Analysis parsing failed' };
-      }
-    }
+    const parsed = parseJSON(result.content, { fallacies: [], funnel_stage: 'unknown', emotional_intensity: 5, bias_score: 5, summary: 'Analysis parsing failed' });
 
     const uid = userId || 'default';
     db.prepare(
@@ -79,23 +68,17 @@ router.post('/stream', async (req, res) => {
       { purpose: 'forensic_analysis_stream', temperature: 0.2, response_format: { type: 'json_object' }, providerId: provider || null, db }
     );
 
-    let parsed;
-    try {
-      parsed = JSON.parse(result.content);
-    } catch {
-      const cleaned = result.content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      const withCommas = cleaned.replace(/,\s*([\]}])/g, '$1');
-      try { parsed = JSON.parse(withCommas); } catch { parsed = { fallacies: [], emotional_intensity: 5, bias_score: 5 }; }
-    }
+    const parsed = parseJSON(result.content, { fallacies: [], emotional_intensity: 5, bias_score: 5 });
 
     sendEvent('fallacies', { fallacies: parsed.fallacies || [] });
     sendEvent('intensity', { emotional_intensity: parsed.emotional_intensity || 0 });
     sendEvent('funnel', { funnel_stage: parsed.funnel_stage || '' });
     sendEvent('done', { summary: parsed.summary || '', bias_score: parsed.bias_score || 0, provider: result.provider });
 
+    const streamUserId = req.body.userId || 'default';
     db.prepare(
       'INSERT INTO forensic_history (user_id, raw_text, fallacy_data, bias_score, emotional_intensity, funnel_stage) VALUES (?,?,?,?,?,?)'
-    ).run('default', trimmed, JSON.stringify(parsed.fallacies || []), parsed.bias_score || 0, parsed.emotional_intensity || 0, parsed.funnel_stage || '');
+    ).run(streamUserId, trimmed, JSON.stringify(parsed.fallacies || []), parsed.bias_score || 0, parsed.emotional_intensity || 0, parsed.funnel_stage || '');
 
     res.end();
   } catch (err) {
@@ -108,7 +91,8 @@ router.post('/stream', async (req, res) => {
 // GET /api/forensics/history — get forensic analysis history
 router.get('/history', (req, res) => {
   const limit = parseInt(req.query.limit) || 20;
-  const rows = db.prepare('SELECT * FROM forensic_history ORDER BY created_at DESC LIMIT ?').all(limit);
+  const userId = req.query.userId || 'default';
+  const rows = db.prepare('SELECT * FROM forensic_history WHERE user_id = ? ORDER BY created_at DESC LIMIT ?').all(userId, limit);
   res.json(rows);
 });
 
@@ -130,30 +114,19 @@ router.post('/study', async (req, res) => {
       { purpose: 'study_analysis', temperature: 0.2, response_format: { type: 'json_object' }, providerId: provider || null, db }
     );
 
-    let parsed;
-    try {
-      parsed = JSON.parse(result.content);
-    } catch {
-      const cleaned = result.content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      const withCommas = cleaned.replace(/,\s*([\]}])/g, '$1');
-      try {
-        parsed = JSON.parse(withCommas);
-      } catch {
-        parsed = {
-          sampleSize: { score: 5, label: 'Unclear', reasoning: 'Parse failed' },
-          hasControlGroup: { present: false, unclear: true, reasoning: '' },
-          conflictOfInterest: { hasConflict: false, unclear: true, details: '' },
-          peerReviewed: { likely: false, unclear: true, reasoning: '' },
-          effectSize: { meaningful: false, inflated: false, reasoning: '' },
-          methodologyIssues: [],
-          overallScore: 5,
-          issues: ['Analysis parsing failed'],
-          strengths: [],
-          headlineVsStudy: 'Unable to compare',
-          summary: 'Analysis could not be completed due to parsing error.'
-        };
-      }
-    }
+    const parsed = parseJSON(result.content, {
+      sampleSize: { score: 5, label: 'Unclear', reasoning: 'Parse failed' },
+      hasControlGroup: { present: false, unclear: true, reasoning: '' },
+      conflictOfInterest: { hasConflict: false, unclear: true, details: '' },
+      peerReviewed: { likely: false, unclear: true, reasoning: '' },
+      effectSize: { meaningful: false, inflated: false, reasoning: '' },
+      methodologyIssues: [],
+      overallScore: 5,
+      issues: ['Analysis parsing failed'],
+      strengths: [],
+      headlineVsStudy: 'Unable to compare',
+      summary: 'Analysis could not be completed due to parsing error.'
+    });
 
     const uid = userId || 'default';
     db.prepare(
@@ -169,7 +142,8 @@ router.post('/study', async (req, res) => {
 
 router.get('/study/history', (req, res) => {
   const limit = parseInt(req.query.limit) || 20;
-  const rows = db.prepare('SELECT * FROM study_analyses ORDER BY created_at DESC LIMIT ?').all(limit);
+  const userId = req.query.userId || 'default';
+  const rows = db.prepare('SELECT * FROM study_analyses WHERE user_id = ? ORDER BY created_at DESC LIMIT ?').all(userId, limit);
   res.json(rows);
 });
 
