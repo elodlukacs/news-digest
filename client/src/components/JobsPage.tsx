@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import {
   Briefcase, ExternalLink, Search, X, RefreshCw, Sparkles,
   ChevronLeft, ChevronRight, Check, EyeOff, MapPin, Globe,
@@ -11,7 +11,7 @@ import { ScrollArea } from './ui/scroll-area';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Skeleton } from './ui/skeleton';
-import type { Job, JobFilters, JobCounts } from '../types';
+import type { Job, JobFilters, JobCounts, SourceCounts } from '../types';
 import { timeAgoDays } from '../utils/date';
 
 interface Props {
@@ -19,6 +19,7 @@ interface Props {
   total: number;
   counts: JobCounts;
   sources: string[];
+  sourceCounts: SourceCounts;
   countries: string[];
   filters: JobFilters;
   updateFilters: (partial: Partial<JobFilters>) => void;
@@ -62,43 +63,13 @@ const WORK_TYPE_LABELS: Record<string, string> = {
 };
 
 export function JobsPage({
-  jobs, total, counts, sources, filters, updateFilters,
+  jobs, total, counts, sources, sourceCounts, filters, updateFilters,
   page, setPage, loading, fetching, aiFiltering,
   fetchJobs, updateStatus, aiFilter, selectedLlm,
 }: Props) {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
-  const filterScrollRef = useRef<HTMLDivElement>(null);
-  const [scrollState, setScrollState] = useState({ canScrollLeft: false, canScrollRight: false });
   const PER_PAGE = 100;
   const totalPages = Math.ceil(total / PER_PAGE);
-
-  const checkScroll = useCallback(() => {
-    const el = filterScrollRef.current;
-    if (!el) return;
-    setScrollState({
-      canScrollLeft: el.scrollLeft > 0,
-      canScrollRight: el.scrollLeft < el.scrollWidth - el.clientWidth - 1,
-    });
-  }, []);
-
-  useEffect(() => {
-    checkScroll();
-    const el = filterScrollRef.current;
-    if (!el) return;
-    el.addEventListener('scroll', checkScroll, { passive: true });
-    window.addEventListener('resize', checkScroll);
-    return () => {
-      el.removeEventListener('scroll', checkScroll);
-      window.removeEventListener('resize', checkScroll);
-    };
-  }, [checkScroll]);
-
-  const scroll = (direction: 'left' | 'right') => {
-    const el = filterScrollRef.current;
-    if (!el) return;
-    const amount = direction === 'left' ? -200 : 200;
-    el.scrollBy({ left: amount, behavior: 'smooth' });
-  };
 
   return (
     <div>
@@ -143,95 +114,72 @@ export function JobsPage({
       </div>
 
       {/* ─── Filter bar ─── */}
-      <div className="sm:border-b border-rule mb-5">
-        <div className="py-3 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-1.5">
-          {/* Filter buttons row - scrollable on mobile with arrows */}
-          <div className="relative bg-paper-dark/40 -mx-4 px-4 sm:mx-0 sm:px-0 sm:bg-transparent sm:flex-1 sm:min-w-0">
-            {/* Left scroll arrow - mobile only */}
-            {scrollState.canScrollLeft && (
-              <button
-                onClick={() => scroll('left')}
-                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 sm:hidden flex items-center justify-center w-8 h-8 bg-paper/90 backdrop-blur-sm rounded-r-md shadow-sm border border-rule/60 border-l-0"
-                aria-label="Scroll filters left"
-              >
-                <ChevronLeft size={16} className="text-ink-muted" />
-              </button>
-            )}
-
-            <div
-              ref={filterScrollRef}
-              className="flex items-center gap-1.5 overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0"
-            >
-            {/* Source filter */}
-            <div className="flex items-center gap-px shrink-0">
-              <FilterButton active={!filters.source} onClick={() => updateFilters({ source: '' })}>All</FilterButton>
-              {sources.map(s => (
-                <FilterButton key={s} active={filters.source === s} onClick={() => updateFilters({ source: filters.source === s ? '' : s })}>
-                  {SOURCE_LABELS[s] || s}
-                </FilterButton>
-              ))}
-            </div>
-
-            <div className="hidden sm:block w-px h-5 bg-rule/60 mx-1 shrink-0" />
-
-            {/* Work type */}
-            <div className="flex items-center gap-px shrink-0">
-              <FilterButton active={!filters.workType} onClick={() => updateFilters({ workType: '' })}>All</FilterButton>
-              {['remote', 'hybrid', 'onsite'].map(w => (
-                <FilterButton key={w} active={filters.workType === w} onClick={() => updateFilters({ workType: filters.workType === w ? '' : w })}>
-                  {WORK_TYPE_LABELS[w]}
-                </FilterButton>
-              ))}
-            </div>
-
-            <div className="hidden sm:block w-px h-5 bg-rule/60 mx-1 shrink-0" />
-
-            {/* Status */}
-            <div className="flex items-center gap-px shrink-0">
-              <FilterButton active={!filters.status} onClick={() => updateFilters({ status: '' })}>All</FilterButton>
-              <FilterButton active={filters.status === 'new'} onClick={() => updateFilters({ status: filters.status === 'new' ? '' : 'new' })}>
-                New {counts.new > 0 && `(${counts.new})`}
+      <div className="border-b border-rule pb-4 mb-5 space-y-3">
+        {/* Source filter */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider w-14 shrink-0">Source</span>
+          <div className="flex items-center gap-1 flex-wrap">
+            <FilterButton active={!filters.source} onClick={() => updateFilters({ source: '' })}>All ({counts.total})</FilterButton>
+            {sources.map(s => (
+              <FilterButton key={s} active={filters.source === s} onClick={() => updateFilters({ source: filters.source === s ? '' : s })}>
+                {SOURCE_LABELS[s] || s} {sourceCounts[s] !== undefined && `(${sourceCounts[s]})`}
               </FilterButton>
-              <FilterButton active={filters.status === 'applied'} onClick={() => updateFilters({ status: filters.status === 'applied' ? '' : 'applied' })}>
-                Applied {counts.applied > 0 && `(${counts.applied})`}
-              </FilterButton>
-              <FilterButton active={filters.status === 'ignored'} onClick={() => updateFilters({ status: filters.status === 'ignored' ? '' : 'ignored' })}>
-                Ignored {counts.ignored > 0 && `(${counts.ignored})`}
-              </FilterButton>
-            </div>
-
-            <div className="hidden sm:block w-px h-5 bg-rule/60 mx-1 shrink-0" />
-
-            {/* AI toggle */}
-            <FilterButton active={filters.aiOnly} onClick={() => updateFilters({ aiOnly: !filters.aiOnly })}>
-              <span className="flex items-center gap-1"><Sparkles size={10} /> AI {counts.aiFiltered > 0 && `(${counts.aiFiltered})`}</span>
-            </FilterButton>
-            </div>
-
-            {/* Right scroll arrow - mobile only */}
-            {scrollState.canScrollRight && (
-              <button
-                onClick={() => scroll('right')}
-                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 sm:hidden flex items-center justify-center w-8 h-8 bg-paper/90 backdrop-blur-sm rounded-l-md shadow-sm border border-rule/60 border-r-0"
-                aria-label="Scroll filters right"
-              >
-                <ChevronRight size={16} className="text-ink-muted" />
-              </button>
-            )}
+            ))}
           </div>
+        </div>
 
-          {/* Search - full width on mobile, inline on desktop */}
-          <div className="relative w-full sm:w-auto sm:max-w-[200px] sm:shrink-0">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted/50 sm:left-2.5 sm:size-[13px]" />
+        {/* Work type */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider w-14 shrink-0">Type</span>
+          <div className="flex items-center gap-1">
+            <FilterButton active={!filters.workType} onClick={() => updateFilters({ workType: '' })}>All</FilterButton>
+            {['remote', 'hybrid', 'onsite'].map(w => (
+              <FilterButton key={w} active={filters.workType === w} onClick={() => updateFilters({ workType: filters.workType === w ? '' : w })}>
+                {WORK_TYPE_LABELS[w]}
+              </FilterButton>
+            ))}
+          </div>
+        </div>
+
+        {/* Status */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider w-14 shrink-0">Status</span>
+          <div className="flex items-center gap-1">
+            <FilterButton active={!filters.status} onClick={() => updateFilters({ status: '' })}>All</FilterButton>
+            <FilterButton active={filters.status === 'new'} onClick={() => updateFilters({ status: filters.status === 'new' ? '' : 'new' })}>
+              New {counts.new > 0 && `(${counts.new})`}
+            </FilterButton>
+            <FilterButton active={filters.status === 'applied'} onClick={() => updateFilters({ status: filters.status === 'applied' ? '' : 'applied' })}>
+              Applied {counts.applied > 0 && `(${counts.applied})`}
+            </FilterButton>
+            <FilterButton active={filters.status === 'ignored'} onClick={() => updateFilters({ status: filters.status === 'ignored' ? '' : 'ignored' })}>
+              Ignored {counts.ignored > 0 && `(${counts.ignored})`}
+            </FilterButton>
+          </div>
+        </div>
+
+        {/* AI toggle */}
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider w-14 shrink-0">Filter</span>
+          <FilterButton active={filters.aiOnly} onClick={() => updateFilters({ aiOnly: !filters.aiOnly })}>
+            <span className="flex items-center gap-1"><Sparkles size={12} /> AI Curated Only {counts.aiFiltered > 0 && `(${counts.aiFiltered})`}</span>
+          </FilterButton>
+        </div>
+
+        {/* Search */}
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider w-14 shrink-0">Search</span>
+          <div className="relative max-w-xs w-full">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted/50" />
             <Input
               placeholder="Search jobs..."
               value={filters.search}
               onChange={e => updateFilters({ search: e.target.value })}
-              className="pl-9 sm:pl-8 h-9 sm:h-7 text-sm sm:text-[11px] bg-transparent border-rule/60"
+              className="pl-9 h-9 text-sm bg-transparent border-rule/60"
             />
             {filters.search && (
-              <button onClick={() => updateFilters({ search: '' })} className="absolute right-3 sm:right-2.5 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink">
-                <X size={14} className="sm:size-3" />
+              <button onClick={() => updateFilters({ search: '' })} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink">
+                <X size={14} />
               </button>
             )}
           </div>
@@ -385,7 +333,7 @@ function FilterButton({ active, onClick, children }: { active: boolean; onClick:
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`px-2 py-1.5 sm:py-1 text-xs sm:text-[10px] font-sans font-medium rounded transition-all duration-200 cursor-pointer ${
+      className={`px-3.5 py-2 text-sm font-sans font-medium rounded-md transition-all duration-200 cursor-pointer ${
         active
           ? 'bg-masthead text-white shadow-sm'
           : 'text-ink-muted hover:text-ink hover:bg-paper'

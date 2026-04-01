@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { Category, Feed, Summary, HistoryEntry, ChatMessage, Job, JobFilters, JobCounts, Briefing, HomepageBrief, StudyAnalysis, StudyAnalysisEntry, InformationDietResult } from '../types';
+import type { Category, Feed, Summary, HistoryEntry, ChatMessage, Job, JobFilters, JobCounts, SourceCounts, Briefing, HomepageBrief, StudyAnalysis, StudyAnalysisEntry, InformationDietResult } from '../types';
 
 import { API_BASE as BASE } from '../config';
 
@@ -444,6 +444,7 @@ export function useJobs() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [total, setTotal] = useState(0);
   const [counts, setCounts] = useState<JobCounts>({ total: 0, new: 0, applied: 0, ignored: 0, aiFiltered: 0 });
+  const [sourceCounts, setSourceCounts] = useState<SourceCounts>({});
   const [sources, setSources] = useState<string[]>([]);
   const [countries, setCountries] = useState<string[]>([]);
   const [filters, setFilters] = useState<JobFilters>(DEFAULT_FILTERS);
@@ -479,6 +480,7 @@ export function useJobs() {
         setCounts(data.counts);
         setSources(data.sources);
         setCountries(data.countries);
+        setSourceCounts(data.sourceCounts || {});
       }
     } catch (e) {
       if (e instanceof DOMException && e.name === 'AbortError') return;
@@ -559,7 +561,7 @@ export function useJobs() {
   }, [filters, page, fetchList]);
 
   return {
-    jobs, total, counts, sources, countries,
+    jobs, total, counts, sources, countries, sourceCounts,
     filters, updateFilters, page, setPage,
     loading, fetching, aiFiltering,
     fetchJobs, updateStatus, aiFilter,

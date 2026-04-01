@@ -120,7 +120,7 @@ export function ReleasesPage({ releases: defaultReleases }: Props) {
     : '';
 
   return (
-    <div className="py-6">
+    <div>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 pt-6 md:pt-8 mb-6 border-b border-rule pb-4">
         <div>
@@ -144,25 +144,28 @@ export function ReleasesPage({ releases: defaultReleases }: Props) {
       </div>
 
       {/* Filters */}
-      <div className="bg-paper-dark px-5 py-4 mb-6">
-        <div className="flex flex-wrap items-center gap-4">
+      <div className="bg-paper-dark px-4 sm:px-5 py-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
           {/* Type filter */}
-          <div className="flex items-center">
-            {(['all', 'movie', 'tv'] as const).map(t => (
-              <Button
-                key={t}
-                variant={typeFilter === t ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setTypeFilter(t)}
-                className={`px-3.5 py-1.5 text-[11px] uppercase tracking-[0.12em] font-semibold cursor-pointer transition-all duration-200 ${
-                  typeFilter === t
-                    ? 'bg-masthead text-white hover:bg-masthead/90'
-                    : 'text-ink-muted hover:text-ink hover:bg-paper'
-                }`}
-              >
-                {t === 'all' ? 'All' : t === 'movie' ? 'Movies' : 'TV Shows'}
-              </Button>
-            ))}
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider shrink-0">Category</span>
+            <div className="flex items-center">
+              {(['all', 'movie', 'tv'] as const).map(t => (
+                <Button
+                  key={t}
+                  variant={typeFilter === t ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setTypeFilter(t)}
+                  className={`px-3.5 py-1.5 text-sm font-semibold cursor-pointer transition-all duration-200 ${
+                    typeFilter === t
+                      ? 'bg-masthead text-white hover:bg-masthead/90'
+                      : 'text-ink-muted hover:text-ink hover:bg-paper'
+                  }`}
+                >
+                  {t === 'all' ? 'All' : t === 'movie' ? 'Movies' : 'TV Shows'}
+                </Button>
+              ))}
+            </div>
           </div>
 
           {/* Date range */}
@@ -174,9 +177,9 @@ export function ReleasesPage({ releases: defaultReleases }: Props) {
             onClear={() => { setDateFrom(null); setDateTo(null); setPage(1); }}
           />
 
-          <div className="flex-1 min-w-0" />
+          <div className="hidden sm:block flex-1 min-w-0" />
 
-          {/* Search */}
+          {/* Search - full width on mobile, inline on desktop */}
           <div className="relative">
             <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-muted" />
             <Input
@@ -184,10 +187,9 @@ export function ReleasesPage({ releases: defaultReleases }: Props) {
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search titles..."
-              className="pl-8 pr-3 py-1.5 text-sm bg-paper placeholder:text-ink-muted focus:outline-none focus:ring-1 focus:ring-masthead/30 transition-all w-48 h-8"
+              className="pl-8 pr-3 py-1.5 text-sm bg-paper placeholder:text-ink-muted focus:outline-none focus:ring-1 focus:ring-masthead/30 transition-all w-full sm:w-48 h-8"
             />
           </div>
-
         </div>
       </div>
 
@@ -467,28 +469,28 @@ function DateRangeFilter({ dateFrom, dateTo, onDateFromChange, onDateToChange, o
   onClear: () => void;
 }) {
   return (
-    <div className="flex items-center gap-2">
-      <Calendar size={13} className="text-ink-muted shrink-0" />
-      <span className="text-[11px] text-ink-muted font-medium">From</span>
+    <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+      <Calendar size={13} className="text-ink-muted shrink-0 hidden sm:block" />
+      <span className="text-[11px] text-ink-muted font-medium shrink-0">From</span>
       <Input
         type="date"
         value={dateFrom || ''}
         onChange={(e) => onDateFromChange(e.target.value || null)}
-        className="px-3 py-1.5 text-[12px] bg-paper font-medium focus:outline-none focus:ring-1 focus:ring-masthead/30 transition-all cursor-pointer h-8"
+        className="px-2 sm:px-3 py-1.5 text-[12px] bg-paper font-medium focus:outline-none focus:ring-1 focus:ring-masthead/30 transition-all cursor-pointer h-8 flex-1 min-w-[120px]"
       />
-      <span className="text-[11px] text-ink-muted font-medium">to</span>
+      <span className="text-[11px] text-ink-muted font-medium shrink-0">to</span>
       <Input
         type="date"
         value={dateTo || ''}
         onChange={(e) => onDateToChange(e.target.value || null)}
-        className="px-3 py-1.5 text-[12px] bg-paper font-medium focus:outline-none focus:ring-1 focus:ring-masthead/30 transition-all cursor-pointer h-8"
+        className="px-2 sm:px-3 py-1.5 text-[12px] bg-paper font-medium focus:outline-none focus:ring-1 focus:ring-masthead/30 transition-all cursor-pointer h-8 flex-1 min-w-[120px]"
       />
       {(dateFrom || dateTo) && (
         <Button
           variant="ghost"
           size="icon"
           onClick={onClear}
-          className="h-7 w-7"
+          className="h-7 w-7 shrink-0"
           title="Clear dates"
         >
           <X size={13} />

@@ -128,6 +128,8 @@ export interface JobCounts {
   aiFiltered: number;
 }
 
+export type SourceCounts = Record<string, number>;
+
 export interface ReleaseDetail {
   id: number;
   title: string;

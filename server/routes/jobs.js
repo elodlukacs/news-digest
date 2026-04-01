@@ -57,6 +57,9 @@ router.get('/', (req, res) => {
 
   const sources = db.prepare("SELECT DISTINCT source FROM jobs WHERE source != '' ORDER BY source").all().map(r => r.source);
   const countries = db.prepare("SELECT DISTINCT country FROM jobs WHERE country != '' ORDER BY country").all().map(r => r.country);
+  const sourceCountRows = db.prepare("SELECT source, COUNT(*) as count FROM jobs GROUP BY source").all();
+  const sourceCounts = {};
+  for (const r of sourceCountRows) sourceCounts[r.source] = r.count;
 
   res.json({
     jobs: jobs.map(r => ({
@@ -67,7 +70,7 @@ router.get('/', (req, res) => {
     })),
     total: countRow.total,
     counts: { ...counts, aiFiltered: aiCount.count },
-    sources, countries,
+    sources, countries, sourceCounts,
     page: parseInt(page), limit: parseInt(limit),
   });
 });
