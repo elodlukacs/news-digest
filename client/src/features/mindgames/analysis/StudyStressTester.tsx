@@ -160,7 +160,9 @@ export function StudyStressTester() {
             let analysisData: StudyAnalysis | null = null;
             try {
               analysisData = typeof h.analysis_data === 'string' ? JSON.parse(h.analysis_data) : h.analysis_data;
-            } catch { /* ignore */ }
+            } catch (err) {
+              console.error('Failed to parse study analysis data:', err);
+            }
             return (
               <button key={h.id} onClick={() => { setHeadline(h.headline); setResult(analysisData); setShowHistory(false); }}
                 className="w-full text-left p-2 rounded hover:bg-paper border border-rule/50 cursor-pointer transition-colors">

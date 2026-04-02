@@ -63,6 +63,36 @@
     --accent-error-border: #FED7AA;
     --accent-error-text: #C2410C;
     --accent-error-text-strong: #7C2D12;
+    /* Sentiment badge colors */
+    --color-positive-bg: #ECFDF5;
+    --color-positive-text: #065F46;
+    --color-positive-dot: #10B981;
+    --color-negative-bg: #FEF2F2;
+    --color-negative-text: #991B1B;
+    --color-negative-dot: #EF4444;
+    --color-neutral-bg: #F3F4F6;
+    --color-neutral-text: #4B5563;
+    --color-neutral-dot: #9CA3AF;
+    --color-mixed-bg: #FFFBEB;
+    --color-mixed-text: #92400E;
+    --color-mixed-dot: #F59E0B;
+    /* Job source badge colors */
+    --color-source-remoteok-bg: #ECFDF5;
+    --color-source-remoteok-text: #065F46;
+    --color-source-weworkremotely-bg: #EFF6FF;
+    --color-source-weworkremotely-text: #1E40AF;
+    --color-source-himalayas-bg: #F3E8FF;
+    --color-source-himalayas-text: #7C3AED;
+    --color-source-remotive-bg: #FFF7ED;
+    --color-source-remotive-text: #C2410C;
+    --color-source-arbeitnow-bg: #ECFEFF;
+    --color-source-arbeitnow-text: #0E7490;
+    --color-source-linkedin-bg: #F0F9FF;
+    --color-source-linkedin-text: #0369A1;
+    --color-source-indeed-bg: #EEF2FF;
+    --color-source-indeed-text: #4338CA;
+    --color-source-hackernews-bg: #FFFBEB;
+    --color-source-hackernews-text: #B45309;
   }
 }
 
@@ -164,9 +194,39 @@ body {
   --accent-success-text: #86EFAC;
   --accent-success-text-strong: #BBF7D0;
   --accent-error-bg: #7C2D12;
-  --accent-error-border: #EA580C;
-  --accent-error-text: #FED7AA;
-  --accent-error-text-strong: #FFF7ED;
+    --accent-error-border: #EA580C;
+    --accent-error-text: #FED7AA;
+    --accent-error-text-strong: #FFF7ED;
+    /* Sentiment badge colors — dark theme */
+    --color-positive-bg: #064E3B;
+    --color-positive-text: #6EE7B7;
+    --color-positive-dot: #34D399;
+    --color-negative-bg: #7F1D1D;
+    --color-negative-text: #FCA5A5;
+    --color-negative-dot: #F87171;
+    --color-neutral-bg: #374151;
+    --color-neutral-text: #D1D5DB;
+    --color-neutral-dot: #9CA3AF;
+    --color-mixed-bg: #78350F;
+    --color-mixed-text: #FCD34D;
+    --color-mixed-dot: #FBBF24;
+    /* Job source badge colors — dark theme */
+    --color-source-remoteok-bg: #064E3B;
+    --color-source-remoteok-text: #6EE7B7;
+    --color-source-weworkremotely-bg: #1E3A5F;
+    --color-source-weworkremotely-text: #93C5FD;
+    --color-source-himalayas-bg: #4C1D95;
+    --color-source-himalayas-text: #C4B5FD;
+    --color-source-remotive-bg: #7C2D12;
+    --color-source-remotive-text: #FDBA74;
+    --color-source-arbeitnow-bg: #164E63;
+    --color-source-arbeitnow-text: #67E8F9;
+    --color-source-linkedin-bg: #0C4A6E;
+    --color-source-linkedin-text: #7DD3FC;
+    --color-source-indeed-bg: #312E81;
+    --color-source-indeed-text: #A5B4FC;
+    --color-source-hackernews-bg: #78350F;
+    --color-source-hackernews-text: #FCD34D;
 }
 
 /* ─── Newspaper Grid Layout ─── */

@@ -1,7 +1,6 @@
 ---
 description: General code quality reviewer. Use after implementation to check for bugs, error handling, dead code, and convention violations.
 mode: subagent
-model: anthropic/claude-sonnet
 steps: 20
 hidden: false
 color: "#F59E0B"

@@ -72,7 +72,9 @@ export function ScientistPanel({ selectedLlm }: Props) {
     try {
       const res = await fetch(`${API_BASE}/scientist/journal`);
       setJournal(await res.json());
-    } catch { /* ignore */ } finally {
+    } catch (err) {
+      console.error('Failed to load scientist journal:', err);
+    } finally {
       setJournalLoading(false);
     }
   }, []);
@@ -127,7 +129,9 @@ export function ScientistPanel({ selectedLlm }: Props) {
           mode: mode === 'unknown' ? 'scientist' : mode,
         }),
       });
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.error('Scientist panel error:', err);
+    }
 
     setRecorded({ initial: initialConfidence, final });
   };

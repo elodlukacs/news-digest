@@ -175,9 +175,19 @@ db.exec(`
   );
 `);
 
-try { db.exec(`ALTER TABLE categories ADD COLUMN custom_prompt TEXT DEFAULT ''`); } catch (e) {}
-try { db.exec(`ALTER TABLE categories ADD COLUMN language TEXT DEFAULT 'English'`); } catch (e) {}
-try { db.exec(`ALTER TABLE articles ADD COLUMN topic_id TEXT DEFAULT ''`); } catch (e) {}
+function addColumnIfNotExists(table, column, definition) {
+  try {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  } catch (e) {
+    if (!e.message.includes('duplicate column') && !e.message.includes('already exists')) {
+      console.error(`Migration failed for ${table}.${column}:`, e.message);
+    }
+  }
+}
+
+addColumnIfNotExists('categories', 'custom_prompt', "TEXT DEFAULT ''");
+addColumnIfNotExists('categories', 'language', "TEXT DEFAULT 'English'");
+addColumnIfNotExists('articles', 'topic_id', "TEXT DEFAULT ''");
 
 db.exec(`
   CREATE INDEX IF NOT EXISTS idx_sh_cat_date ON summary_history(category_id, date_key);
@@ -197,13 +207,17 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_study_user ON study_analyses(user_id);
   CREATE INDEX IF NOT EXISTS idx_study_date ON study_analyses(created_at);
 `);
-try { db.exec(`ALTER TABLE articles ADD COLUMN body_text TEXT DEFAULT ''`); } catch (e) {}
-try { db.exec(`ALTER TABLE cognitive_users ADD COLUMN antibody_count INTEGER DEFAULT 0`); } catch (e) {}
-try { db.exec(`ALTER TABLE cognitive_users ADD COLUMN last_inoculation_date TEXT`); } catch (e) {}
-// Migrate data from old column if it exists
-try { db.exec(`UPDATE cognitive_users SET antibody_count = rethinking_score WHERE antibody_count = 0 AND rethinking_score > 0`); } catch (e) {}
+addColumnIfNotExists('articles', 'body_text', "TEXT DEFAULT ''");
+addColumnIfNotExists('cognitive_users', 'antibody_count', 'INTEGER DEFAULT 0');
+addColumnIfNotExists('cognitive_users', 'last_inoculation_date', 'TEXT');
 
 db.prepare("INSERT OR IGNORE INTO user_settings (key, value) VALUES ('theme', 'classic')").run();
+
+// Migrate deprecated feeds.reuters.com URLs (discontinued June 2020)
+db.prepare("UPDATE feeds SET url = 'https://cdn.feedcontrol.net/8/1115-TvWAhu4G064WT.xml' WHERE url = 'https://feeds.reuters.com/Reuters/worldNews'").run();
+
+// Migrate deprecated feeds.reuters.com URLs (discontinued June 2020)
+db.prepare("UPDATE feeds SET url = 'https://cdn.feedcontrol.net/8/1115-TvWAhu4G064WT.xml' WHERE url = 'https://feeds.reuters.com/Reuters/worldNews'").run();
 
 const count = db.prepare('SELECT COUNT(*) as c FROM categories').get();
 if (count.c === 0) {
@@ -218,7 +232,7 @@ if (count.c === 0) {
 
     insertFeed.run(1, 'TechCrunch', 'https://techcrunch.com/feed/');
     insertFeed.run(1, 'Ars Technica', 'https://feeds.arstechnica.com/arstechnica/index');
-    insertFeed.run(2, 'Reuters World', 'https://feeds.reuters.com/Reuters/worldNews');
+    insertFeed.run(2, 'Reuters World', 'https://cdn.feedcontrol.net/8/1115-TvWAhu4G064WT.xml');
     insertFeed.run(2, 'BBC News', 'https://feeds.bbci.co.uk/news/world/rss.xml');
     insertFeed.run(3, 'Nature', 'https://www.nature.com/nature.rss');
     insertFeed.run(4, 'Bloomberg', 'https://feeds.bloomberg.com/markets/news.rss');

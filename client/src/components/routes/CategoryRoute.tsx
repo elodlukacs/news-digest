@@ -30,7 +30,7 @@ export function CategoryRoute() {
   }, [ctx, categoryId, navigate]);
 
   return (
-    <div className="max-w-7xl mx-auto px-6 pb-20 flex gap-8">
+    <div className="max-w-[1600px] mx-auto px-4 pb-20 flex gap-8">
       <LeftSidebar
         dates={dates}
         selectedSnapshotId={selectedSnapshotId}

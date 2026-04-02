@@ -61,7 +61,10 @@ export function ForensicPanel({ sections = [], categoryName = '', headline = '',
     try {
       const res = await fetch(`${API_BASE}/forensics/history?limit=10`);
       setHistory(await res.json());
-    } catch { /* ignore */ } finally { setHistoryLoading(false); }
+    } catch (err) {
+      console.error('Failed to load forensic history:', err);
+      setHistory([]);
+    } finally { setHistoryLoading(false); }
   }, []);
 
   const toggleHistory = () => {

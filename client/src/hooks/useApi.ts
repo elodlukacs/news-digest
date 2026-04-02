@@ -245,9 +245,12 @@ export function useChat(summaryId: number | null, providerId: string = 'openai/g
     abortRef.current = controller;
 
     fetch(`${BASE}/chat/${summaryId}`, { signal: controller.signal })
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`Server returned ${r.status}`);
+        return r.json();
+      })
       .then((data) => { if (!controller.signal.aborted) setMessages(data); })
-      .catch(() => { if (!controller.signal.aborted) setMessages([]); });
+      .catch((err) => { if (!controller.signal.aborted) { console.error('Failed to load chat history:', err); setMessages([]); } });
 
     return () => { controller.abort(); abortRef.current = null; };
   }, [summaryId]);
@@ -270,6 +273,10 @@ export function useChat(summaryId: number | null, providerId: string = 'openai/g
         signal: controller.signal,
       });
       const reply = await res.json();
+      if (!res.ok) {
+        setError(reply.error || 'Failed to send message');
+        return;
+      }
       // Only append if summaryId hasn't changed since the request started
       if (reply.content && summaryId === requestId && !controller.signal.aborted) {
         setMessages((prev) => [...prev, reply]);
@@ -328,7 +335,7 @@ export function useBriefing(providerId: string = 'openai/gpt-oss-20b') {
       });
       if (controller.signal.aborted) return;
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok) throw new Error(data.error || 'Failed to generate briefing');
       setBriefing(data);
     } catch (e: unknown) {
       if (e instanceof DOMException && e.name === 'AbortError') return;
@@ -399,7 +406,7 @@ export function useStudyAnalysis() {
       const res = await fetch(`${BASE}/forensics/study/history?limit=20`);
       const data = await res.json();
       setHistory(Array.isArray(data) ? data : []);
-    } catch { /* ignore */ } finally { setHistoryLoading(false); }
+    } catch (err) { console.error('Failed to load study history:', err); setHistory([]); } finally { setHistoryLoading(false); }
   }, []);
 
   const analyze = useCallback(async (headline: string, provider?: string) => {

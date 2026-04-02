@@ -1,7 +1,6 @@
 ---
 description: TypeScript-specific reviewer. Use for type safety, strict mode compliance, and verbatimModuleSyntax checks.
 mode: subagent
-model: anthropic/claude-sonnet
 steps: 15
 hidden: false
 color: "#3B82F6"

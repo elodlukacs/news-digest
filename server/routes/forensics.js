@@ -61,10 +61,10 @@ router.post('/stream', async (req, res) => {
   res.flushHeaders();
 
   let closed = false;
-  req.on('close', () => { closed = true; console.log('[SSE] Client disconnected'); });
+  req.on('close', () => { closed = true; });
 
   const sendEvent = (event, data) => {
-    if (closed) { console.log(`[SSE] Skipping ${event} — client closed`); return; }
+    if (closed) return;
     res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
   };
 
@@ -78,7 +78,6 @@ router.post('/stream', async (req, res) => {
       { purpose: 'forensic_analysis_stream', temperature: 0.2, response_format: { type: 'json_object' }, providerId: provider || null, db }
     );
 
-    console.log('[SSE] LLM done, closed=', closed);
     const parsed = parseJSON(result.content, { fallacies: [], emotional_intensity: 5, bias_score: 5 });
 
     sendEvent('fallacies', { fallacies: parsed.fallacies || [] });
@@ -101,9 +100,9 @@ router.post('/stream', async (req, res) => {
 
 // GET /api/forensics/history — get forensic analysis history
 router.get('/history', (req, res) => {
-  const limit = parseInt(req.query.limit) || 20;
+  const limit = Math.min(parseInt(req.query.limit) || 20, 100);
   const userId = req.query.userId || 'default';
-  const rows = db.prepare('SELECT * FROM forensic_history WHERE user_id = ? ORDER BY created_at DESC LIMIT ?').all(userId, limit);
+  const rows = db.prepare('SELECT id, user_id, raw_text, fallacy_data, bias_score, emotional_intensity, funnel_stage, created_at FROM forensic_history WHERE user_id = ? ORDER BY created_at DESC LIMIT ?').all(userId, limit);
   res.json(rows);
 });
 

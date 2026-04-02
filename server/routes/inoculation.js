@@ -9,12 +9,12 @@ const router = express.Router();
 // ─── 6 Core Viral Antigens (Tactics) ───
 // Each maps to a cognitive bias (Host Vulnerability)
 const VIRAL_ANTIGENS = [
-  { id: 'impersonation', label: 'Impersonation', icon: '🎪', bias: 'Authority Bias', description: 'Mimicking credible sources or authorities to borrow their trust' },
-  { id: 'emotion', label: 'Emotion', icon: '🔥', bias: 'Emotional Reasoning', description: 'Using fear, outrage, or anger to bypass rational thinking' },
-  { id: 'polarization', label: 'Polarization', icon: '⚡', bias: 'In-Group Bias', description: 'Reframing neutral topics as divisive intergroup conflicts' },
-  { id: 'conspiracy', label: 'Conspiracy', icon: '🕵️', bias: 'Pattern Seeking', description: 'Suggesting hidden agendas to explain complex or random events' },
-  { id: 'discredit', label: 'Discredit', icon: '🛡️', bias: 'Confirmation Bias', description: 'Attacking the source rather than engaging with the evidence' },
-  { id: 'trolling', label: 'Trolling', icon: '🎭', bias: 'Emotional Reactivity', description: 'Deliberate provocation designed to trigger defensive reactions' },
+  { id: 'impersonation', label: 'Impersonation', icon: 'Users', bias: 'Authority Bias', description: 'Mimicking credible sources or authorities to borrow their trust' },
+  { id: 'emotion', label: 'Emotion', icon: 'Flame', bias: 'Emotional Reasoning', description: 'Using fear, outrage, or anger to bypass rational thinking' },
+  { id: 'polarization', label: 'Polarization', icon: 'Zap', bias: 'In-Group Bias', description: 'Reframing neutral topics as divisive intergroup conflicts' },
+  { id: 'conspiracy', label: 'Conspiracy', icon: 'Search', bias: 'Pattern Seeking', description: 'Suggesting hidden agendas to explain complex or random events' },
+  { id: 'discredit', label: 'Discredit', icon: 'Shield', bias: 'Confirmation Bias', description: 'Attacking the source rather than engaging with the evidence' },
+  { id: 'trolling', label: 'Trolling', icon: 'Theater', bias: 'Emotional Reactivity', description: 'Deliberate provocation designed to trigger defensive reactions' },
 ];
 
 // ─── Dose tiers based on antibody_count ───
@@ -97,7 +97,9 @@ router.post('/generate', async (req, res) => {
 
     // Find the virus headline (is_virus: true) — the LLM marks it
     const virusIndex = rawHeadlines.findIndex(h => h.is_virus === true);
-    const targetIndex = virusIndex >= 0 ? virusIndex : 0;
+    if (virusIndex < 0) {
+      return res.status(500).json({ error: 'Failed to generate a valid round — no virus headline detected' });
+    }
 
     // Shuffle headlines so the virus isn't always at the same position
     const shuffled = shuffleArray(rawHeadlines);
@@ -239,7 +241,7 @@ router.get('/tactics', (req, res) => {
 // ─── GET /api/inoculation/sessions — get user sessions + immunity status ───
 router.get('/sessions', (req, res) => {
   const userId = req.query.userId || 'default';
-  const rows = db.prepare('SELECT * FROM inoculation_sessions WHERE user_id = ? ORDER BY created_at DESC LIMIT 20').all(userId);
+  const rows = db.prepare('SELECT id, user_id, level, score, created_at FROM inoculation_sessions WHERE user_id = ? ORDER BY created_at DESC LIMIT 20').all(userId);
 
   const user = db.prepare('SELECT antibody_count, last_inoculation_date FROM cognitive_users WHERE id = ?').get(userId);
   const { antibodyCount, needsBooster } = checkImmunityDecay(userId);

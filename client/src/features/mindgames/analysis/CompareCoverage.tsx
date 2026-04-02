@@ -63,7 +63,9 @@ export function CompareCoverage() {
         const parsed = JSON.parse(stored);
         setHistory(Array.isArray(parsed) ? parsed.slice(0, 10) : []);
       }
-    } catch { /* ignore */ } finally { setHistoryLoading(false); }
+    } catch (err) {
+      console.error('Failed to load compare coverage history:', err);
+    } finally { setHistoryLoading(false); }
   }, []);
 
   const toggleHistory = () => {
@@ -77,7 +79,9 @@ export function CompareCoverage() {
       const existing: CoverageResult[] = stored ? JSON.parse(stored) : [];
       const updated = [data, ...existing.filter(h => h.topic !== data.topic)].slice(0, 10);
       localStorage.setItem('compareCoverageHistory', JSON.stringify(updated));
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.error('Failed to save compare coverage history:', err);
+    }
   };
 
   const analyze = async () => {

@@ -1,7 +1,6 @@
 ---
 description: System architecture reviewer. Use when planning new features, evaluating design decisions, or checking structural integrity of the codebase.
 mode: subagent
-model: anthropic/claude-sonnet
 steps: 20
 hidden: false
 color: "#6366F1"

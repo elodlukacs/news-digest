@@ -37,7 +37,9 @@ export function PromptLibrary() {
           const data = await res.json();
           setCategories(data);
         }
-      } catch { /* ignore */ } finally {
+      } catch (err) {
+        console.error('Failed to load prompts:', err);
+      } finally {
         setLoading(false);
       }
     }
@@ -63,7 +65,9 @@ export function PromptLibrary() {
       await navigator.clipboard.writeText(text);
       setCopiedId(id);
       setTimeout(() => setCopiedId(null), 2000);
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.error('Failed to copy prompt:', err);
+    }
   }, []);
 
   const toggleExpand = useCallback((id: string) => {
