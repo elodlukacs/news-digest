@@ -115,27 +115,31 @@ export function JobsPage({
 
       {/* ─── Filter bar ─── */}
       <div className="border-b border-rule pb-5 mb-5 space-y-4">
-        {/* Search */}
-        <div className="relative">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted/50 pointer-events-none" />
-          <input
-            type="search"
-            placeholder="Search jobs, companies, skills…"
-            value={filters.search}
-            onChange={e => updateFilters({ search: e.target.value })}
-            className="w-full pl-10 pr-9 py-2.5 rounded-xl border border-rule bg-paper-dark text-sm text-ink placeholder:text-ink-muted/50 focus:outline-none focus:border-masthead/40 focus:ring-2 focus:ring-masthead/10 transition-all"
-          />
-          {filters.search && (
-            <button onClick={() => updateFilters({ search: '' })} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink">
-              <X size={14} />
-            </button>
-          )}
-        </div>
 
-        {/* Source filter */}
-        <div className="space-y-1.5">
-          <p className="text-[10px] font-bold text-ink-muted uppercase tracking-widest">Source</p>
-          <div className="flex items-center gap-1.5 flex-wrap">
+        {/* Desktop: single compact row — search + all filters inline */}
+        <div className="hidden md:flex md:items-center md:gap-3 md:flex-wrap">
+          {/* Search */}
+          <div className="relative w-56">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted/50 pointer-events-none" />
+            <input
+              type="search"
+              placeholder="Search…"
+              value={filters.search}
+              onChange={e => updateFilters({ search: e.target.value })}
+              className="w-full pl-8 pr-7 py-1.5 rounded-lg border border-rule bg-paper-dark text-sm text-ink placeholder:text-ink-muted/50 focus:outline-none focus:border-masthead/40 focus:ring-2 focus:ring-masthead/10 transition-all"
+            />
+            {filters.search && (
+              <button onClick={() => updateFilters({ search: '' })} className="absolute right-2 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink">
+                <X size={12} />
+              </button>
+            )}
+          </div>
+
+          <span className="w-px h-5 bg-rule shrink-0" />
+
+          {/* Source */}
+          <span className="text-[10px] font-bold text-ink-muted uppercase tracking-widest shrink-0">Source</span>
+          <div className="flex items-center gap-1 flex-wrap">
             <FilterButton active={!filters.source} onClick={() => updateFilters({ source: '' })}>All <span className="opacity-60">({counts.total})</span></FilterButton>
             {sources.map(s => (
               <FilterButton key={s} active={filters.source === s} onClick={() => updateFilters({ source: filters.source === s ? '' : s })}>
@@ -143,45 +147,114 @@ export function JobsPage({
               </FilterButton>
             ))}
           </div>
+
+          <span className="w-px h-5 bg-rule shrink-0" />
+
+          {/* Type */}
+          <span className="text-[10px] font-bold text-ink-muted uppercase tracking-widest shrink-0">Type</span>
+          <div className="flex items-center gap-1">
+            <FilterButton active={!filters.workType} onClick={() => updateFilters({ workType: '' })}>All</FilterButton>
+            {['remote', 'hybrid', 'onsite'].map(w => (
+              <FilterButton key={w} active={filters.workType === w} onClick={() => updateFilters({ workType: filters.workType === w ? '' : w })}>
+                {WORK_TYPE_LABELS[w]}
+              </FilterButton>
+            ))}
+          </div>
+
+          <span className="w-px h-5 bg-rule shrink-0" />
+
+          {/* Status */}
+          <span className="text-[10px] font-bold text-ink-muted uppercase tracking-widest shrink-0">Status</span>
+          <div className="flex items-center gap-1">
+            <FilterButton active={!filters.status} onClick={() => updateFilters({ status: '' })}>All</FilterButton>
+            <FilterButton active={filters.status === 'new'} onClick={() => updateFilters({ status: filters.status === 'new' ? '' : 'new' })}>
+              New{counts.new > 0 && <span className="opacity-60"> ({counts.new})</span>}
+            </FilterButton>
+            <FilterButton active={filters.status === 'applied'} onClick={() => updateFilters({ status: filters.status === 'applied' ? '' : 'applied' })}>
+              Applied{counts.applied > 0 && <span className="opacity-60"> ({counts.applied})</span>}
+            </FilterButton>
+            <FilterButton active={filters.status === 'ignored'} onClick={() => updateFilters({ status: filters.status === 'ignored' ? '' : 'ignored' })}>
+              Ignored{counts.ignored > 0 && <span className="opacity-60"> ({counts.ignored})</span>}
+            </FilterButton>
+          </div>
+
+          <span className="w-px h-5 bg-rule shrink-0" />
+
+          {/* AI Curation */}
+          <FilterButton active={filters.aiOnly} onClick={() => updateFilters({ aiOnly: !filters.aiOnly })}>
+            <Sparkles size={11} /> AI Only{counts.aiFiltered > 0 && <span className="opacity-60"> ({counts.aiFiltered})</span>}
+          </FilterButton>
         </div>
 
-        {/* Work type + Status side by side on mobile */}
-        <div className="grid grid-cols-2 gap-4">
+        {/* Mobile: stacked sections */}
+        <div className="md:hidden space-y-4">
+          {/* Search */}
+          <div className="relative">
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted/50 pointer-events-none" />
+            <input
+              type="search"
+              placeholder="Search jobs, companies, skills…"
+              value={filters.search}
+              onChange={e => updateFilters({ search: e.target.value })}
+              className="w-full pl-10 pr-9 py-2.5 rounded-xl border border-rule bg-paper-dark text-sm text-ink placeholder:text-ink-muted/50 focus:outline-none focus:border-masthead/40 focus:ring-2 focus:ring-masthead/10 transition-all"
+            />
+            {filters.search && (
+              <button onClick={() => updateFilters({ search: '' })} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink">
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          {/* Source filter */}
           <div className="space-y-1.5">
-            <p className="text-[10px] font-bold text-ink-muted uppercase tracking-widest">Type</p>
+            <p className="text-[10px] font-bold text-ink-muted uppercase tracking-widest">Source</p>
             <div className="flex items-center gap-1.5 flex-wrap">
-              <FilterButton active={!filters.workType} onClick={() => updateFilters({ workType: '' })}>All</FilterButton>
-              {['remote', 'hybrid', 'onsite'].map(w => (
-                <FilterButton key={w} active={filters.workType === w} onClick={() => updateFilters({ workType: filters.workType === w ? '' : w })}>
-                  {WORK_TYPE_LABELS[w]}
+              <FilterButton active={!filters.source} onClick={() => updateFilters({ source: '' })}>All <span className="opacity-60">({counts.total})</span></FilterButton>
+              {sources.map(s => (
+                <FilterButton key={s} active={filters.source === s} onClick={() => updateFilters({ source: filters.source === s ? '' : s })}>
+                  {SOURCE_LABELS[s] || s}{sourceCounts[s] !== undefined && <span className="opacity-60"> ({sourceCounts[s]})</span>}
                 </FilterButton>
               ))}
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-bold text-ink-muted uppercase tracking-widest">Status</p>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <FilterButton active={!filters.status} onClick={() => updateFilters({ status: '' })}>All</FilterButton>
-              <FilterButton active={filters.status === 'new'} onClick={() => updateFilters({ status: filters.status === 'new' ? '' : 'new' })}>
-                New{counts.new > 0 && <span className="opacity-60"> ({counts.new})</span>}
-              </FilterButton>
-              <FilterButton active={filters.status === 'applied'} onClick={() => updateFilters({ status: filters.status === 'applied' ? '' : 'applied' })}>
-                Applied{counts.applied > 0 && <span className="opacity-60"> ({counts.applied})</span>}
-              </FilterButton>
-              <FilterButton active={filters.status === 'ignored'} onClick={() => updateFilters({ status: filters.status === 'ignored' ? '' : 'ignored' })}>
-                Ignored{counts.ignored > 0 && <span className="opacity-60"> ({counts.ignored})</span>}
-              </FilterButton>
+          {/* Work type + Status side by side */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-bold text-ink-muted uppercase tracking-widest">Type</p>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <FilterButton active={!filters.workType} onClick={() => updateFilters({ workType: '' })}>All</FilterButton>
+                {['remote', 'hybrid', 'onsite'].map(w => (
+                  <FilterButton key={w} active={filters.workType === w} onClick={() => updateFilters({ workType: filters.workType === w ? '' : w })}>
+                    {WORK_TYPE_LABELS[w]}
+                  </FilterButton>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-bold text-ink-muted uppercase tracking-widest">Status</p>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <FilterButton active={!filters.status} onClick={() => updateFilters({ status: '' })}>All</FilterButton>
+                <FilterButton active={filters.status === 'new'} onClick={() => updateFilters({ status: filters.status === 'new' ? '' : 'new' })}>
+                  New{counts.new > 0 && <span className="opacity-60"> ({counts.new})</span>}
+                </FilterButton>
+                <FilterButton active={filters.status === 'applied'} onClick={() => updateFilters({ status: filters.status === 'applied' ? '' : 'applied' })}>
+                  Applied{counts.applied > 0 && <span className="opacity-60"> ({counts.applied})</span>}
+                </FilterButton>
+                <FilterButton active={filters.status === 'ignored'} onClick={() => updateFilters({ status: filters.status === 'ignored' ? '' : 'ignored' })}>
+                  Ignored{counts.ignored > 0 && <span className="opacity-60"> ({counts.ignored})</span>}
+                </FilterButton>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* AI toggle */}
-        <div className="space-y-1.5">
-          <p className="text-[10px] font-bold text-ink-muted uppercase tracking-widest">Curation</p>
-          <FilterButton active={filters.aiOnly} onClick={() => updateFilters({ aiOnly: !filters.aiOnly })}>
-            <Sparkles size={12} /> AI Curated Only{counts.aiFiltered > 0 && <span className="opacity-60"> ({counts.aiFiltered})</span>}
-          </FilterButton>
+          {/* AI toggle */}
+          <div className="space-y-1.5">
+            <p className="text-[10px] font-bold text-ink-muted uppercase tracking-widest">Curation</p>
+            <FilterButton active={filters.aiOnly} onClick={() => updateFilters({ aiOnly: !filters.aiOnly })}>
+              <Sparkles size={12} /> AI Curated Only{counts.aiFiltered > 0 && <span className="opacity-60"> ({counts.aiFiltered})</span>}
+            </FilterButton>
+          </div>
         </div>
       </div>
 
