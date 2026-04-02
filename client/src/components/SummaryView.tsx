@@ -198,11 +198,11 @@ export function SummaryView({
         <div className="flex items-center gap-1">
           {/* Mobile: single trigger button */}
           <button
-            className="md:hidden shrink-0 -ml-2 p-1 rounded hover:bg-paper-dark text-ink-muted hover:text-ink cursor-pointer"
+            className="md:hidden shrink-0 flex items-center justify-center w-9 h-9 rounded-full border border-rule bg-paper-dark text-ink shadow-sm active:scale-95 transition-transform cursor-pointer"
             onClick={() => setActionsOpen(true)}
             aria-label="More options"
           >
-            <MoreVertical size={28} />
+            <MoreVertical size={20} />
           </button>
           <h2 className="font-serif text-3xl md:text-4xl font-bold text-masthead tracking-tight">{categoryName}</h2>
         </div>
