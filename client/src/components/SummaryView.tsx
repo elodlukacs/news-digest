@@ -207,12 +207,22 @@ export function SummaryView({
           <h2 className="font-serif text-3xl md:text-4xl font-bold text-masthead tracking-tight">{categoryName}</h2>
         </div>
         {summary && (
-          <p className="text-xs text-ink-muted mt-1.5 font-light">
-            {summary.article_count} articles from {summary.feed_count} sources
-            &nbsp;&middot;&nbsp;
-            {new Date(summary.generated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            {summary.provider && <>&nbsp;&middot;&nbsp;{summary.provider}</>}
-          </p>
+          <div className="flex flex-wrap items-center gap-1.5 mt-2">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-paper-dark border border-rule text-[11px] font-medium text-ink-muted">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
+              {summary.article_count} articles · {summary.feed_count} sources
+            </span>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-paper-dark border border-rule text-[11px] font-medium text-ink-muted">
+              <Clock size={10} />
+              {new Date(summary.generated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+            {summary.provider && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-paper-dark border border-rule text-[11px] font-medium text-ink-muted">
+                <Zap size={10} />
+                {summary.provider}
+              </span>
+            )}
+          </div>
         )}
 
         <div className="md:hidden mt-4">
