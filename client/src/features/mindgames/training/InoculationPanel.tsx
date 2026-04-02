@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef, useCallback, useOptimistic } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import type React from 'react';
 import { Card } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Badge } from '../../../components/ui/badge';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../../../components/ui/tooltip';
-import { Loader2, Shield, Zap, CheckCircle, XCircle, AlertTriangle, Trophy, Eye, RotateCcw, Syringe } from 'lucide-react';
+import { Loader2, Shield, Zap, CheckCircle, XCircle, AlertTriangle, Trophy, Eye, RotateCcw, Syringe, Droplet, Users, Flame, Search, Theater } from 'lucide-react';
 import { API_BASE } from '../../../config';
 import type { InoculationHeadline } from '../../../types';
 import { FeaturePanelHeader } from '../common';
@@ -38,15 +39,24 @@ const DOSE_LABELS: Record<number, string> = {
   2: 'Active',
   3: 'Full Virus',
 };
-const DOSE_ICONS: Record<number, string> = {
-  1: '💧',
-  2: '💉',
-  3: '🦠',
+const DOSE_ICONS: Record<number, React.ComponentType<{ size?: number; className?: string }>> = {
+  1: Droplet,
+  2: Syringe,
+  3: Zap,
 };
 const DOSE_DESCRIPTIONS: Record<number, string> = {
   1: 'Subtle manipulation — can you catch the faint signal?',
   2: 'Standard dose — the tactics are clearly present.',
   3: 'Full-strength virus — the manipulation is obvious. Can you name the tactic?',
+};
+
+const ANTIGEN_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
+  Users,
+  Flame,
+  Zap,
+  Search,
+  Shield,
+  Theater,
 };
 
 /* ─── Component ─── */
@@ -87,11 +97,7 @@ export function InoculationPanel() {
   const [activeLoading, setActiveLoading] = useState(false);
   const [activeError, setActiveError] = useState('');
 
-  // useOptimistic for instant score feedback
-  const [optimisticAntibodies, addOptimisticAntibodies] = useOptimistic(
-    antibodyCount,
-    (current: number, delta: number) => current + delta
-  );
+  // Display antibody count from server (no optimistic update to avoid stale state on wrong answers)
 
   const abortRef = useRef<AbortController | null>(null);
 
@@ -125,7 +131,9 @@ export function InoculationPanel() {
         setRoundsPlayed(sessions.length);
         setCorrectCount(sessions.reduce((s: number, d: { score: number }) => s + Math.floor(d.score / 10), 0));
       }
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.error('Failed to load inoculation sessions:', err);
+    }
   }, []);
 
   useEffect(() => { loadSessions(); }, [loadSessions]);
@@ -171,8 +179,6 @@ export function InoculationPanel() {
     abortRef.current = ctrl;
     setSelected(idx);
     setError('');
-
-    addOptimisticAntibodies(10);
 
     try {
       const res = await fetch(`${API_BASE}/inoculation/answer`, {
@@ -297,7 +303,7 @@ export function InoculationPanel() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="flex items-center gap-1.5 text-sm text-curiosity font-bold cursor-help">
-                    <Trophy size={15} /> {optimisticAntibodies}
+                    <Trophy size={15} /> {antibodyCount}
                   </span>
                 </TooltipTrigger>
                 <TooltipContent className="text-xs">
@@ -376,7 +382,7 @@ export function InoculationPanel() {
                               : 'text-ink-muted/40'
                         }`}
                       >
-                        <span className="text-sm">{DOSE_ICONS[dose]}</span>
+                        <span className="text-sm">{(() => { const Icon = DOSE_ICONS[dose]; return <Icon size={16} />; })()}</span>
                         <span className="hidden sm:inline">{DOSE_LABELS[dose]}</span>
                       </div>
                     </TooltipTrigger>
@@ -415,8 +421,8 @@ export function InoculationPanel() {
                 <div className="flex items-center gap-3">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span className="text-sm font-semibold text-ink cursor-help">
-                        {DOSE_ICONS[session.dose]} {DOSE_LABELS[session.dose]} dose
+                       <span className="text-sm font-semibold text-ink cursor-help">
+                        {(() => { const Icon = DOSE_ICONS[session.dose]; return <Icon size={14} className="inline mr-1" />; })()}{DOSE_LABELS[session.dose]} dose
                       </span>
                     </TooltipTrigger>
                     <TooltipContent className="max-w-[220px] text-xs">{DOSE_DESCRIPTIONS[session.dose]}</TooltipContent>
@@ -425,7 +431,7 @@ export function InoculationPanel() {
                     <Badge variant="outline" className="text-xs">{accuracy}% accuracy</Badge>
                   )}
                 </div>
-                <span className="text-sm font-bold text-curiosity">{optimisticAntibodies} 🛡️</span>
+                <span className="text-sm font-bold text-curiosity">{antibodyCount} <Shield size={14} className="inline" /></span>
               </div>
 
               {/* Instruction */}
@@ -516,7 +522,7 @@ export function InoculationPanel() {
                           : 'border-rule hover:border-ink/40 text-ink-muted hover:text-ink'
                       }`}
                     >
-                      <span className="mr-1.5">{t.icon}</span>{t.label}
+                      <span className="mr-1.5">{(() => { const Icon = ANTIGEN_ICONS[t.icon] || Shield; return <Icon size={14} className="inline" />; })()}</span>{t.label}
                     </button>
                   </TooltipTrigger>
                   <TooltipContent className="max-w-[220px] text-xs">

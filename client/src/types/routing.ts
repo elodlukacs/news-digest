@@ -1,13 +1,6 @@
-import type { Weather, CryptoPrice, Rates, Headline, HackerNewsItem, Category, UpcomingRelease } from '../types';
+import type { Category } from '../types';
 
 export interface AppOutletContext {
-  weather: Weather | null;
-  crypto: CryptoPrice[];
-  rates: Rates | null;
-  headlines: Headline[];
-  hackerNews: HackerNewsItem[];
-  trending: { tag: string; count: number }[];
-  releases: UpcomingRelease[];
   categories: Category[];
   selectedLlm: string;
   onLlmChange: (id: string) => void;

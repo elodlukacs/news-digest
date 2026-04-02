@@ -32,6 +32,7 @@ export function CognitiveTabNav() {
             <button
               key={tab.id}
               onClick={() => navigate(tab.path)}
+              aria-label={tab.label}
               className={`relative flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition-colors cursor-pointer active:bg-paper-dark ${
                 activeTab === tab.id ? 'text-ink' : 'text-ink-muted'
               }`}

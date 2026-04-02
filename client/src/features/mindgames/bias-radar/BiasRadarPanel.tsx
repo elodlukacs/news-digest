@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { FocusTrap } from 'focus-trap-react';
 import { Search, X } from 'lucide-react';
@@ -28,6 +28,8 @@ const TAB_LABELS: Record<Tab, string> = {
   steelman: 'Steelman',
 };
 
+const DISMISS_THRESHOLD = 120;
+
 export default function BiasRadarPanel({
   headline,
   content,
@@ -40,6 +42,57 @@ export default function BiasRadarPanel({
   categoryName = '',
 }: BiasRadarPanelProps) {
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
+  const [dragY, setDragY] = useState<number | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const handleRef = useRef<HTMLDivElement>(null);
+  const touchState = useRef({ active: false, startY: 0 });
+
+  useEffect(() => {
+    const panel = panelRef.current;
+    const handle = handleRef.current;
+    if (!panel || !handle) return;
+
+    function onTouchStart(e: TouchEvent) {
+      touchState.current = {
+        active: true,
+        startY: e.touches[0].clientY,
+      };
+    }
+
+    function onTouchMove(e: TouchEvent) {
+      if (!panel) return;
+      const state = touchState.current;
+      if (!state.active) return;
+
+      const diff = e.touches[0].clientY - state.startY;
+      if (diff < 0) {
+        setDragY(null);
+        return;
+      }
+
+      e.preventDefault();
+      setDragY(diff);
+    }
+
+    function onTouchEnd() {
+      touchState.current.active = false;
+      setDragY((prev) => {
+        if (prev !== null && prev > DISMISS_THRESHOLD) {
+          onClose();
+        }
+        return null;
+      });
+    }
+
+    handle.addEventListener('touchstart', onTouchStart, { passive: true });
+    handle.addEventListener('touchmove', onTouchMove, { passive: false });
+    handle.addEventListener('touchend', onTouchEnd, { passive: true });
+    return () => {
+      handle.removeEventListener('touchstart', onTouchStart);
+      handle.removeEventListener('touchmove', onTouchMove);
+      handle.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [onClose]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -50,15 +103,34 @@ export default function BiasRadarPanel({
   }, [onClose]);
 
   useEffect(() => {
+    const scrollY = window.scrollY;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
     document.body.style.overflow = 'hidden';
     return () => {
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
       document.body.style.overflow = '';
+      window.scrollTo(0, scrollY);
     };
   }, []);
 
+  const panelTransform = dragY !== null ? `translateY(${dragY}px)` : undefined;
+  const panelOpacity = dragY !== null ? Math.max(0, 1 - dragY / 400) : undefined;
+  const backdropOpacity = dragY !== null ? Math.max(0, 0.3 - dragY / 1000) : undefined;
+
   return createPortal(
     <>
-      <div className="fixed inset-0 bg-black/30 z-40" onClick={onClose} aria-hidden="true" />
+      <div
+        className="fixed inset-0 bg-black/30 z-40"
+        onClick={onClose}
+        aria-hidden="true"
+        style={backdropOpacity !== undefined ? { opacity: backdropOpacity } : undefined}
+      />
 
       <FocusTrap
         focusTrapOptions={{
@@ -67,16 +139,22 @@ export default function BiasRadarPanel({
         }}
       >
         <div
+          ref={panelRef}
           role="dialog"
           aria-modal="true"
           aria-label="Bias Radar"
           className={`fixed z-50 bg-paper shadow-2xl flex flex-col border-rule panel-slide-in
-            inset-x-0 bottom-0 rounded-t-2xl border-t max-h-[50dvh]
+            inset-0 rounded-t-2xl border-t
             md:inset-y-0 md:right-0 md:left-auto md:rounded-none
-            md:w-full md:max-w-[560px] md:border-l md:border-t-0 md:max-h-full
+            md:w-full md:max-w-[560px] md:border-l md:border-t-0
           `}
+          style={{
+            transform: panelTransform,
+            opacity: panelOpacity,
+            transition: dragY !== null ? 'none' : undefined,
+          }}
         >
-          <div className="md:hidden flex justify-center pt-3 pb-1">
+          <div ref={handleRef} className="md:hidden flex justify-center pt-3 pb-1 cursor-grab">
             <div className="w-10 h-1 rounded-full bg-rule" />
           </div>
 
@@ -122,35 +200,38 @@ export default function BiasRadarPanel({
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            <div
-              id="bias-radar-panel-compare"
-              aria-labelledby="bias-radar-tab-compare"
-              role="tabpanel"
-              style={{ display: activeTab === 'compare' ? 'contents' : 'none' }}
-            >
-              <BiasRadarCompare
-                currentArticle={currentArticle}
-                searchTitle={headline}
-                excludeSource={sourceName}
-                language={language}
-              />
-            </div>
-            <div
-              id="bias-radar-panel-decode"
-              aria-labelledby="bias-radar-tab-decode"
-              role="tabpanel"
-              style={{ display: activeTab === 'decode' ? 'contents' : 'none' }}
-            >
-              <BiasRadarDecode headline={headline} content={content} sections={sections} categoryName={categoryName} />
-            </div>
-            <div
-              id="bias-radar-panel-steelman"
-              aria-labelledby="bias-radar-tab-steelman"
-              role="tabpanel"
-              style={{ display: activeTab === 'steelman' ? 'contents' : 'none' }}
-            >
-              <BiasRadarSteelman headline={headline} content={content} language={language} />
-            </div>
+            {activeTab === 'compare' && (
+              <div
+                id="bias-radar-panel-compare"
+                aria-labelledby="bias-radar-tab-compare"
+                role="tabpanel"
+              >
+                <BiasRadarCompare
+                  currentArticle={currentArticle}
+                  searchTitle={headline}
+                  excludeSource={sourceName}
+                  language={language}
+                />
+              </div>
+            )}
+            {activeTab === 'decode' && (
+              <div
+                id="bias-radar-panel-decode"
+                aria-labelledby="bias-radar-tab-decode"
+                role="tabpanel"
+              >
+                <BiasRadarDecode headline={headline} content={content} sections={sections} categoryName={categoryName} />
+              </div>
+            )}
+            {activeTab === 'steelman' && (
+              <div
+                id="bias-radar-panel-steelman"
+                aria-labelledby="bias-radar-tab-steelman"
+                role="tabpanel"
+              >
+                <BiasRadarSteelman headline={headline} content={content} language={language} />
+              </div>
+            )}
           </div>
         </div>
       </FocusTrap>

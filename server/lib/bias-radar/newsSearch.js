@@ -133,7 +133,7 @@ async function searchGoogleNews(title, language = 'English') {
         continue;
       }
 
-      console.log('[GoogleNews] Got', parsed.items.length, 'items for query:', query);
+      console.debug('[GoogleNews] Got', parsed.items.length, 'items for query:', query);
 
       return parsed.items
         .slice(0, 10)
@@ -173,7 +173,7 @@ async function searchGoogleNews(title, language = 'English') {
 }
 
 async function searchAllSources(title, excludeSource = null, language = 'English') {
-  console.log('[NewsSearch] Searching for:', title, 'language:', language, 'excluding:', excludeSource);
+  console.debug('[NewsSearch] Searching for:', title, 'language:', language, 'excluding:', excludeSource);
 
   const searchKeywords = extractKeywords(title, language);
 
@@ -182,12 +182,12 @@ async function searchAllSources(title, excludeSource = null, language = 'English
     searchGoogleNews(title, language),
   ]);
 
-  console.log('[NewsSearch] Results - GDELT:', gdeltResults.length, 'Google:', googleResults.length);
+  console.debug('[NewsSearch] Results - GDELT:', gdeltResults.length, 'Google:', googleResults.length);
 
   const results = [...gdeltResults, ...googleResults];
 
   if (results.length === 0) {
-    console.log('[NewsSearch] No results from any source for:', title);
+    console.debug('[NewsSearch] No results from any source for:', title);
     return [];
   }
 
@@ -206,7 +206,7 @@ async function searchAllSources(title, excludeSource = null, language = 'English
     });
     // Only use filtered results if we have enough; otherwise keep originals
     if (relevant.length >= 3) {
-      console.log('[NewsSearch] Relevance filter:', filtered.length, '→', relevant.length);
+      console.debug('[NewsSearch] Relevance filter:', filtered.length, '→', relevant.length);
       filtered = relevant;
     }
   }
@@ -230,7 +230,7 @@ async function searchAllSources(title, excludeSource = null, language = 'English
     return Math.abs(biasA - 2) - Math.abs(biasB - 2);
   });
 
-  console.log('[NewsSearch] Final results:', biasOrdered.length);
+  console.debug('[NewsSearch] Final results:', biasOrdered.length);
 
   return biasOrdered.slice(0, 6);
 }

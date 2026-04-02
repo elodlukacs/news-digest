@@ -174,7 +174,7 @@ export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, 
 
         <div className="flex-1 overflow-y-auto min-h-0">
           <TabsContent value="sources" className="mt-0">
-            <div className="md:max-h-64 overflow-y-auto p-4 space-y-1">
+            <div className="p-4 space-y-1">
               {feeds.length === 0 && (
                 <div className="text-center py-8 text-ink-muted">
                   <Rss size={24} className="mx-auto mb-2 opacity-40" />

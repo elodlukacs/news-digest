@@ -49,7 +49,9 @@ export function OverviewTab() {
         auditCount: audits.length,
         avgSiloScore: audits.length > 0 ? Math.round((audits.reduce((s: number, a: { siloing_score: number }) => s + (a.siloing_score || 0), 0) / audits.length) * 10) / 10 : 0,
       });
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.error('Failed to load dashboard stats:', err);
+    }
   }, []);
 
   useEffect(() => { loadStats(); }, [loadStats]);
@@ -60,7 +62,9 @@ export function OverviewTab() {
       await fetch(`${API_BASE}/progress/reset`, { method: 'DELETE' });
       setStats(null);
       loadStats();
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.error('Failed to reset cognitive progress:', err);
+    }
   };
 
   const isNewUser = !stats || (

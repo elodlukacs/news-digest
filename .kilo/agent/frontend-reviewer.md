@@ -1,7 +1,6 @@
 ---
 description: UI/UX and visual design reviewer. Use for any frontend visual changes — components, layouts, themes, animations, responsive design.
 mode: subagent
-model: anthropic/claude-sonnet
 steps: 20
 hidden: false
 color: "#EC4899"

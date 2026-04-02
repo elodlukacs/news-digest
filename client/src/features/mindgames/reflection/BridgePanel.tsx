@@ -67,7 +67,9 @@ export function BridgePanel() {
     try {
       const res = await fetch(`${API_BASE}/bridge/audits`);
       setHistory(await res.json());
-    } catch { /* ignore */ } finally {
+    } catch (err) {
+      console.error('Failed to load bridge audits:', err);
+    } finally {
       setHistoryLoading(false);
     }
   }, []);
@@ -170,7 +172,9 @@ export function BridgePanel() {
         body: JSON.stringify({ values: Array.from(selectedValues) }),
       });
       setSavedValues(true);
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.error('Bridge panel error:', err);
+    }
   };
 
   const isLoading = loading || bridgeLoading;
@@ -235,7 +239,9 @@ export function BridgePanel() {
           {!historyLoading && history.length === 0 && <p className="text-sm text-ink-muted">No audits yet.</p>}
           {history.map(h => {
             let srcList: string[] = [];
-            try { srcList = JSON.parse(h.sources); } catch { /* ignore */ }
+            try { srcList = JSON.parse(h.sources); } catch (err) {
+              console.error('Bridge panel error:', err);
+            }
             return (
               <div key={h.id} className="p-2 rounded border border-rule/50 text-[12px]">
                 <div className="flex items-center justify-between gap-2">
