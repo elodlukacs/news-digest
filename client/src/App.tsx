@@ -9,7 +9,6 @@ import { useModels } from './hooks/useModels';
 import { slugify } from './utils/slugify';
 import { useTheme } from './hooks/useTheme';
 import type { Theme } from './hooks/useTheme';
-import { useWidgets } from './hooks/useWidgets';
 import { usePullToRefresh } from './hooks/usePullToRefresh';
 import { TooltipProvider } from './components/ui/tooltip';
 import { HomeRoute } from './components/routes/HomeRoute';
@@ -38,7 +37,6 @@ function AppLayout() {
   const navigate = useNavigate();
 
   const { feeds, addFeed, deleteFeed } = useFeeds(managingId);
-  const { weather, rates, headlines, crypto, hackerNews, releases, trending } = useWidgets();
   const { models, loading: modelsLoading } = useModels();
 
   const managingCategory = categories.find((c) => c.id === managingId);
@@ -56,13 +54,6 @@ function AppLayout() {
   }, [deleteCategory]);
 
   const outletContext: AppOutletContext = {
-    weather,
-    crypto,
-    rates,
-    headlines,
-    hackerNews,
-    trending,
-    releases,
     categories,
     selectedLlm,
     onLlmChange: setSelectedLlm,
