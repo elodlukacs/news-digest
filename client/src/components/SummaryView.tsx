@@ -215,11 +215,22 @@ export function SummaryView({
           </p>
         )}
 
-        <div className="md:hidden mt-3">
-          <Button variant="outline" size="sm" className="gap-2 w-full" onClick={onRefresh} disabled={busy}>
-            <RefreshCw size={14} className={busy ? 'animate-spin' : ''} />
-            {refreshing ? 'Fetching...' : 'Fetch fresh articles'}
-          </Button>
+        <div className="md:hidden mt-4">
+          <button
+            onClick={onRefresh}
+            disabled={busy}
+            className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-masthead/8 border border-masthead/20 text-masthead disabled:opacity-50 active:scale-[0.98] transition-transform cursor-pointer"
+          >
+            <div className="flex flex-col items-start">
+              <span className="text-sm font-semibold leading-tight">
+                {refreshing ? 'Updating…' : 'Pull latest stories'}
+              </span>
+              {!refreshing && (
+                <span className="text-[11px] text-masthead/60 mt-0.5">Fetch new articles from your feeds</span>
+              )}
+            </div>
+            <RefreshCw size={18} className={`shrink-0 ml-3 ${busy ? 'animate-spin' : ''}`} />
+          </button>
         </div>
 
         {/* Desktop: labeled action buttons */}
