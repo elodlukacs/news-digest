@@ -196,8 +196,6 @@ export function SummaryView({
     <div>
       <div className="pt-8 pb-4 md:border-b md:border-rule">
         <div className="flex items-center gap-3">
-          <h2 className="font-serif text-3xl md:text-4xl font-bold text-masthead tracking-tight">{categoryName}</h2>
-
           {/* Mobile: single trigger button */}
           <Button
             variant="ghost"
@@ -208,6 +206,7 @@ export function SummaryView({
           >
             <MoreVertical size={20} />
           </Button>
+          <h2 className="font-serif text-3xl md:text-4xl font-bold text-masthead tracking-tight">{categoryName}</h2>
         </div>
         {summary && (
           <p className="text-xs text-ink-muted mt-1.5 font-light">
