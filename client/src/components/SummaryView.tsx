@@ -202,7 +202,7 @@ export function SummaryView({
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden ml-auto"
+            className="md:hidden"
             onClick={() => setActionsOpen(true)}
             aria-label="More options"
           >
