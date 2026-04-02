@@ -214,9 +214,9 @@ async function searchAllSources(title, excludeSource = null, language = 'English
   const seen = new Map();
   const deduped = filtered.filter((a) => {
     try {
-      const url = a.url;
-      if (seen.has(url)) return false;
-      seen.set(url, true);
+      const domain = new URL(a.url).hostname.replace('www.', '').replace('news.google.com', 'google');
+      if (seen.has(domain)) return false;
+      seen.set(domain, true);
       return true;
     } catch {
       return true;

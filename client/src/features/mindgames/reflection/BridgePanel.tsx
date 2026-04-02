@@ -240,8 +240,8 @@ export function BridgePanel() {
           {history.map(h => {
             let srcList: string[] = [];
             try { srcList = JSON.parse(h.sources); } catch (err) {
-      console.error('Bridge panel error:', err);
-    }
+              console.error('Bridge panel error:', err);
+            }
             return (
               <div key={h.id} className="p-2 rounded border border-rule/50 text-[12px]">
                 <div className="flex items-center justify-between gap-2">

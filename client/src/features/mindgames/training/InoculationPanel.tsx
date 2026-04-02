@@ -421,8 +421,8 @@ export function InoculationPanel() {
                 <div className="flex items-center gap-3">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span className="text-sm font-semibold text-ink cursor-help">
-                         {(() => { const Icon = DOSE_ICONS[session.dose]; return <Icon size={14} className="inline mr-1" />; })()}{DOSE_LABELS[session.dose]} dose
+                       <span className="text-sm font-semibold text-ink cursor-help">
+                        {(() => { const Icon = DOSE_ICONS[session.dose]; return <Icon size={14} className="inline mr-1" />; })()}{DOSE_LABELS[session.dose]} dose
                       </span>
                     </TooltipTrigger>
                     <TooltipContent className="max-w-[220px] text-xs">{DOSE_DESCRIPTIONS[session.dose]}</TooltipContent>

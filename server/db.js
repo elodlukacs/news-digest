@@ -216,9 +216,6 @@ db.prepare("INSERT OR IGNORE INTO user_settings (key, value) VALUES ('theme', 'c
 // Migrate deprecated feeds.reuters.com URLs (discontinued June 2020)
 db.prepare("UPDATE feeds SET url = 'https://cdn.feedcontrol.net/8/1115-TvWAhu4G064WT.xml' WHERE url = 'https://feeds.reuters.com/Reuters/worldNews'").run();
 
-// Migrate deprecated feeds.reuters.com URLs (discontinued June 2020)
-db.prepare("UPDATE feeds SET url = 'https://cdn.feedcontrol.net/8/1115-TvWAhu4G064WT.xml' WHERE url = 'https://feeds.reuters.com/Reuters/worldNews'").run();
-
 const count = db.prepare('SELECT COUNT(*) as c FROM categories').get();
 if (count.c === 0) {
   const insertCat = db.prepare('INSERT INTO categories (name, icon, sort_order) VALUES (?, ?, ?)');
