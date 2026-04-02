@@ -195,7 +195,7 @@ export function SummaryView({
   return (
     <div>
       <div className="pt-8 pb-4 md:border-b md:border-rule">
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-3">
           {/* Mobile: single trigger button */}
           <button
             className="md:hidden shrink-0 flex items-center justify-center w-9 h-9 rounded-full border border-rule bg-paper-dark text-ink shadow-sm active:scale-95 transition-transform cursor-pointer"
