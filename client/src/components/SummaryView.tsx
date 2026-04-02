@@ -197,15 +197,13 @@ export function SummaryView({
       <div className="pt-8 pb-4 md:border-b md:border-rule">
         <div className="flex items-center gap-1">
           {/* Mobile: single trigger button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden w-8 h-full shrink-0 -ml-2"
+          <button
+            className="md:hidden shrink-0 -ml-2 p-1 rounded hover:bg-paper-dark text-ink-muted hover:text-ink cursor-pointer"
             onClick={() => setActionsOpen(true)}
             aria-label="More options"
           >
             <MoreVertical size={28} />
-          </Button>
+          </button>
           <h2 className="font-serif text-3xl md:text-4xl font-bold text-masthead tracking-tight">{categoryName}</h2>
         </div>
         {summary && (
