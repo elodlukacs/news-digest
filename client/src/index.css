@@ -118,6 +118,12 @@ body {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* iOS Safari: fixed bottom bars jump on toolbar show/hide without a compositing layer */
+.fixed.bottom-0 {
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
 .scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
