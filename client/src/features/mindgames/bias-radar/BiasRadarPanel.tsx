@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { FocusTrap } from 'focus-trap-react';
-import { Search, X } from 'lucide-react';
+import { Search } from 'lucide-react';
 import BiasRadarCompare from './BiasRadarCompare';
 import BiasRadarDecode from './BiasRadarDecode';
 import BiasRadarSteelman from './BiasRadarSteelman';
@@ -166,9 +166,7 @@ export default function BiasRadarPanel({
                 <span className="text-xs text-ink-muted ml-1">({language})</span>
               )}
             </div>
-            <button onClick={onClose} className="text-ink-muted hover:text-ink" aria-label="Close">
-              <X size={18} />
-            </button>
+{/* Desktop-only close via Escape key; mobile dismisses with swipe-down */}
           </div>
 
           <div className="px-5 py-3 border-b border-rule bg-paper-dark">
