@@ -200,11 +200,11 @@ export function SummaryView({
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden w-10 h-10 self-center shrink-0"
+            className="md:hidden w-8 h-full shrink-0 -ml-2"
             onClick={() => setActionsOpen(true)}
             aria-label="More options"
           >
-            <MoreVertical size={24} />
+            <MoreVertical size={28} />
           </Button>
           <h2 className="font-serif text-3xl md:text-4xl font-bold text-masthead tracking-tight">{categoryName}</h2>
         </div>
