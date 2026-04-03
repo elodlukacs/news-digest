@@ -47,7 +47,20 @@ export function useCategories() {
     await refresh();
   }, [refresh]);
 
-  return { categories, loading, refresh, addCategory, deleteCategory };
+  const renameCategory = useCallback(async (id: number, name: string) => {
+    const res = await fetch(`${BASE}/categories/${id}/name`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Failed to rename category');
+    }
+    await refresh();
+  }, [refresh]);
+
+  return { categories, loading, refresh, addCategory, deleteCategory, renameCategory };
 }
 
 export function useFeeds(categoryId: number | null) {

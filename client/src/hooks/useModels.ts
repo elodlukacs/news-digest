@@ -7,6 +7,7 @@ export interface GroqModel {
   owned_by: string;
   context_window: number;
   max_completion_tokens: number;
+  provider: string;
 }
 
 const DEFAULT_MODEL = 'openai/gpt-oss-20b';

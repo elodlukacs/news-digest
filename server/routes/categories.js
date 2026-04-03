@@ -33,6 +33,21 @@ router.post('/', (req, res) => {
   }
 });
 
+router.put('/:id/name', validateId, (req, res) => {
+  const { name } = req.body;
+  if (!name || !name.trim()) return res.status(400).json({ error: 'Name is required' });
+  try {
+    const result = db.prepare('UPDATE categories SET name = ? WHERE id = ?').run(name.trim(), req.params.id);
+    if (result.changes === 0) return res.status(404).json({ error: 'Category not found' });
+    res.json({ ok: true });
+  } catch (e) {
+    if (e.message && e.message.includes('UNIQUE')) {
+      return res.status(400).json({ error: 'A category with this name already exists' });
+    }
+    res.status(500).json({ error: 'Failed to update name' });
+  }
+});
+
 router.put('/:id/prompt', validateId, (req, res) => {
   const { prompt } = req.body;
   db.prepare('UPDATE categories SET custom_prompt = ? WHERE id = ?').run(prompt || '', req.params.id);

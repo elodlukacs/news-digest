@@ -454,7 +454,10 @@ export function NavigationBar({
 }
 
 function formatModelName(id: string): string {
-  return id.replace(/^openai\//, '').replace(/^meta-llama\//, 'Llama ');
+  return id
+    .replace(/^openai\//, '')
+    .replace(/^meta-llama\//, 'Llama ')
+    .replace(/:free$/, '');
 }
 
 function formatTokens(n: number): string {
@@ -465,9 +468,10 @@ function formatTokens(n: number): string {
 function groupModels(models: GroqModel[]): { owner: string; models: GroqModel[] }[] {
   const groups = new Map<string, GroqModel[]>();
   for (const m of models) {
-    const list = groups.get(m.owned_by);
+    const key = m.provider || m.owned_by;
+    const list = groups.get(key);
     if (list) list.push(m);
-    else groups.set(m.owned_by, [m]);
+    else groups.set(key, [m]);
   }
   return Array.from(groups.entries()).map(([owner, models]) => ({ owner, models }));
 }

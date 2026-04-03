@@ -2,7 +2,7 @@ const env = (name) => process.env[name];
 
 const AI_PROVIDERS = [
   { id: 'llama', name: 'Groq', url: 'https://api.groq.com/openai/v1/chat/completions', key: () => env('GROQ_API_KEY'), model: 'openai/gpt-oss-20b' },
-  { id: 'minimax', name: 'OpenRouter', url: 'https://openrouter.ai/api/v1/chat/completions', key: () => env('OPENROUTER_KEY'), model: 'minimax/minimax-m2.7' },
+  { id: 'openrouter', name: 'OpenRouter', url: 'https://openrouter.ai/api/v1/chat/completions', key: () => env('OPENROUTER_API_KEY'), model: 'minimax/minimax-m2.5:free' },
 ];
 
 const providerQuotas = {};
@@ -17,10 +17,15 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
       if (!target.key()) throw new Error(`API key not configured for ${target.name}. Set the required env var.`);
       providers = [target];
     } else if (providerId.includes('/')) {
-      // Treat as a Groq model ID
+      const openrouter = AI_PROVIDERS.find(p => p.id === 'openrouter');
       const groq = AI_PROVIDERS.find(p => p.id === 'llama');
-      if (!groq || !groq.key()) throw new Error('GROQ_API_KEY not configured');
-      providers = [{ ...groq, model: providerId }];
+      if (openrouter && openrouter.key() && (providerId.includes(':free') || providerId.includes('openrouter/'))) {
+        providers = [{ ...openrouter, model: providerId }];
+      } else if (groq && groq.key()) {
+        providers = [{ ...groq, model: providerId }];
+      } else {
+        throw new Error('No matching provider configured for model: ' + providerId);
+      }
     } else {
       throw new Error(`Unknown provider: ${providerId}`);
     }

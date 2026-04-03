@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Trash2, Rss, FileText, Globe, Search } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Trash2, Rss, FileText, Globe, Search, Pencil } from 'lucide-react';
 import { API_BASE } from '../config';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
@@ -26,9 +27,11 @@ interface Props {
   onAdd: (name: string, url: string) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
   onClose: () => void;
+  onRename: (id: number, name: string) => Promise<void>;
 }
 
-export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, onClose }: Props) {
+export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, onClose, onRename }: Props) {
+  const navigate = useNavigate();
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
   const [tab, setTab] = useState('sources');
@@ -41,12 +44,17 @@ export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, 
   const [discovered, setDiscovered] = useState<{ title: string; url: string }[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [open, setOpen] = useState(true);
+  const [editName, setEditName] = useState(categoryName);
+  const [nameSaved, setNameSaved] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [nameSaving, setNameSaving] = useState(false);
   const isDesktop = useMediaQuery('(min-width: 768px)');
 
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const promptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const langTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const discoverAbortRef = useRef<AbortController | null>(null);
+  const nameTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleClose = useCallback(() => {
     setOpen(false);
     if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
@@ -58,6 +66,7 @@ export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, 
       if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
       if (promptTimerRef.current) clearTimeout(promptTimerRef.current);
       if (langTimerRef.current) clearTimeout(langTimerRef.current);
+      if (nameTimerRef.current) clearTimeout(nameTimerRef.current);
       if (discoverAbortRef.current) discoverAbortRef.current.abort();
     };
   }, []);
@@ -113,6 +122,21 @@ export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, 
     }
   };
 
+  const handleSaveName = async () => {
+    if (!editName.trim() || editName.trim() === categoryName) return;
+    setNameSaving(true);
+    setNameError(null);
+    try {
+      await onRename(categoryId, editName.trim());
+      handleClose();
+      navigate('/', { replace: true });
+    } catch (e) {
+      setNameError(e instanceof Error ? e.message : 'Failed to rename');
+    } finally {
+      setNameSaving(false);
+    }
+  };
+
   const handleDiscover = async () => {
     if (!discoverUrl.trim()) return;
     if (discoverAbortRef.current) discoverAbortRef.current.abort();
@@ -156,6 +180,7 @@ export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, 
         <TabsList className="w-full justify-start rounded-none bg-transparent p-0 border-b border-rule h-auto">
           {(
             [
+              { key: 'name', label: 'Name', icon: Pencil },
               { key: 'sources', label: 'Sources', icon: Rss },
               { key: 'discover', label: 'Discover', icon: Search },
               { key: 'prompt', label: 'Prompt', icon: FileText },
@@ -173,6 +198,35 @@ export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, 
         </TabsList>
 
         <div className="flex-1 overflow-y-auto min-h-0">
+          <TabsContent value="name" className="mt-0">
+            <div className="p-4 space-y-3">
+              <p className="text-xs text-ink-muted leading-relaxed">
+                Rename this category. The change takes effect immediately.
+              </p>
+              <Input
+                value={editName}
+                onChange={(e) => { setEditName(e.target.value); setNameError(null); setNameSaved(false); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSaveName(); }}
+                placeholder="Category name"
+              />
+              {nameError && (
+                <p className="text-xs text-red-500">{nameError}</p>
+              )}
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] text-ink-muted">
+                  {editName.trim() !== categoryName ? 'Unsaved changes' : 'Current name'}
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={handleSaveName}
+                  disabled={!editName.trim() || editName.trim() === categoryName || nameSaving}
+                >
+                  {nameSaving ? 'Saving...' : nameSaved ? 'Saved' : 'Save Name'}
+                </Button>
+              </div>
+            </div>
+          </TabsContent>
+
           <TabsContent value="sources" className="mt-0">
             <div className="p-4 space-y-1">
               {feeds.length === 0 && (
