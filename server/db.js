@@ -1,7 +1,29 @@
 const Database = require('better-sqlite3');
 const path = require('path');
+const fs = require('fs');
 
 const dbPath = process.env.DB_PATH || path.join(__dirname, 'newsreader.db');
+
+// Ensure the directory containing the database file exists and is writable.
+// This is especially important when DB_PATH points to a volume mount (e.g. /data)
+// that may not yet have the correct permissions on first boot.
+const dbDir = path.dirname(dbPath);
+try {
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+    console.log(`[db] Created database directory: ${dbDir}`);
+  }
+  // Touch the file so it exists before we open it, then ensure it is writable.
+  if (!fs.existsSync(dbPath)) {
+    fs.writeFileSync(dbPath, '');
+    console.log(`[db] Created database file: ${dbPath}`);
+  }
+  fs.chmodSync(dbPath, 0o664);
+  console.log(`[db] Database path: ${dbPath} (permissions set to 664)`);
+} catch (e) {
+  console.warn(`[db] Could not set permissions on ${dbPath}: ${e.message}`);
+}
+
 const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
@@ -211,33 +233,52 @@ addColumnIfNotExists('articles', 'body_text', "TEXT DEFAULT ''");
 addColumnIfNotExists('cognitive_users', 'antibody_count', 'INTEGER DEFAULT 0');
 addColumnIfNotExists('cognitive_users', 'last_inoculation_date', 'TEXT');
 
-db.prepare("INSERT OR IGNORE INTO user_settings (key, value) VALUES ('theme', 'classic')").run();
+// Wrap default-settings inserts in try-catch so a temporarily read-only
+// volume mount does not crash the process on startup.
+try {
+  db.prepare("INSERT OR IGNORE INTO user_settings (key, value) VALUES ('theme', 'classic')").run();
+  console.log('[db] Default user settings applied.');
+} catch (e) {
+  console.error(`[db] Could not insert default user_settings (database may be read-only): ${e.message}`);
+  console.error('[db] The app will continue, but theme defaults may not be persisted until the volume is writable.');
+}
 
 // Migrate deprecated feeds.reuters.com URLs (discontinued June 2020)
-db.prepare("UPDATE feeds SET url = 'https://cdn.feedcontrol.net/8/1115-TvWAhu4G064WT.xml' WHERE url = 'https://feeds.reuters.com/Reuters/worldNews'").run();
+try {
+  db.prepare("UPDATE feeds SET url = 'https://cdn.feedcontrol.net/8/1115-TvWAhu4G064WT.xml' WHERE url = 'https://feeds.reuters.com/Reuters/worldNews'").run();
+} catch (e) {
+  console.error(`[db] Could not migrate deprecated Reuters feed URL: ${e.message}`);
+}
 
-const count = db.prepare('SELECT COUNT(*) as c FROM categories').get();
-if (count.c === 0) {
-  const insertCat = db.prepare('INSERT INTO categories (name, icon, sort_order) VALUES (?, ?, ?)');
-  const insertFeed = db.prepare('INSERT INTO feeds (category_id, name, url) VALUES (?, ?, ?)');
 
-  const seed = db.transaction(() => {
-    insertCat.run('Technology', 'cpu', 0);
-    insertCat.run('World News', 'globe', 1);
-    insertCat.run('Science', 'flask-conical', 2);
-    insertCat.run('Business', 'trending-up', 3);
+try {
+  const count = db.prepare('SELECT COUNT(*) as c FROM categories').get();
+  if (count.c === 0) {
+    const insertCat = db.prepare('INSERT INTO categories (name, icon, sort_order) VALUES (?, ?, ?)');
+    const insertFeed = db.prepare('INSERT INTO feeds (category_id, name, url) VALUES (?, ?, ?)');
 
-    insertFeed.run(1, 'TechCrunch', 'https://techcrunch.com/feed/');
-    insertFeed.run(1, 'Ars Technica', 'https://feeds.arstechnica.com/arstechnica/index');
-    insertFeed.run(2, 'Reuters World', 'https://cdn.feedcontrol.net/8/1115-TvWAhu4G064WT.xml');
-    insertFeed.run(2, 'BBC News', 'https://feeds.bbci.co.uk/news/world/rss.xml');
-    insertFeed.run(3, 'Nature', 'https://www.nature.com/nature.rss');
-    insertFeed.run(4, 'Bloomberg', 'https://feeds.bloomberg.com/markets/news.rss');
-  });
-  seed();
+    const seed = db.transaction(() => {
+      insertCat.run('Technology', 'cpu', 0);
+      insertCat.run('World News', 'globe', 1);
+      insertCat.run('Science', 'flask-conical', 2);
+      insertCat.run('Business', 'trending-up', 3);
+
+      insertFeed.run(1, 'TechCrunch', 'https://techcrunch.com/feed/');
+      insertFeed.run(1, 'Ars Technica', 'https://feeds.arstechnica.com/arstechnica/index');
+      insertFeed.run(2, 'Reuters World', 'https://cdn.feedcontrol.net/8/1115-TvWAhu4G064WT.xml');
+      insertFeed.run(2, 'BBC News', 'https://feeds.bbci.co.uk/news/world/rss.xml');
+      insertFeed.run(3, 'Nature', 'https://www.nature.com/nature.rss');
+      insertFeed.run(4, 'Bloomberg', 'https://feeds.bloomberg.com/markets/news.rss');
+    });
+    seed();
+    console.log('[db] Default categories and feeds seeded.');
+  }
+} catch (e) {
+  console.error(`[db] Could not seed default categories/feeds (database may be read-only): ${e.message}`);
 }
 
 // Seed default prompts if empty
+try {
 const promptCount = db.prepare('SELECT COUNT(*) as c FROM prompts').get();
 if (promptCount.c === 0) {
   const insertPrompt = db.prepare("INSERT INTO prompts (slug, name, description, category, system_message, user_prompt, created_at, updated_at) VALUES (?,?,?,?,?,?,datetime('now'),datetime('now'))");
@@ -817,9 +858,12 @@ Jobs:
     );
   });
   seedPrompts();
+  console.log('[db] Default prompts seeded.');
+}
+} catch (e) {
+  console.error(`[db] Could not seed default prompts (database may be read-only): ${e.message}`);
 }
 
-// Force-update Foolproof inoculation prompts on every startup
 const updateInoculationPrompts = db.transaction(() => {
   const upsert = db.prepare(`INSERT INTO prompts (slug, name, description, category, system_message, user_prompt, created_at, updated_at)
     VALUES (?,?,?,?,?,?,datetime('now'),datetime('now'))
@@ -879,7 +923,13 @@ Return JSON:
 }`
   );
 });
-updateInoculationPrompts();
+
+// Force-update Foolproof inoculation prompts on every startup
+try {
+  updateInoculationPrompts();
+} catch (e) {
+  console.error(`[db] Could not update inoculation prompts (database may be read-only): ${e.message}`);
+}
 
 // Clean up deprecated prompt slugs
 try { db.prepare("DELETE FROM prompts WHERE slug IN ('inoculation-twister', 'inoculation-cdo')").run(); } catch (e) {}
