@@ -48,27 +48,39 @@ No test framework is configured. Do not attempt to run tests.
 
 ## Sub-Agent Workflow
 
-### Available Sub-Agents (`.kilo/agent/`)
+### Available Sub-Agents (`.opencode/agents/`)
 
 | Agent | Purpose | When to Use |
 |-------|---------|-------------|
+| `planner` | Structured implementation plans | Before any feature, produces phased plan |
 | `architect` | Structure, data flow, patterns | Before new features, after refactoring |
 | `code-reviewer` | Bugs, quality, conventions | After every implementation step |
 | `typescript-reviewer` | Type safety, strict mode | After writing/changing TypeScript |
 | `frontend-reviewer` | UI/visual, themes, responsive | After any UI/styling change |
+| `build-error-resolver` | Minimal build/type error fixes | When build fails — fixes ONLY the error |
 
 ### Phased Workflow for New Features
 
 ```
-1. RESEARCH → Grep/Glob to find affected files
-2. PLAN → Use /plan command or architect agent
+1. RESEARCH → Grep/Glob to find affected files (iterative retrieval, max 3 cycles)
+2. PLAN → Launch planner agent, produces structured plan
 3. IMPLEMENT → Write code
 4. REVIEW → Launch code-reviewer + typescript-reviewer
 5. UI CHECK → If frontend changed, launch frontend-reviewer
 6. BUILD CHECK → Run tsc --noEmit && npm run build
+7. BUILD FIX → If errors, launch build-error-resolver (minimal diffs only)
 ```
 
-### Slash Commands (`.kilo/command/`)
+### Iterative Retrieval for Sub-Agents
+
+When sub-agents need to find context, use this pattern:
+1. **DISPATCH** — Broad search with keywords + patterns relevant to the task
+2. **EVALUATE** — Score each result 0.0-1.0 for relevance (high: 0.8+, medium: 0.5-0.7, low: <0.5)
+3. **REFINE** — Extract new keywords from high-relevance results, exclude low-relevance paths
+4. **LOOP** — Repeat until 3+ high-relevance files found with no critical gaps (max 3 cycles)
+Pass the OBJECTIVE and PURPOSE, not just literal keywords.
+
+### Slash Commands (`.opencode/commands/`)
 
 | Command | Purpose |
 |---------|---------|
@@ -85,6 +97,26 @@ No test framework is configured. Do not attempt to run tests.
 - **Do NOT compact mid-implementation**: Losing variable names and file paths is costlier than the tokens saved.
 - **Compact after debugging**: Debug traces pollute context. Clear them before moving to next task.
 - **Compact after failed approaches**: Dead-end reasoning wastes context window.
+
+### Compaction Decision Table
+
+| Phase Transition | Compact? | Why |
+|---|---|---|
+| Research -> Planning | **Yes** | Research context is bulky; plan is the distilled output |
+| Planning -> Implementation | **Yes** | Plan is saved in TodoWrite/file; free context for code |
+| Implementation -> Testing | Maybe | Keep if tests reference recent code changes |
+| Debugging -> Next feature | **Yes** | Debug traces pollute context for unrelated work |
+| Mid-implementation | **No** | Losing variable names, file paths, partial state is costly |
+| After a failed approach | **Yes** | Clear dead-end reasoning before new approach |
+
+### What Survives Compaction
+
+| Persists | Lost |
+|---|---|
+| AGENTS.md / instructions | Intermediate reasoning/analysis |
+| TodoWrite task list | File contents previously read |
+| Files on disk | Tool call history |
+| Git state | Multi-step conversation context |
 
 ### Sub-Agent Efficiency
 

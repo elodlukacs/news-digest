@@ -1,8 +1,35 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "instructions": ["AGENTS.md"],
+  "instructions": ["AGENTS.md", ".opencode/instructions/search-first.md"],
   "compaction": {
     "auto": true,
-    "prune": true
+    "prune": true,
+    "reserved": 10000
+  },
+  "agent": {
+    "build-error-resolver": {
+      "description": "Fixes build/type errors with minimal diffs only",
+      "mode": "subagent",
+      "steps": 15
+    },
+    "planner": {
+      "description": "Read-only feature planner producing structured implementation plans",
+      "mode": "subagent",
+      "steps": 25
+    }
+  },
+  "permission": {
+    "bash": {
+      "*": "ask",
+      "git diff*": "allow",
+      "git log*": "allow",
+      "git status*": "allow",
+      "ls*": "allow",
+      "npx tsc*": "allow",
+      "npm run build*": "allow",
+      "npm run lint*": "allow",
+      "npm install*": "allow",
+      "node*": "allow"
+    }
   }
 }
