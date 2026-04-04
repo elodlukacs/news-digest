@@ -38,9 +38,10 @@ interface ForensicPanelProps {
   categoryName?: string;
   headline?: string;
   content?: string;
+  originalContent?: string;
 }
 
-export function ForensicPanel({ sections = [], categoryName = '', headline = '', content = '' }: ForensicPanelProps) {
+export function ForensicPanel({ sections = [], categoryName = '', headline = '', content = '', originalContent = '' }: ForensicPanelProps) {
   const [activeTab, setActiveTab] = useState<'forensic' | 'study'>('forensic');
   const [selectedIdx, setSelectedIdx] = useState<number>(-1);
   const [showCustomInput, setShowCustomInput] = useState(false);
@@ -92,7 +93,7 @@ export function ForensicPanel({ sections = [], categoryName = '', headline = '',
     }
   };
 
-  const analyzeWithText = async (inputText: string) => {
+  const analyzeWithText = async (inputText: string, articleTitle?: string) => {
     if (inputText.trim().length < 20) return;
     const trimmed = inputText.trim().slice(0, 5000);
     abortRef.current?.abort();
@@ -104,10 +105,12 @@ export function ForensicPanel({ sections = [], categoryName = '', headline = '',
     setStreamStep('Analyzing text for cognitive vulnerabilities…');
 
     try {
+      const body: Record<string, string> = { text: trimmed };
+      if (articleTitle) body.title = articleTitle;
       const res = await fetch(`${API_BASE}/forensics`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: trimmed }),
+        body: JSON.stringify(body),
         signal: ctrl.signal,
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Analysis failed');
@@ -197,8 +200,8 @@ export function ForensicPanel({ sections = [], categoryName = '', headline = '',
               <p className="text-sm text-ink leading-relaxed">{headline}</p>
               <Button
                 type="button"
-                onClick={() => analyzeWithText(content)}
-                disabled={loading || content.trim().length < 20}
+                onClick={() => analyzeWithText(originalContent || content, headline)}
+                disabled={loading || (originalContent || content).trim().length < 20}
                 className="w-full gap-1.5 text-sm h-10"
               >
                 {loading

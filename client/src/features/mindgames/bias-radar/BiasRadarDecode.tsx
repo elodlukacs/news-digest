@@ -4,11 +4,12 @@ import type { ParsedSection } from '../../../components/SummaryView';
 interface BiasRadarDecodeProps {
   headline: string;
   content: string;
+  originalContent?: string;
   language?: string;
   sections?: ParsedSection[];
   categoryName?: string;
 }
 
-export default function BiasRadarDecode({ headline = '', content = '', sections = [], categoryName = '' }: BiasRadarDecodeProps) {
-  return <ForensicPanel headline={headline} content={content} sections={sections} categoryName={categoryName} />;
+export default function BiasRadarDecode({ headline = '', content = '', originalContent = '', sections = [], categoryName = '' }: BiasRadarDecodeProps) {
+  return <ForensicPanel headline={headline} content={content} originalContent={originalContent} sections={sections} categoryName={categoryName} />;
 }

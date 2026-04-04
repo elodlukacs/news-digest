@@ -17,18 +17,23 @@ export interface ParsedSection {
   url: string;
   content: string;
   sentiment: 'positive' | 'negative' | 'neutral' | 'mixed' | null;
+  originalContent?: string;
 }
 
 export function parseSummaryMarkdown(markdown: string, sentimentData: Summary['sentiment_data']): ParsedSection[] {
   const sections: ParsedSection[] = [];
   const parts = markdown.split(/\n---\n/);
 
-  // Build a title→sentiment lookup for reliable matching
+  // Build title→sentiment and title→originalContent lookups
   const sentimentByTitle = new Map<string, 'positive' | 'negative' | 'neutral' | 'mixed'>();
+  const originalContentByTitle = new Map<string, string>();
   if (sentimentData) {
     for (const entry of sentimentData) {
       if (entry.title && entry.sentiment) {
         sentimentByTitle.set(entry.title.toLowerCase(), entry.sentiment);
+      }
+      if (entry.title && entry.original_content) {
+        originalContentByTitle.set(entry.title.toLowerCase(), entry.original_content);
       }
     }
   }
@@ -61,6 +66,7 @@ export function parseSummaryMarkdown(markdown: string, sentimentData: Summary['s
       url,
       content,
       sentiment: sentimentByTitle.get(title.toLowerCase()) || null,
+      originalContent: originalContentByTitle.get(title.toLowerCase()) || '',
     });
   }
 
@@ -179,7 +185,7 @@ export function SummaryView({
 }: Props) {
   const [rateLimitDismissed, setRateLimitDismissed] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
-  const [radarSection, setRadarSection] = useState<{ title: string; content: string; url: string } | null>(null);
+  const [radarSection, setRadarSection] = useState<{ title: string; content: string; url: string; originalContent?: string } | null>(null);
 
   useEffect(() => {
     setRateLimitDismissed(false);
@@ -342,7 +348,7 @@ export function SummaryView({
                     variant="outline"
                     size="sm"
                     className="gap-2"
-                    onClick={() => setRadarSection({ title: section.title, content: section.content, url: section.url })}
+                    onClick={() => setRadarSection({ title: section.title, content: section.content, url: section.url, originalContent: section.originalContent })}
                   >
                     <Search size={14} strokeWidth={1.5} />
                     Bias Radar
@@ -379,6 +385,7 @@ export function SummaryView({
         <BiasRadarPanel
           headline={radarSection.title}
           content={radarSection.content}
+          originalContent={radarSection.originalContent}
           currentArticle={{
             id: radarSection.url || radarSection.title,
             title: radarSection.title,

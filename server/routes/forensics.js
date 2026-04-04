@@ -8,12 +8,13 @@ const router = express.Router();
 
 // POST /api/forensics — analyze text
 router.post('/', async (req, res) => {
-  const { text, userId, provider } = req.body;
+  const { text, title, userId, provider } = req.body;
   if (!text || text.trim().length < 20) return res.status(400).json({ error: 'Text must be at least 20 characters' });
   const trimmed = text.trim().slice(0, 5000);
+  const analysisText = title ? `Article title: ${title.trim()}\n\nArticle content:\n${trimmed}` : trimmed;
 
   try {
-    const messages = buildMessages('forensic-analysis', { text: trimmed });
+    const messages = buildMessages('forensic-analysis', { text: analysisText });
 
     const result = await callLLM(
       messages,

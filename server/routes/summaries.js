@@ -104,7 +104,7 @@ router.post('/:id/refresh', validateId, async (req, res) => {
           const parsed = await parser.parseURL(feed.url);
           return parsed.items.slice(0, 10).map((item) => ({
             title: item.title || '',
-            description: (item.contentSnippet || item.content || '').slice(0, 500),
+            description: (item.contentSnippet || item.content || '').slice(0, 3000),
             link: item.link || '',
             pubDate: item.pubDate || '',
             source: feed.name,
@@ -211,11 +211,17 @@ router.post('/:id/refresh', validateId, async (req, res) => {
       `## [${a.title}](${a.url})\n${a.summary}`
     ).join('\n\n---\n\n');
 
-    const sentimentData = parsedArticles.map(a => ({
-      title: a.title,
-      sentiment: ['positive', 'negative', 'neutral', 'mixed'].includes(a.sentiment) ? a.sentiment : 'neutral',
-      tags: Array.isArray(a.tags) ? a.tags : [],
-    }));
+    const sentimentData = parsedArticles.map(a => {
+      const original = allArticles.find(orig =>
+        orig.link === a.url || orig.title.toLowerCase() === (a.title || '').toLowerCase()
+      );
+      return {
+        title: a.title,
+        sentiment: ['positive', 'negative', 'neutral', 'mixed'].includes(a.sentiment) ? a.sentiment : 'neutral',
+        tags: Array.isArray(a.tags) ? a.tags : [],
+        original_content: original ? original.description : '',
+      };
+    });
 
     const tagSet = new Set();
     for (const s of sentimentData) {

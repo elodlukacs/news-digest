@@ -11,6 +11,7 @@ import type { ParsedSection } from '../../../components/SummaryView';
 interface BiasRadarPanelProps {
   headline: string;
   content: string;
+  originalContent?: string;
   currentArticle: SourceArticle;
   sourceName: string;
   language?: string;
@@ -33,6 +34,7 @@ const DISMISS_THRESHOLD = 120;
 export default function BiasRadarPanel({
   headline,
   content,
+  originalContent,
   currentArticle,
   sourceName,
   language = 'English',
@@ -218,7 +220,7 @@ export default function BiasRadarPanel({
                 aria-labelledby="bias-radar-tab-decode"
                 role="tabpanel"
               >
-                <BiasRadarDecode headline={headline} content={content} sections={sections} categoryName={categoryName} />
+                <BiasRadarDecode headline={headline} content={content} originalContent={originalContent} sections={sections} categoryName={categoryName} />
               </div>
             )}
             {activeTab === 'steelman' && (
