@@ -19,13 +19,15 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
     } else if (providerId.includes('/')) {
       const openrouter = AI_PROVIDERS.find(p => p.id === 'openrouter');
       const groq = AI_PROVIDERS.find(p => p.id === 'llama');
-      if (openrouter && openrouter.key() && (providerId.includes(':free') || providerId.includes('openrouter/'))) {
-        providers = [{ ...openrouter, model: providerId }];
-      } else if (groq && groq.key()) {
-        providers = [{ ...groq, model: providerId }];
-      } else {
-        throw new Error('No matching provider configured for model: ' + providerId);
-      }
+      const isLikelyOpenRouter = providerId.includes(':free') || providerId.includes('openrouter/');
+      // Route to the most likely provider first, fall back to the other
+      const primary = isLikelyOpenRouter ? openrouter : groq;
+      const fallback = isLikelyOpenRouter ? groq : openrouter;
+      const candidates = [];
+      if (primary?.key()) candidates.push({ ...primary, model: providerId });
+      if (fallback?.key()) candidates.push({ ...fallback, model: providerId });
+      if (candidates.length === 0) throw new Error('No matching provider configured for model: ' + providerId);
+      providers = candidates;
     } else {
       throw new Error(`Unknown provider: ${providerId}`);
     }
@@ -95,8 +97,14 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
         );
       }
 
+      const content = data.choices?.[0]?.message?.content || '';
+      if (!content.trim()) {
+        console.warn(`[LLM] ${provider.name} (${provider.model}) returned empty content`);
+        lastError = `${provider.name} returned empty response`;
+        continue;
+      }
       console.log(`[LLM] Success: ${provider.name} (${latency}ms, ${usage.total_tokens || '?'} tokens)`);
-      return { content: data.choices?.[0]?.message?.content || '', provider: `${provider.name} · ${provider.model}`, usage };
+      return { content, provider: `${provider.name} · ${provider.model}`, usage };
     } catch (err) {
       console.warn(`[LLM] ${provider.name} error:`, err.message);
       lastError = `${provider.name}: ${err.message}`;
