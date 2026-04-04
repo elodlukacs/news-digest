@@ -11,7 +11,8 @@ router.post('/', async (req, res) => {
   const { text, title, userId, provider } = req.body;
   if (!text || text.trim().length < 20) return res.status(400).json({ error: 'Text must be at least 20 characters' });
   const trimmed = text.trim().slice(0, 5000);
-  const analysisText = title ? `Article title: ${title.trim()}\n\nArticle content:\n${trimmed}` : trimmed;
+  const safeTitle = title ? title.trim().slice(0, 300) : '';
+  const analysisText = safeTitle ? `Article title: ${safeTitle}\n\nArticle content:\n${trimmed}` : trimmed;
 
   try {
     const messages = buildMessages('forensic-analysis', { text: analysisText });
@@ -51,9 +52,11 @@ router.post('/', async (req, res) => {
 
 // POST /api/forensics/stream — SSE streaming analysis
 router.post('/stream', async (req, res) => {
-  const { text, provider } = req.body;
+  const { text, title, provider } = req.body;
   if (!text || text.trim().length < 20) return res.status(400).json({ error: 'Text must be at least 20 characters' });
   const trimmed = text.trim().slice(0, 5000);
+  const safeTitle = title ? title.trim().slice(0, 300) : '';
+  const streamAnalysisText = safeTitle ? `Article title: ${safeTitle}\n\nArticle content:\n${trimmed}` : trimmed;
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -72,7 +75,7 @@ router.post('/stream', async (req, res) => {
   try {
     sendEvent('status', { step: 'analyzing', message: 'Analyzing text for cognitive vulnerabilities...' });
 
-    const messages = buildMessages('forensic-analysis', { text: trimmed });
+    const messages = buildMessages('forensic-analysis', { text: streamAnalysisText });
 
     const result = await callLLM(
       messages,

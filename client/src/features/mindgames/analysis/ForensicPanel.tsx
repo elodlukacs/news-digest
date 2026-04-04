@@ -83,12 +83,12 @@ export function ForensicPanel({ sections = [], categoryName = '', headline = '',
   const handleSelectArticle = (idx: number) => {
     setSelectedIdx(idx);
     if (idx >= 0 && idx < sections.length) {
-      const articleContent = sections[idx].content;
+      const section = sections[idx];
+      const articleContent = section.originalContent || section.content;
       setText(articleContent);
       setShowCustomInput(false);
-      // Auto-analyze after state updates
       setTimeout(() => {
-        analyzeWithText(articleContent);
+        analyzeWithText(articleContent, section.title);
       }, 0);
     }
   };
