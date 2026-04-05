@@ -15,7 +15,7 @@ const RIBBON_DOT: Record<string, string> = {
 };
 function SentimentRibbon({ sentiment }: { sentiment: 'positive' | 'negative' | 'neutral' | 'mixed' }) {
   return (
-    <span className={`absolute top-2.5 right-2.5 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] uppercase tracking-wider font-semibold pointer-events-none ${RIBBON_COLORS[sentiment]}`}>
+    <span className={`absolute top-0 right-0 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-bl-lg text-[9px] uppercase tracking-wider font-semibold pointer-events-none ${RIBBON_COLORS[sentiment]}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${RIBBON_DOT[sentiment]}`} />
       {sentiment}
     </span>
@@ -366,38 +366,7 @@ export function SummaryView({
                     {section.content}
                   </p>
                 </CardContent>
-                {/* Mobile: icon-only action bar */}
-                <div className="flex md:hidden items-center gap-1 px-0 pb-3">
-                  {section.url && (
-                    <a
-                      href={section.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center w-9 h-9 rounded-full text-ink-muted hover:text-masthead hover:bg-masthead/10 active:scale-95 transition-all"
-                      aria-label="Read full article"
-                    >
-                      <ExternalLink size={16} strokeWidth={1.5} />
-                    </a>
-                  )}
-                  <button
-                    className="inline-flex items-center justify-center w-9 h-9 rounded-full text-ink-muted hover:text-masthead hover:bg-masthead/10 active:scale-95 transition-all"
-                    onClick={() => setRadarSection({ title: section.title, content: section.content, url: section.url, originalContent: section.originalContent })}
-                    aria-label="Bias Radar"
-                  >
-                    <Search size={16} strokeWidth={1.5} />
-                  </button>
-                  {summary.id && (
-                    <button
-                      className="inline-flex items-center justify-center w-9 h-9 rounded-full text-ink-muted hover:text-masthead hover:bg-masthead/10 active:scale-95 transition-all"
-                      onClick={() => setChatSection({ title: section.title, content: section.content, originalContent: section.originalContent })}
-                      aria-label="Chat about this article"
-                    >
-                      <MessageCircle size={16} strokeWidth={1.5} />
-                    </button>
-                  )}
-                </div>
-                {/* Desktop: labeled buttons */}
-                <CardFooter className="hidden md:flex px-0 md:px-5 flex-wrap gap-2">
+                <CardFooter className="px-0 md:px-5 flex-wrap gap-1.5 md:gap-2">
                   {section.url && (
                     <Button variant="outline" size="sm" className="gap-1.5 text-xs" asChild>
                       <a href={section.url} target="_blank" rel="noopener noreferrer">
