@@ -244,7 +244,12 @@ export function useSummaryHistory(categoryId: number | null) {
   return { dates, refresh };
 }
 
-export function useChat(summaryId: number | null, providerId: string = 'openai/gpt-oss-20b') {
+export function useArticleChat(
+  summaryId: number | null,
+  articleTitle: string | null,
+  articleContent: string | null,
+  providerId: string = 'openai/gpt-oss-20b',
+) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -252,12 +257,13 @@ export function useChat(summaryId: number | null, providerId: string = 'openai/g
   const sendAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    if (!summaryId) { setMessages([]); return; }
+    if (!summaryId || !articleTitle) { setMessages([]); return; }
     if (abortRef.current) abortRef.current.abort();
     const controller = new AbortController();
     abortRef.current = controller;
 
-    fetch(`${BASE}/chat/${summaryId}`, { signal: controller.signal })
+    const params = new URLSearchParams({ article_title: articleTitle });
+    fetch(`${BASE}/chat/${summaryId}?${params}`, { signal: controller.signal })
       .then((r) => {
         if (!r.ok) throw new Error(`Server returned ${r.status}`);
         return r.json();
@@ -266,10 +272,10 @@ export function useChat(summaryId: number | null, providerId: string = 'openai/g
       .catch((err) => { if (!controller.signal.aborted) { console.error('Failed to load chat history:', err); setMessages([]); } });
 
     return () => { controller.abort(); abortRef.current = null; };
-  }, [summaryId]);
+  }, [summaryId, articleTitle]);
 
   const sendMessage = useCallback(async (text: string) => {
-    if (!summaryId || !text.trim()) return;
+    if (!summaryId || !articleTitle || !text.trim()) return;
     if (sendAbortRef.current) sendAbortRef.current.abort();
     const controller = new AbortController();
     sendAbortRef.current = controller;
@@ -282,7 +288,13 @@ export function useChat(summaryId: number | null, providerId: string = 'openai/g
       const res = await fetch(`${BASE}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ summary_id: requestId, message: text, provider: providerId }),
+        body: JSON.stringify({
+          summary_id: requestId,
+          message: text,
+          provider: providerId,
+          article_title: articleTitle,
+          article_content: articleContent || undefined,
+        }),
         signal: controller.signal,
       });
       const reply = await res.json();
@@ -290,7 +302,6 @@ export function useChat(summaryId: number | null, providerId: string = 'openai/g
         setError(reply.error || 'Failed to send message');
         return;
       }
-      // Only append if summaryId hasn't changed since the request started
       if (reply.content && summaryId === requestId && !controller.signal.aborted) {
         setMessages((prev) => [...prev, reply]);
       } else if (!reply.content && !controller.signal.aborted) {
@@ -302,7 +313,7 @@ export function useChat(summaryId: number | null, providerId: string = 'openai/g
     } finally {
       setSending(false);
     }
-  }, [summaryId, providerId]);
+  }, [summaryId, articleTitle, articleContent, providerId]);
 
   return { messages, sending, error, sendMessage };
 }
