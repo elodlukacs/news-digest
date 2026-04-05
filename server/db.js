@@ -74,7 +74,8 @@ db.exec(`
     summary_id INTEGER NOT NULL,
     role TEXT NOT NULL,
     content TEXT NOT NULL,
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL,
+    article_title TEXT DEFAULT NULL
   );
 
   CREATE TABLE IF NOT EXISTS user_settings (
@@ -210,6 +211,7 @@ db.exec(`
 addColumnIfNotExists('articles', 'body_text', "TEXT DEFAULT ''");
 addColumnIfNotExists('cognitive_users', 'antibody_count', 'INTEGER DEFAULT 0');
 addColumnIfNotExists('cognitive_users', 'last_inoculation_date', 'TEXT');
+addColumnIfNotExists('chat_messages', 'article_title', 'TEXT DEFAULT NULL');
 
 db.prepare("INSERT OR IGNORE INTO user_settings (key, value) VALUES ('theme', 'classic')").run();
 

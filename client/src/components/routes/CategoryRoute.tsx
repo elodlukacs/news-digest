@@ -2,7 +2,7 @@ import { useParams, useOutletContext, useNavigate } from 'react-router-dom';
 import { useState, useCallback } from 'react';
 import { SummaryView } from '../SummaryView';
 import { LeftSidebar } from '../LeftSidebar';
-import { useSummary, useSummaryHistory, useChat } from '../../hooks/useApi';
+import { useSummary, useSummaryHistory } from '../../hooks/useApi';
 import { slugify } from '../../utils/slugify';
 import type { AppOutletContext } from '../../types/routing';
 
@@ -17,7 +17,6 @@ export function CategoryRoute() {
   const categoryId = category?.id ?? 0;
   const { summary, loading, refreshing, error, refresh } = useSummary(categoryId, selectedSnapshotId, ctx.selectedLlm);
   const { dates, refresh: refreshHistory } = useSummaryHistory(categoryId);
-  const { messages: chatMessages, sending: chatSending, sendMessage: chatSend } = useChat(summary?.id || null, ctx.selectedLlm);
 
   const handleRefresh = useCallback(async () => {
     await refresh();
@@ -50,9 +49,7 @@ export function CategoryRoute() {
             onRefresh={handleRefresh}
             onManageFeeds={() => ctx.onManageFeeds(category.id)}
             onDelete={handleDelete}
-            chatMessages={chatMessages}
-            chatSending={chatSending}
-            onChatSend={chatSend}
+            selectedLlm={ctx.selectedLlm}
           />
         ) : (
           <div className="py-24 text-center">

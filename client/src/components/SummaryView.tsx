@@ -9,7 +9,8 @@ import { Badge } from './ui/badge';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Skeleton } from './ui/skeleton';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from './ui/card';
-import type { Summary, ChatMessage } from '../types';
+import type { Summary } from '../types';
+import { useArticleChat } from '../hooks/useApi';
 import { BiasRadarPanel } from '../features/mindgames/bias-radar';
 
 export interface ParsedSection {
@@ -164,9 +165,7 @@ interface Props {
   onRefresh: () => void;
   onManageFeeds: () => void;
   onDelete: () => void;
-  chatMessages: ChatMessage[];
-  chatSending: boolean;
-  onChatSend: (text: string) => void;
+  selectedLlm: string;
 }
 
 export function SummaryView({
@@ -179,14 +178,24 @@ export function SummaryView({
   onRefresh,
   onManageFeeds,
   onDelete,
-  chatMessages,
-  chatSending,
-  onChatSend,
+  selectedLlm,
 }: Props) {
   const [rateLimitDismissed, setRateLimitDismissed] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [radarSection, setRadarSection] = useState<{ title: string; content: string; url: string; originalContent?: string } | null>(null);
-  const [chatSection, setChatSection] = useState<{ title: string } | null>(null);
+  const [chatSection, setChatSection] = useState<{ title: string; content: string; originalContent?: string } | null>(null);
+
+  const chatArticleContent = useMemo(() => {
+    if (!chatSection) return null;
+    return chatSection.originalContent || chatSection.content || null;
+  }, [chatSection]);
+
+  const { messages: chatMessages, sending: chatSending, sendMessage: chatSend } = useArticleChat(
+    summary?.id ?? null,
+    chatSection?.title ?? null,
+    chatArticleContent,
+    selectedLlm,
+  );
 
   useEffect(() => {
     setRateLimitDismissed(false);
@@ -333,22 +342,22 @@ export function SummaryView({
                     {section.content}
                   </p>
                 </CardContent>
-                <CardFooter className="px-0 md:px-5 gap-2">
+                <CardFooter className="px-0 md:px-5 flex-wrap gap-1.5 md:gap-2">
                   {section.sentiment && (
                     <SentimentBadge sentiment={section.sentiment} />
                   )}
                   {section.url && (
-                    <Button variant="outline" size="sm" className="gap-2" asChild>
+                    <Button variant="outline" size="sm" className="gap-1.5 text-xs" asChild>
                       <a href={section.url} target="_blank" rel="noopener noreferrer">
                         <ExternalLink size={12} />
-                        Read full article
+                        <span className="hidden sm:inline">Read full</span> article
                       </a>
                     </Button>
                   )}
                   <Button
                     variant="outline"
                     size="sm"
-                    className="gap-2"
+                    className="gap-1.5 text-xs"
                     onClick={() => setRadarSection({ title: section.title, content: section.content, url: section.url, originalContent: section.originalContent })}
                   >
                     <Search size={14} strokeWidth={1.5} />
@@ -358,8 +367,8 @@ export function SummaryView({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="gap-2"
-                      onClick={() => setChatSection({ title: section.title })}
+                      className="gap-1.5 text-xs"
+                      onClick={() => setChatSection({ title: section.title, content: section.content, originalContent: section.originalContent })}
                     >
                       <MessageCircle size={14} strokeWidth={1.5} />
                       Chat
@@ -389,7 +398,7 @@ export function SummaryView({
               sourceName={categoryName}
               messages={chatMessages}
               sending={chatSending}
-              onSend={onChatSend}
+              onSend={chatSend}
               onClose={() => setChatSection(null)}
             />
           )}
