@@ -15,7 +15,7 @@ const RIBBON_DOT: Record<string, string> = {
 };
 function SentimentRibbon({ sentiment }: { sentiment: 'positive' | 'negative' | 'neutral' | 'mixed' }) {
   return (
-    <span className={`absolute top-0 right-0 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-bl-lg text-[9px] uppercase tracking-wider font-semibold pointer-events-none ${RIBBON_COLORS[sentiment]}`}>
+    <span className={`absolute top-0 -right-6 md:right-0 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-bl-lg md:rounded-bl-lg text-[9px] uppercase tracking-wider font-semibold pointer-events-none ${RIBBON_COLORS[sentiment]}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${RIBBON_DOT[sentiment]}`} />
       {sentiment}
     </span>
@@ -352,12 +352,12 @@ export function SummaryView({
       {summary && sections.length > 0 && (
         <div className="pt-2 md:pt-8 pb-12 space-y-1 md:space-y-4">
           {sections.map((section, idx) => (
-            <article key={idx} className="relative -mx-6 px-6 py-1.5 border-y border-rule/60 bg-paper-dark/70 md:mx-0 md:px-0 md:py-0 md:bg-transparent md:border-y-0">
-              {/* Sentiment ribbon — flush to screen edge on mobile, card edge on desktop */}
-              {section.sentiment && (
-                <SentimentRibbon sentiment={section.sentiment} />
-              )}
-              <Card className="border-0 bg-transparent md:bg-paper-dark md:border md:border-rule overflow-hidden">
+            <article key={idx} className="-mx-6 px-6 py-1.5 border-y border-rule/60 bg-paper-dark/70 md:mx-0 md:px-0 md:py-0 md:bg-transparent md:border-y-0">
+              <Card className="relative border-0 bg-transparent md:bg-paper-dark md:border md:border-rule overflow-visible md:overflow-hidden">
+                {/* Sentiment ribbon — flush to screen edge on mobile, card edge on desktop */}
+                {section.sentiment && (
+                  <SentimentRibbon sentiment={section.sentiment} />
+                )}
                 <CardHeader className="pb-0 px-0 md:px-5">
                   <CardTitle className="text-lg md:text-xl pr-16">{section.title}</CardTitle>
                 </CardHeader>
