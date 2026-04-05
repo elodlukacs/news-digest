@@ -352,12 +352,12 @@ export function SummaryView({
       {summary && sections.length > 0 && (
         <div className="pt-2 md:pt-8 pb-12 space-y-1 md:space-y-4">
           {sections.map((section, idx) => (
-            <article key={idx} className="-mx-6 px-6 py-1.5 border-y border-rule/60 bg-paper-dark/70 md:mx-0 md:px-0 md:py-0 md:bg-transparent md:border-y-0">
-              <Card className="relative border-0 bg-transparent md:bg-paper-dark md:border md:border-rule overflow-hidden">
-                {/* Sentiment ribbon — top-right corner, no layout impact */}
-                {section.sentiment && (
-                  <SentimentRibbon sentiment={section.sentiment} />
-                )}
+            <article key={idx} className="relative -mx-6 px-6 py-1.5 border-y border-rule/60 bg-paper-dark/70 md:mx-0 md:px-0 md:py-0 md:bg-transparent md:border-y-0">
+              {/* Sentiment ribbon — flush to screen edge on mobile, card edge on desktop */}
+              {section.sentiment && (
+                <SentimentRibbon sentiment={section.sentiment} />
+              )}
+              <Card className="border-0 bg-transparent md:bg-paper-dark md:border md:border-rule overflow-hidden">
                 <CardHeader className="pb-0 px-0 md:px-5">
                   <CardTitle className="text-lg md:text-xl pr-16">{section.title}</CardTitle>
                 </CardHeader>
