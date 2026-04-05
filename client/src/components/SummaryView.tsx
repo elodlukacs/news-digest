@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import { RefreshCw, AlertCircle, Clock, Zap, Settings, Trash2, ExternalLink, MoreVertical, Search } from 'lucide-react';
+import { RefreshCw, AlertCircle, Clock, Zap, Settings, Trash2, ExternalLink, MoreVertical, Search, MessageCircle } from 'lucide-react';
 import { SentimentBadge } from './SentimentBadge';
-import { ChatPanel } from './ChatPanel';
+import { ArticleChatPopup } from './ArticleChatPopup';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Drawer, DrawerContent } from './ui/drawer';
 import { Button } from './ui/button';
@@ -186,6 +186,7 @@ export function SummaryView({
   const [rateLimitDismissed, setRateLimitDismissed] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [radarSection, setRadarSection] = useState<{ title: string; content: string; url: string; originalContent?: string } | null>(null);
+  const [chatSection, setChatSection] = useState<{ title: string } | null>(null);
 
   useEffect(() => {
     setRateLimitDismissed(false);
@@ -353,6 +354,17 @@ export function SummaryView({
                     <Search size={14} strokeWidth={1.5} />
                     Bias Radar
                   </Button>
+                  {summary.id && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => setChatSection({ title: section.title })}
+                    >
+                      <MessageCircle size={14} strokeWidth={1.5} />
+                      Chat
+                    </Button>
+                  )}
                 </CardFooter>
               </Card>
             </article>
@@ -371,7 +383,16 @@ export function SummaryView({
             </div>
           )}
 
-          {summary.id && <ChatPanel messages={chatMessages} sending={chatSending} onSend={onChatSend} />}
+          {chatSection && summary.id && (
+            <ArticleChatPopup
+              headline={chatSection.title}
+              sourceName={categoryName}
+              messages={chatMessages}
+              sending={chatSending}
+              onSend={onChatSend}
+              onClose={() => setChatSection(null)}
+            />
+          )}
         </div>
       )}
 
