@@ -155,7 +155,7 @@ async function searchGoogleNews(title, language = 'English') {
           const ratingUrl = item.source?.url || item.link;
 
           return {
-            title: item.title?.replace(/^.*? - /, '') || item.title,
+            title: item.title?.replace(/ - [^-]+$/, '') || item.title,
             url: item.link,
             source,
             biasRating: getBiasRating(ratingUrl) || 'unknown',
