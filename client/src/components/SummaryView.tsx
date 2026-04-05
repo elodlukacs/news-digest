@@ -15,7 +15,7 @@ const RIBBON_DOT: Record<string, string> = {
 };
 function SentimentRibbon({ sentiment }: { sentiment: 'positive' | 'negative' | 'neutral' | 'mixed' }) {
   return (
-    <span className={`absolute top-0 -right-6 md:right-0 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-bl-lg md:rounded-bl-lg text-[9px] uppercase tracking-wider font-semibold pointer-events-none ${RIBBON_COLORS[sentiment]}`}>
+    <span className={`absolute -top-1.5 -right-6 md:top-0 md:right-0 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-bl-lg text-[9px] uppercase tracking-wider font-semibold pointer-events-none ${RIBBON_COLORS[sentiment]}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${RIBBON_DOT[sentiment]}`} />
       {sentiment}
     </span>
