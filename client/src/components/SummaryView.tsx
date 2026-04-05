@@ -1,6 +1,26 @@
 import { useState, useEffect, useMemo } from 'react';
 import { RefreshCw, AlertCircle, Clock, Zap, Settings, Trash2, ExternalLink, MoreVertical, Search, MessageCircle } from 'lucide-react';
-import { SentimentBadge } from './SentimentBadge';
+// Sentiment ribbon — positioned absolute top-right, no layout impact
+const RIBBON_COLORS: Record<string, string> = {
+  positive: 'bg-[var(--color-positive-bg)] text-[var(--color-positive-text)]',
+  negative: 'bg-[var(--color-negative-bg)] text-[var(--color-negative-text)]',
+  neutral: 'bg-[var(--color-neutral-bg)] text-[var(--color-neutral-text)]',
+  mixed: 'bg-[var(--color-mixed-bg)] text-[var(--color-mixed-text)]',
+};
+const RIBBON_DOT: Record<string, string> = {
+  positive: 'bg-[var(--color-positive-dot)]',
+  negative: 'bg-[var(--color-negative-dot)]',
+  neutral: 'bg-[var(--color-neutral-dot)]',
+  mixed: 'bg-[var(--color-mixed-dot)]',
+};
+function SentimentRibbon({ sentiment }: { sentiment: 'positive' | 'negative' | 'neutral' | 'mixed' }) {
+  return (
+    <span className={`absolute top-2.5 right-2.5 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] uppercase tracking-wider font-semibold pointer-events-none ${RIBBON_COLORS[sentiment]}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${RIBBON_DOT[sentiment]}`} />
+      {sentiment}
+    </span>
+  );
+}
 import { ArticleChatPopup } from './ArticleChatPopup';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Drawer, DrawerContent } from './ui/drawer';
@@ -333,24 +353,56 @@ export function SummaryView({
         <div className="pt-2 md:pt-8 pb-12 space-y-1 md:space-y-4">
           {sections.map((section, idx) => (
             <article key={idx} className="-mx-6 px-6 py-1.5 border-y border-rule/60 bg-paper-dark/70 md:mx-0 md:px-0 md:py-0 md:bg-transparent md:border-y-0">
-              <Card className="border-0 bg-transparent md:bg-paper-dark md:border md:border-rule">
+              <Card className="relative border-0 bg-transparent md:bg-paper-dark md:border md:border-rule overflow-hidden">
+                {/* Sentiment ribbon — top-right corner, no layout impact */}
+                {section.sentiment && (
+                  <SentimentRibbon sentiment={section.sentiment} />
+                )}
                 <CardHeader className="pb-0 px-0 md:px-5">
-                  <CardTitle className="text-lg md:text-xl">{section.title}</CardTitle>
+                  <CardTitle className="text-lg md:text-xl pr-16">{section.title}</CardTitle>
                 </CardHeader>
                 <CardContent className="px-0 md:px-5">
                   <p className="text-[16px] leading-[1.8] text-ink font-[family-name:var(--font-body)]">
                     {section.content}
                   </p>
                 </CardContent>
-                <CardFooter className="px-0 md:px-5 flex-wrap gap-1.5 md:gap-2">
-                  {section.sentiment && (
-                    <SentimentBadge sentiment={section.sentiment} />
+                {/* Mobile: icon-only action bar */}
+                <div className="flex md:hidden items-center gap-1 px-0 pb-3">
+                  {section.url && (
+                    <a
+                      href={section.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center w-9 h-9 rounded-full text-ink-muted hover:text-masthead hover:bg-masthead/10 active:scale-95 transition-all"
+                      aria-label="Read full article"
+                    >
+                      <ExternalLink size={16} strokeWidth={1.5} />
+                    </a>
                   )}
+                  <button
+                    className="inline-flex items-center justify-center w-9 h-9 rounded-full text-ink-muted hover:text-masthead hover:bg-masthead/10 active:scale-95 transition-all"
+                    onClick={() => setRadarSection({ title: section.title, content: section.content, url: section.url, originalContent: section.originalContent })}
+                    aria-label="Bias Radar"
+                  >
+                    <Search size={16} strokeWidth={1.5} />
+                  </button>
+                  {summary.id && (
+                    <button
+                      className="inline-flex items-center justify-center w-9 h-9 rounded-full text-ink-muted hover:text-masthead hover:bg-masthead/10 active:scale-95 transition-all"
+                      onClick={() => setChatSection({ title: section.title, content: section.content, originalContent: section.originalContent })}
+                      aria-label="Chat about this article"
+                    >
+                      <MessageCircle size={16} strokeWidth={1.5} />
+                    </button>
+                  )}
+                </div>
+                {/* Desktop: labeled buttons */}
+                <CardFooter className="hidden md:flex px-0 md:px-5 flex-wrap gap-2">
                   {section.url && (
                     <Button variant="outline" size="sm" className="gap-1.5 text-xs" asChild>
                       <a href={section.url} target="_blank" rel="noopener noreferrer">
                         <ExternalLink size={12} />
-                        <span className="hidden sm:inline">Read full</span> article
+                        Read full article
                       </a>
                     </Button>
                   )}

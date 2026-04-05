@@ -21,12 +21,17 @@ router.post('/', async (req, res) => {
     const now = new Date().toISOString();
     db.prepare('INSERT INTO chat_messages (summary_id, role, content, created_at, article_title) VALUES (?,?,?,?,?)').run(summary_id, 'user', message, now, article_title || null);
 
-    // Build context: use article content if available, otherwise full summary
-    let context = summary.summary;
+    // Build context scoped to the single article only
+    let context;
     if (article_title && article_content) {
       context = `Article: ${article_title}\n\n${article_content}`;
     } else if (article_title) {
-      context = `Article: ${article_title}\n\nFull summary:\n${summary.summary}`;
+      // Extract only this article's section from the full summary
+      const parts = summary.summary.split(/\n---\n/);
+      const match = parts.find(p => p.includes(article_title));
+      context = match ? `Article: ${article_title}\n\n${match.trim()}` : `Article: ${article_title}`;
+    } else {
+      context = summary.summary;
     }
 
     const promptMessages = buildMessages('chat', { summary: context });
