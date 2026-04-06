@@ -11,12 +11,6 @@ const EXCLUDED_IDS = [
   'allam-2-7b',
 ];
 
-const EXCLUDED_OR_IDS = [
-  'openrouter/free',
-  'google/lyria-3-pro-preview',
-  'google/lyria-3-clip-preview',
-];
-
 async function fetchGroqModels() {
   const apiKey = env('GROQ_API_KEY');
   if (!apiKey) return [];
@@ -47,53 +41,42 @@ async function fetchGroqModels() {
   }
 }
 
-async function fetchOpenRouterModels() {
-  const apiKey = env('OPENROUTER_API_KEY');
+async function fetchGoogleModels() {
+  const apiKey = env('GOOGLE_AI_API_KEY');
   if (!apiKey) return [];
 
   try {
-    const response = await fetch('https://openrouter.ai/api/v1/models', {
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/models', {
       headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     });
     if (!response.ok) {
-      console.warn(`[Models] OpenRouter API returned ${response.status}`);
+      console.warn(`[Models] Google AI Studio API returned ${response.status}`);
       return [];
     }
     const data = await response.json();
-    const freeModels = (data.data || [])
-      .filter(m => {
-        if (!m.id || EXCLUDED_OR_IDS.includes(m.id)) return false;
-        const pricing = m.pricing || {};
-        return pricing.prompt === '0' && pricing.completion === '0';
-      })
-      .filter(m => {
-        const arch = m.architecture || {};
-        const modalities = arch.modality || '';
-        return modalities.includes('text');
-      })
-      .sort((a, b) => (b.context_length || 0) - (a.context_length || 0))
-      .slice(0, 10)
+    return (data.data || [])
+      .filter(m => m.id && m.id.startsWith('gemini-'))
       .map(m => ({
         id: m.id,
-        name: (m.name || m.id).replace(/ \(free\)$/i, '').trim(),
-        owned_by: m.id.split('/')[0].charAt(0).toUpperCase() + m.id.split('/')[0].slice(1),
-        context_window: m.context_length,
-        max_completion_tokens: (m.top_provider || {}).max_completion_tokens || m.context_length,
-        provider: 'OpenRouter',
-      }));
-    return freeModels;
+        name: m.id.replace(/^gemini-/, 'Gemini ').replace(/-/g, ' '),
+        owned_by: 'Google',
+        context_window: m.context_window || 1000000,
+        max_completion_tokens: m.max_completion_tokens || 8192,
+        provider: 'Google AI Studio',
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   } catch (err) {
-    console.error('[Models] Failed to fetch OpenRouter models:', err.message);
+    console.error('[Models] Failed to fetch Google AI Studio models:', err.message);
     return [];
   }
 }
 
 router.get('/', async (req, res) => {
-  const [groqModels, openRouterModels] = await Promise.all([
+  const [groqModels, googleModels] = await Promise.all([
     fetchGroqModels(),
-    fetchOpenRouterModels(),
+    fetchGoogleModels(),
   ]);
-  res.json([...groqModels, ...openRouterModels]);
+  res.json([...groqModels, ...googleModels]);
 });
 
 module.exports = router;

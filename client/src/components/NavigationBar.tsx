@@ -457,7 +457,8 @@ function formatModelName(id: string): string {
   return id
     .replace(/^openai\//, '')
     .replace(/^meta-llama\//, 'Llama ')
-    .replace(/:free$/, '');
+    .replace(/^gemini-/, 'Gemini ')
+    .replace(/-/g, ' ');
 }
 
 function formatTokens(n: number): string {

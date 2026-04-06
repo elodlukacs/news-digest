@@ -2,7 +2,7 @@ const env = (name) => process.env[name];
 
 const AI_PROVIDERS = [
   { id: 'llama', name: 'Groq', url: 'https://api.groq.com/openai/v1/chat/completions', key: () => env('GROQ_API_KEY'), model: 'openai/gpt-oss-20b' },
-  { id: 'openrouter', name: 'OpenRouter', url: 'https://openrouter.ai/api/v1/chat/completions', key: () => env('OPENROUTER_API_KEY'), model: 'minimax/minimax-m2.5:free' },
+  { id: 'google', name: 'Google AI Studio', url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', key: () => env('GOOGLE_AI_API_KEY'), model: 'gemini-2.0-flash' },
 ];
 
 const providerQuotas = {};
@@ -16,18 +16,14 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
     if (target) {
       if (!target.key()) throw new Error(`API key not configured for ${target.name}. Set the required env var.`);
       providers = [target];
+    } else if (providerId.startsWith('gemini-')) {
+      const google = AI_PROVIDERS.find(p => p.id === 'google');
+      if (!google?.key()) throw new Error('GOOGLE_AI_API_KEY not configured');
+      providers = [{ ...google, model: providerId }];
     } else if (providerId.includes('/')) {
-      const openrouter = AI_PROVIDERS.find(p => p.id === 'openrouter');
       const groq = AI_PROVIDERS.find(p => p.id === 'llama');
-      const isLikelyOpenRouter = providerId.includes(':free') || providerId.includes('openrouter/');
-      // Route to the most likely provider first, fall back to the other
-      const primary = isLikelyOpenRouter ? openrouter : groq;
-      const fallback = isLikelyOpenRouter ? groq : openrouter;
-      const candidates = [];
-      if (primary?.key()) candidates.push({ ...primary, model: providerId });
-      if (fallback?.key()) candidates.push({ ...fallback, model: providerId });
-      if (candidates.length === 0) throw new Error('No matching provider configured for model: ' + providerId);
-      providers = candidates;
+      if (!groq?.key()) throw new Error('No matching provider configured for model: ' + providerId);
+      providers = [{ ...groq, model: providerId }];
     } else {
       throw new Error(`Unknown provider: ${providerId}`);
     }
