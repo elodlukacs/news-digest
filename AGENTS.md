@@ -3,7 +3,7 @@
 ## Project Overview
 
 Monorepo: `server/` (Express 5 + SQLite, CommonJS) + `client/` (React 19 + TypeScript + Vite + Tailwind CSS 4).
-No shared code between packages. Frontend deploys to Vercel, backend to Railway.
+No shared code between packages. Frontend deploys to Vercel, backend runs locally.
 
 ## Build & Run Commands
 

@@ -1,8 +1,0 @@
-[phases.setup]
-nixPkgs = ["nodejs_22", "python3", "gcc", "gnumake"]
-
-[phases.install]
-cmds = ["npm ci && npm rebuild better-sqlite3"]
-
-[start]
-cmd = "node index.js"
