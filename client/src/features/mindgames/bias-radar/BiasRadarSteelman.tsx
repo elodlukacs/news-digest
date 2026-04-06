@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { API_BASE } from '../../../config';
+import { useLlm } from '../../../contexts/LlmContext';
 import type { SteelmanResponse } from '../../../types/lens';
 
 interface BiasRadarSteelmanProps {
@@ -11,6 +12,7 @@ interface BiasRadarSteelmanProps {
 type SteelState = 'input' | 'loading' | 'result' | 'rebuttal' | 'challenge' | 'error';
 
 export default function BiasRadarSteelman({ headline, content, language }: BiasRadarSteelmanProps) {
+  const selectedLlm = useLlm();
   const [position, setPosition] = useState('');
   const [state, setState] = useState<SteelState>('input');
   const [result, setResult] = useState<SteelmanResponse | null>(null);
@@ -35,7 +37,7 @@ export default function BiasRadarSteelman({ headline, content, language }: BiasR
       const res = await fetch(`${API_BASE}/bias-radar/steelman`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userPosition: position, articleContext, language }),
+        body: JSON.stringify({ userPosition: position, articleContext, language, provider: selectedLlm }),
         signal: abortRef.current.signal,
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);

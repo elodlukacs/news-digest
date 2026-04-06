@@ -6,6 +6,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '../../../components/ui/
 import { Search, Loader2, AlertTriangle, Brain, History, ChevronDown, ChevronUp, Info, FlaskConical, PenLine, BookOpen } from 'lucide-react';
 import { FeaturePanelHeader } from '../common';
 import { API_BASE } from '../../../config';
+import { useLlm } from '../../../contexts/LlmContext';
 import type { ForensicResult, ForensicFallacy, ForensicEntry } from '../../../types';
 import type { ParsedSection } from '../../../components/SummaryView';
 import { StudyStressTester } from './StudyStressTester';
@@ -42,6 +43,7 @@ interface ForensicPanelProps {
 }
 
 export function ForensicPanel({ sections = [], categoryName = '', headline = '', content = '', originalContent = '' }: ForensicPanelProps) {
+  const selectedLlm = useLlm();
   const [activeTab, setActiveTab] = useState<'forensic' | 'study'>('forensic');
   const [selectedIdx, setSelectedIdx] = useState<number>(-1);
   const [showCustomInput, setShowCustomInput] = useState(false);
@@ -105,7 +107,7 @@ export function ForensicPanel({ sections = [], categoryName = '', headline = '',
     setStreamStep('Analyzing text for cognitive vulnerabilities…');
 
     try {
-      const body: Record<string, string> = { text: trimmed };
+      const body: Record<string, string> = { text: trimmed, provider: selectedLlm };
       if (articleTitle) body.title = articleTitle;
       const res = await fetch(`${API_BASE}/forensics`, {
         method: 'POST',

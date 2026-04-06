@@ -5,6 +5,7 @@ import { Badge } from '../../../components/ui/badge';
 import { AlertTriangle, Loader2, AlertCircle, GitBranch, ShieldAlert } from 'lucide-react';
 import { FeaturePanelHeader } from '../common';
 import { API_BASE } from '../../../config';
+import { useLlm } from '../../../contexts/LlmContext';
 
 function escapeHtml(str: string): string {
   return String(str)
@@ -80,6 +81,7 @@ const TIER_COLORS = {
 };
 
 export function DisinfoMap() {
+  const selectedLlm = useLlm();
   const [data, setData] = useState<DisinfoMapData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -98,7 +100,7 @@ export function DisinfoMap() {
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ regenerate }),
+        body: JSON.stringify({ regenerate, provider: selectedLlm }),
       });
       
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Failed to load map');

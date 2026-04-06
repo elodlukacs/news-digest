@@ -6,6 +6,7 @@ import { Badge } from '../../../components/ui/badge';
 import { Map, Loader2, AlertTriangle, Play, ChevronLeft, ChevronRight, TrendingUp, Users, Clock } from 'lucide-react';
 import { FeaturePanelHeader } from '../common';
 import { API_BASE } from '../../../config';
+import { useLlm } from '../../../contexts/LlmContext';
 
 function escapeHtml(str: string): string {
   return String(str)
@@ -82,6 +83,7 @@ const STAGE_COLORS: Record<string, string> = {
 };
 
 export function NarrativeMapPanel() {
+  const selectedLlm = useLlm();
   const [topic, setTopic] = useState('');
   const [result, setResult] = useState<NarrativeMapData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -111,7 +113,7 @@ export function NarrativeMapPanel() {
       const res = await fetch(`${API_BASE}/cognitive/narrative-map`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic: topic.trim() }),
+        body: JSON.stringify({ topic: topic.trim(), provider: selectedLlm }),
         signal: ctrl.signal
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Analysis failed');

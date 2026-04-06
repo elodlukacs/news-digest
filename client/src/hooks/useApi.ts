@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useContext } from 'react';
+import { LlmContext } from '../contexts/LlmContext';
 import type { Category, Feed, Summary, HistoryEntry, ChatMessage, Job, JobFilters, JobCounts, SourceCounts, Briefing, HomepageBrief, StudyAnalysis, StudyAnalysisEntry, InformationDietResult } from '../types';
 
 import { API_BASE as BASE } from '../config';
@@ -601,6 +602,7 @@ export function useJobs() {
 }
 
 export function useInformationDiet(sources: { name: string; url?: string }[]) {
+  const selectedLlm = useContext(LlmContext);
   const [result, setResult] = useState<InformationDietResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -618,7 +620,7 @@ export function useInformationDiet(sources: { name: string; url?: string }[]) {
       const res = await fetch(`${BASE}/bridge/information-diet`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sources }),
+        body: JSON.stringify({ sources, provider: selectedLlm }),
         signal: controller.signal,
       });
       const data = await res.json();
@@ -630,7 +632,7 @@ export function useInformationDiet(sources: { name: string; url?: string }[]) {
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  }, [sources]);
+  }, [sources, selectedLlm]);
 
   useEffect(() => {
     return () => abortRef.current?.abort();

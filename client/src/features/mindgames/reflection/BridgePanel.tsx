@@ -7,6 +7,7 @@ import { Badge } from '../../../components/ui/badge';
 import { Loader2, Heart, Plus, X, Globe, AlertTriangle, Check, History, ChevronDown, ChevronUp, MessageSquare } from 'lucide-react';
 import { FeaturePanelHeader } from '../common';
 import { API_BASE } from '../../../config';
+import { useLlm } from '../../../contexts/LlmContext';
 import type { SchwartzValue, BridgeAudit } from '../../../types';
 import { InformationDiet } from './InformationDiet';
 
@@ -30,6 +31,7 @@ interface AuditHistoryEntry {
 type Tab = 'audit' | 'bridge' | 'diet';
 
 export function BridgePanel() {
+  const selectedLlm = useLlm();
   const [tab, setTab] = useState<Tab>('audit');
 
   // SOS Audit state
@@ -102,7 +104,7 @@ export function BridgePanel() {
       const res = await fetch(`${API_BASE}/bridge/audit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sources }),
+        body: JSON.stringify({ sources, provider: selectedLlm }),
         signal: ctrl.signal,
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Audit failed');
@@ -128,7 +130,7 @@ export function BridgePanel() {
       const res = await fetch(`${API_BASE}/bridge/bridge`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ viewA, viewB }),
+        body: JSON.stringify({ viewA, viewB, provider: selectedLlm }),
         signal: ctrl.signal,
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Bridge analysis failed');

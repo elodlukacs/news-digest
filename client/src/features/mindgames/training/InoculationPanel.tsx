@@ -7,6 +7,7 @@ import { Badge } from '../../../components/ui/badge';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../../../components/ui/tooltip';
 import { Loader2, Shield, Zap, CheckCircle, XCircle, AlertTriangle, Trophy, Eye, RotateCcw, Syringe, Droplet, Users, Flame, Search, Theater } from 'lucide-react';
 import { API_BASE } from '../../../config';
+import { useLlm } from '../../../contexts/LlmContext';
 import type { InoculationHeadline } from '../../../types';
 import { FeaturePanelHeader } from '../common';
 
@@ -62,6 +63,7 @@ const ANTIGEN_ICONS: Record<string, React.ComponentType<{ size?: number; classNa
 /* ─── Component ─── */
 
 export function InoculationPanel() {
+  const selectedLlm = useLlm();
   const [mode, setMode] = useState<'passive' | 'active'>('passive');
 
   // Passive mode state
@@ -155,7 +157,7 @@ export function InoculationPanel() {
       const res = await fetch(`${API_BASE}/inoculation/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic }),
+        body: JSON.stringify({ topic, provider: selectedLlm }),
         signal: ctrl.signal,
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Failed to generate round');
@@ -241,7 +243,7 @@ export function InoculationPanel() {
       const res = await fetch(`${API_BASE}/inoculation/craft`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic: activeTopic, tactic: selectedTactic }),
+        body: JSON.stringify({ topic: activeTopic, tactic: selectedTactic, provider: selectedLlm }),
         signal: ctrl.signal,
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Craft failed');

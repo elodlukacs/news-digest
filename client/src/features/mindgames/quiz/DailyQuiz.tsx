@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { API_BASE } from '../../../config';
+import { useLlm } from '../../../contexts/LlmContext';
 import TechniquePicker from '../bias-radar/TechniquePicker';
 import TechniqueCard from '../bias-radar/TechniqueCard';
 import type { TechniqueName, TechniqueResult } from '../../../types/lens';
@@ -16,6 +17,7 @@ interface QuizArticle {
 type Stage = 'loading' | 'reading' | 'guessing' | 'scanning' | 'result';
 
 export function DailyQuiz() {
+  const selectedLlm = useLlm();
   const [stage, setStage] = useState<Stage>('loading');
   const [article, setArticle] = useState<QuizArticle | null>(null);
   const [userGuess, setUserGuess] = useState<TechniqueName | null>(null);
@@ -60,7 +62,7 @@ export function DailyQuiz() {
       const res = await fetch(`${API_BASE}/bias-radar/decode`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ headline: article.headline, content: article.content }),
+        body: JSON.stringify({ headline: article.headline, content: article.content, provider: selectedLlm }),
         signal: abortRef.current.signal,
       });
       if (!res.ok) throw new Error('Failed to analyze');

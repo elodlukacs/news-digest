@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Routes, Route, Outlet, useNavigate } from 'react-router-dom';
+import { LlmProvider } from './contexts/LlmContext';
 import { NavigationBar } from './components/NavigationBar';
 import { FeedManager } from './components/FeedManager';
 import { LlmStatsModal } from './components/LlmStatsModal';
@@ -68,6 +69,7 @@ function AppLayout() {
   });
 
   return (
+    <LlmProvider value={selectedLlm}>
     <TooltipProvider>
       <div className="min-h-screen bg-paper" ref={containerRef}>
         <PullToRefreshIndicator pulling={pulling} pullProgress={pullProgress} />
@@ -100,6 +102,7 @@ function AppLayout() {
         <LlmStatsModal open={showStats} onClose={() => setShowStats(false)} />
       </div>
     </TooltipProvider>
+    </LlmProvider>
   );
 }
 

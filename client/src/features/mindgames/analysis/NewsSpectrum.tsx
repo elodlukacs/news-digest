@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { FeaturePanelHeader } from '../common';
 import { API_BASE } from '../../../config';
+import { useLlm } from '../../../contexts/LlmContext';
 
 interface OutletRating {
   id: string;
@@ -77,6 +78,7 @@ const BIAS_POSITIONS: Record<string, number> = {
 };
 
 export function NewsSpectrum() {
+  const selectedLlm = useLlm();
   const [topic, setTopic] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -111,7 +113,7 @@ export function NewsSpectrum() {
       const res = await fetch(`${API_BASE}/spectrum/compare`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic: topic.trim() })
+        body: JSON.stringify({ topic: topic.trim(), provider: selectedLlm })
       });
       
       if (!res.ok) {

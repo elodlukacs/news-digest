@@ -7,6 +7,7 @@ import { Tabs, TabsList, TabsTrigger } from '../../../components/ui/tabs';
 import { Loader2, Link2, Search, AlertTriangle, Scale, Quote, ChevronDown, ChevronUp, History } from 'lucide-react';
 import { FeaturePanelHeader } from '../common';
 import { API_BASE } from '../../../config';
+import { useLlm } from '../../../contexts/LlmContext';
 
 interface OutletCoverage {
   name: string;
@@ -42,6 +43,7 @@ const BIAS_COLORS: Record<string, string> = {
 const BIAS_ORDER = ['Far Left', 'Left', 'Center-Left', 'Center', 'Center-Right', 'Right', 'Far Right'];
 
 export function CompareCoverage() {
+  const selectedLlm = useLlm();
   const [input, setInput] = useState('');
   const [inputType, setInputType] = useState<'url' | 'topic'>('topic');
   const [result, setResult] = useState<CoverageResult | null>(null);
@@ -97,7 +99,7 @@ export function CompareCoverage() {
       const res = await fetch(`${API_BASE}/compare/coverage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: inputType === 'url' ? input.trim() : undefined, topic: inputType === 'topic' ? input.trim() : undefined }),
+        body: JSON.stringify({ url: inputType === 'url' ? input.trim() : undefined, topic: inputType === 'topic' ? input.trim() : undefined, provider: selectedLlm }),
         signal: ctrl.signal,
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Analysis failed');

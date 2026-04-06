@@ -9,11 +9,12 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../../components/ui
 import { Loader2, Microscope, MessageSquare, AlertTriangle, Brain, History, ChevronDown, ChevronUp, Info, TrendingUp } from 'lucide-react';
 import { FeaturePanelHeader } from '../common';
 import { API_BASE } from '../../../config';
+import { useLlm } from '../../../contexts/LlmContext';
 import type { DebateResponse, RethinkingEntry } from '../../../types';
 import { JournalTrends } from './JournalTrends';
 
 interface Props {
-  selectedLlm?: string;
+  // selectedLlm now comes from LlmContext
 }
 
 type ThinkingMode = 'scientist' | 'preacher' | 'prosecutor' | 'politician' | 'unknown';
@@ -50,7 +51,8 @@ function detectThinkingMode(claim: string, confidence: number): ThinkingMode {
   return 'unknown';
 }
 
-export function ScientistPanel({ selectedLlm }: Props) {
+export function ScientistPanel(_props: Props) {
+  const selectedLlm = useLlm();
   const [claim, setClaim] = useState('');
   const [debate, setDebate] = useState<DebateResponse[] | null>(null);
   const [loading, setLoading] = useState(false);

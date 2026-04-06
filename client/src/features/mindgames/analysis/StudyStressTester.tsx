@@ -6,6 +6,7 @@ import { Badge } from '../../../components/ui/badge';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../../../components/ui/tooltip';
 import { FlaskConical, Loader2, AlertTriangle, History, ChevronDown, ChevronUp, Info, CheckCircle2, XCircle, HelpCircle, TrendingUp, Users, ShieldAlert, FileCheck } from 'lucide-react';
 import { API_BASE } from '../../../config';
+import { useLlm } from '../../../contexts/LlmContext';
 import type { StudyAnalysis, StudyAnalysisEntry } from '../../../types';
 
 function getScoreColor(score: number): string {
@@ -73,6 +74,7 @@ function IndicatorBadge({ label, status, tooltip }: IndicatorBadgeProps) {
 }
 
 export function StudyStressTester() {
+  const selectedLlm = useLlm();
   const [headline, setHeadline] = useState('');
   const [result, setResult] = useState<StudyAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
@@ -122,7 +124,7 @@ export function StudyStressTester() {
       const res = await fetch(`${API_BASE}/forensics/study`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ headline: trimmed }),
+        body: JSON.stringify({ headline: trimmed, provider: selectedLlm }),
         signal: controller.signal,
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Analysis failed');
