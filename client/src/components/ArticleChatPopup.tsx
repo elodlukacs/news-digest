@@ -222,7 +222,7 @@ export function ArticleChatPopup({
             {messages.map((msg, i) => (
               <div key={`${msg.role}-${msg.created_at}-${i}`} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div
-                  className={`max-w-[85%] px-4 py-2.5 text-[13px] leading-relaxed rounded-2xl ${
+                  className={`max-w-[85%] px-4 py-2.5 text-[13px] leading-relaxed rounded-2xl break-words ${
                     msg.role === 'user'
                       ? 'bg-masthead text-white rounded-br-md'
                       : 'bg-paper-dark text-ink border border-rule rounded-bl-md'
