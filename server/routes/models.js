@@ -42,7 +42,7 @@ async function fetchGroqModels() {
 }
 
 async function fetchGoogleModels() {
-  const apiKey = env('GOOGLE_AI_API_KEY');
+  const apiKey = env('GOOGLE_API_KEY');
   if (!apiKey) return [];
 
   try {
@@ -55,15 +55,18 @@ async function fetchGoogleModels() {
     }
     const data = await response.json();
     return (data.data || [])
-      .filter(m => m.id && m.id.startsWith('gemini-'))
-      .map(m => ({
-        id: m.id,
-        name: m.id.replace(/^gemini-/, 'Gemini ').replace(/-/g, ' '),
-        owned_by: 'Google',
-        context_window: m.context_window || 1000000,
-        max_completion_tokens: m.max_completion_tokens || 8192,
-        provider: 'Google AI Studio',
-      }))
+      .filter(m => m.id && (m.id.startsWith('gemini-') || m.id.startsWith('models/gemini-')))
+      .map(m => {
+        const id = m.id.replace(/^models\//, '');
+        return {
+          id,
+          name: id.replace(/^gemini-/, 'Gemini ').replace(/-/g, ' '),
+          owned_by: 'Google',
+          context_window: m.context_window || 1000000,
+          max_completion_tokens: m.max_completion_tokens || 8192,
+          provider: 'Google AI Studio',
+        };
+      })
       .sort((a, b) => a.name.localeCompare(b.name));
   } catch (err) {
     console.error('[Models] Failed to fetch Google AI Studio models:', err.message);
