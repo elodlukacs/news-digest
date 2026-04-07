@@ -34,7 +34,7 @@ function AppLayout() {
   const { categories, addCategory, deleteCategory, renameCategory } = useCategories();
   const [managingId, setManagingId] = useState<number | null>(null);
   const [showStats, setShowStats] = useState(false);
-  const [selectedLlm, setSelectedLlm] = useState('gemini-2.0-flash');
+  const [selectedLlm, setSelectedLlm] = useState('openai/gpt-oss-20b');
   const navigate = useNavigate();
 
   const { feeds, addFeed, deleteFeed } = useFeeds(managingId);

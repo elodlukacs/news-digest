@@ -118,7 +118,7 @@ export function NavigationBar({
                       className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-sans font-medium tracking-wide bg-paper-dark rounded-md text-ink hover:bg-paper cursor-pointer transition-all duration-200 min-w-[120px] justify-between"
                     >
                       <span className="truncate max-w-[140px]">
-                        {modelsLoading ? 'Loading...' : formatModelName(selectedLlm)}
+                        {modelsLoading ? 'Loading...' : selectedLlm}
                       </span>
                       <ChevronDown size={10} className="shrink-0 text-ink-muted" />
                     </button>
@@ -137,7 +137,7 @@ export function NavigationBar({
                           >
                             <div className="flex items-center gap-2 w-full">
                               <Check size={12} className={selectedLlm === m.id ? 'opacity-100' : 'opacity-0'} />
-                              <span className="truncate flex-1">{m.name}</span>
+                              <span className="truncate flex-1">{m.id}</span>
                             </div>
                             <div className="ml-5 flex items-center gap-2 text-[9px] text-ink-muted/70 font-medium">
                               <span>{formatTokens(m.context_window)} ctx</span>
@@ -382,7 +382,7 @@ export function NavigationBar({
                     className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-sans font-medium bg-paper rounded-md text-ink cursor-pointer transition-all duration-200 min-w-[120px] justify-between"
                   >
                     <span className="truncate max-w-[140px]">
-                      {modelsLoading ? 'Loading...' : formatModelName(selectedLlm)}
+                      {modelsLoading ? 'Loading...' : selectedLlm}
                     </span>
                     <ChevronDown size={10} className="shrink-0 text-ink-muted" />
                   </button>
@@ -401,7 +401,7 @@ export function NavigationBar({
                         >
                           <div className="flex items-center gap-2 w-full">
                             <Check size={12} className={selectedLlm === m.id ? 'opacity-100' : 'opacity-0'} />
-                            <span className="truncate flex-1">{m.name}</span>
+                            <span className="truncate flex-1">{m.id}</span>
                           </div>
                           <div className="ml-5 flex items-center gap-2 text-[9px] text-ink-muted/70 font-medium">
                             <span>{formatTokens(m.context_window)} ctx</span>
@@ -451,14 +451,6 @@ export function NavigationBar({
       </Sheet>
     </>
   );
-}
-
-function formatModelName(id: string): string {
-  return id
-    .replace(/^openai\//, '')
-    .replace(/^meta-llama\//, 'Llama ')
-    .replace(/^gemini-/, 'Gemini ')
-    .replace(/-/g, ' ');
 }
 
 function formatTokens(n: number): string {

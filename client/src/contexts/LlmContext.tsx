@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 
-export const LlmContext = createContext<string>('gemini-2.0-flash');
+export const LlmContext = createContext<string>('openai/gpt-oss-20b');
 
 export const LlmProvider = LlmContext.Provider;
 

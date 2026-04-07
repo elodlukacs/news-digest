@@ -353,7 +353,7 @@ export function SummaryView({
         <div className="pt-2 md:pt-8 pb-12 space-y-1 md:space-y-4">
           {sections.map((section, idx) => (
             <article key={idx} className="-mx-4 px-4 py-1.5 border-y border-rule/60 bg-paper-dark/70 md:mx-0 md:px-0 md:py-0 md:bg-transparent md:border-y-0">
-              <Card className="relative border-0 bg-transparent md:bg-paper-dark md:border md:border-rule overflow-visible md:overflow-hidden">
+              <Card className="relative border-0 bg-transparent md:bg-paper-dark md:border md:border-rule overflow-visible md:overflow-hidden min-w-0">
                 {/* Sentiment ribbon — card edge on both mobile and desktop */}
                 {section.sentiment && (
                   <SentimentRibbon sentiment={section.sentiment} />
@@ -362,7 +362,7 @@ export function SummaryView({
                   <CardTitle className="text-lg md:text-xl pr-16 break-words">{section.title}</CardTitle>
                 </CardHeader>
                 <CardContent className="px-0 md:px-5">
-                  <p className="text-[16px] leading-[1.8] text-ink font-[family-name:var(--font-body)]">
+                  <p className="text-[16px] leading-[1.8] text-ink font-[family-name:var(--font-body)] break-words [overflow-wrap:anywhere]">
                     {section.content}
                   </p>
                 </CardContent>
