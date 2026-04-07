@@ -140,23 +140,25 @@ async function searchGoogleNews(title, language = 'English') {
         .slice(0, 10)
         .filter((item) => item.link)
         .map((item) => {
-          let source = 'Google News';
+          // Google News titles are "Article Title - Publisher Name"
+          const titleMatch = item.title?.match(/^(.+)\s+-\s+(.+)$/);
+          const articleTitle = titleMatch ? titleMatch[1].trim() : item.title;
+          const publisherFromTitle = titleMatch ? titleMatch[2].trim() : null;
+
+          let source = publisherFromTitle || 'Unknown';
+          let ratingUrl = item.link;
           try {
-            // Google News RSS includes the original publisher in item.source
-            if (item.source?.title) {
-              source = item.source.title;
-            } else if (item.source?.url) {
-              const sourceUrl = new URL(item.source.url);
-              source = sourceUrl.hostname.replace('www.', '');
+            if (item.source?.url) {
+              ratingUrl = item.source.url;
+              // If we didn't get a publisher from the title, use source metadata
+              if (!publisherFromTitle) {
+                source = item.source.title || new URL(item.source.url).hostname.replace('www.', '');
+              }
             }
           } catch {}
 
-          // For bias rating, use the source URL if available (actual publisher domain),
-          // otherwise fall back to the article link (may be a Google News redirect)
-          const ratingUrl = item.source?.url || item.link;
-
           return {
-            title: item.title?.replace(/ - [^-]+$/, '') || item.title,
+            title: articleTitle,
             url: item.link,
             source,
             biasRating: getBiasRating(ratingUrl) || 'unknown',
@@ -224,7 +226,11 @@ async function searchAllSources(title, excludeSource = null, language = 'English
     }
   });
 
+  // Prioritize rated sources over unrated, then sort center-outward
   const biasOrdered = deduped.sort((a, b) => {
+    const aRated = a.biasRating !== 'unknown';
+    const bRated = b.biasRating !== 'unknown';
+    if (aRated !== bRated) return aRated ? -1 : 1;
     const biasOrder = { left: 0, 'lean-left': 1, center: 2, 'lean-right': 3, right: 4 };
     const biasA = biasOrder[a.biasRating] ?? 2;
     const biasB = biasOrder[b.biasRating] ?? 2;

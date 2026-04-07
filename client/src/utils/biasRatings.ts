@@ -38,6 +38,7 @@ const ratings: Record<string, BiasRating> = {
   'theintercept.com': 'left',
 
   // Lean Left
+  'thewrap.com': 'lean-left',
   'nytimes.com': 'lean-left',
   'washingtonpost.com': 'lean-left',
   'theguardian.com': 'lean-left',
@@ -74,6 +75,17 @@ const ratings: Record<string, BiasRating> = {
   'nymag.com': 'lean-left',
 
   // Center
+  'hollywoodreporter.com': 'center',
+  'variety.com': 'center',
+  'deadline.com': 'center',
+  'yahoo.com': 'center',
+  'aol.com': 'center',
+  'aol.co.uk': 'center',
+  'independent.co.uk': 'center',
+  'sky.com': 'center',
+  'news.sky.com': 'center',
+  'skynews.com.au': 'center',
+  'msn.com': 'center',
   'bbc.com': 'center',
   'bbc.co.uk': 'center',
   'reuters.com': 'center',
