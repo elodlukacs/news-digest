@@ -190,7 +190,7 @@ Pass the OBJECTIVE and PURPOSE, not just literal keywords.
 - Four themes via `[data-theme]` on `<html>`: classic, broadsheet, evening, morning
 - ShadCN CSS variables bridged to theme tokens in `index.css`
 - Custom variant: `dark` variant targets `[data-theme="evening"]`
-- Typography: Playfair Display (headings), Libre Franklin (body), Inter (UI), Source Sans 3 (widgets)
+- Typography: Literata (headings), Source Serif 4 (body), Inter (UI), Source Sans 3 (widgets)
 
 ### Error Handling
 
@@ -270,7 +270,87 @@ When given a new task, structure your response like this:
 
 - API base URL configured via `VITE_API_URL` (defaults to `/api`), defined in `client/src/config.ts`
 - Vite dev proxy: `/api` → `http://localhost:3001`
-- LLM provider fallback: Groq first → OpenRouter, configured in `server/lib/llm.js`
-- All widget endpoints have server-side caching (crypto 2min, releases 30min, homepage 5min)
+- LLM provider fallback: Groq (openai/gpt-oss-20b) first → OpenRouter (minimax/minimax-m2.7), configured in `server/lib/llm.js`
+- Each summary generation triggers **two LLM calls**: main summary + enrichment (sentiment + tags)
+- Category-level `custom_prompt` and `language` fields customize LLM output
+- All widget endpoints have server-side caching (crypto 2min, releases 30min, homepage 5min, job fetch 30min debounce)
+- LLM JSON repair: Triple-attempt parse in summaries.js with heuristics for trailing commas/brackets
 - When adding new context to `AppOutletContext`, add it to the typed object in `App.tsx` AND to the interface in `types/routing.ts`
 - Feature folders under `features/mindgames/` follow: `component files` + `index.ts` barrel export
+
+### Backend Routes (`server/routes/`)
+
+```
+categories.js      — GET/POST /api/categories, GET/PUT/DELETE /api/categories/:id
+feeds.js           — GET/POST /api/categories/:id/feeds
+feedDelete.js      — DELETE /api/feeds/:id
+summaries.js       — GET /api/categories/:id/summary, GET /api/categories/:id/history, POST /api/categories/:id/refresh
+chat.js            — GET /api/chat/:summaryId, POST /api/chat
+briefing.js        — GET /api/briefing/latest, POST /api/briefing/generate
+jobs.js            — GET /api/jobs (filters), POST /api/jobs/fetch, PATCH /api/jobs/:id/status, POST /api/jobs/ai-filter
+stats.js           — GET /api/stats/llm, GET /api/stats/trending
+widgets.js         — GET /api/widgets/{weather,rates,headlines,crypto,hackernews,releases}
+homepage.js        — GET /api/homepage, POST /api/homepage/refresh
+settings.js        — GET /api/settings, PUT /api/settings/:key
+telegram.js        — POST /api/telegram/send
+discovery.js       — POST /api/discover-feed
+```
+
+Cognitive routes: `narrative`, `prompts`, `disinfo`, `cognitive`, `forensics`, `inoculation`, `scientist`, `bridge`, `compare`, `spectrum`.
+Bias-radar routes: `bias-radar/` (decode, related, timeline, daily-quiz, steelman, missing-story).
+
+Shared libs: `lib/llm.js`, `lib/rss.js`, `lib/telegram.js`, `lib/fetchWithTimeout.js`.
+Job aggregator: `jobs/sources.js` (8 sources), `jobs/ai-filter.js`, `jobs/common.js`.
+
+### Database Tables
+
+Core: `categories`, `feeds`, `summaries`, `summary_history` (sentiment_data/tags_data JSON), `articles`, `llm_usage`, `chat_messages`, `user_settings`, `jobs`, `ai_filtered_jobs`. Morning briefings use `category_id = 0` in `summary_history`.
+
+Cognitive: `forensic_analyses`, `inoculation_sessions`, `inoculation_headlines`, `rethinking_journal`, `bridge_audits`, `study_analyses`, `disinfo_maps`, `narrative_maps`, `prompt_usage`.
+
+### Environment Variables
+
+**Server** (`server/.env`):
+- `GROQ_API_KEY` — required for LLM (Groq provider)
+- `OPENROUTER_API_KEY` — required for LLM fallback (OpenRouter/MiniMax)
+- `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` — optional, send-to-Telegram feature
+- `TMDB_API_KEY` — optional, movie/TV releases widget
+- `DB_PATH` — path to SQLite (default: `./newsreader.db`). Set to a Railway volume path for persistence
+- `PORT` — defaults to 3001
+
+**Client** (build-time only):
+- `VITE_API_URL` — backend URL for production split deployment (e.g., `https://your-railway-app.up.railway.app/api`)
+
+### Key Patterns
+
+- **Provider fallback**: Iterate `AI_PROVIDERS` with try/catch, respects `providerId` parameter, rate limit headers captured into `providerQuotas`
+- **Widget data flow**: Single `useWidgets()` in App.tsx, passed as props to both sidebars (avoids double-fetching)
+- **AbortController**: `useSummary` and `useJobs` cancel in-flight requests on category/source switch
+- **Chat**: Pessimistic UI — user message added immediately, server returns assistant response with summary context
+- **Server-synced theme**: `useTheme` fetches from server on mount, PUTs on change, localStorage fallback
+
+### MindGames Feature Structure
+
+```
+features/mindgames/
+├── common/           # FeaturePanelHeader, TabHeader
+├── dashboard/        # CognitiveDashboard, CognitiveTabNav, types
+├── overview/         # OverviewTab (stats, quick actions)
+├── training/         # TrainingTab, InoculationPanel, PatternTests
+├── analysis/         # AnalysisTab, ForensicPanel, StudyStressTester, CompareCoverage, NewsSpectrum
+├── reflection/       # ReflectionTab, ScientistPanel, JournalTrends, BridgePanel, InformationDiet, StressDiagnostic
+├── reference/        # ReferenceTab, PromptLibrary, NarrativeMapPanel, DisinfoMap
+├── quiz/             # QuizTab, DailyQuiz
+└── bias-radar/       # BiasRadarPanel, TechniquePicker, TechniqueCard, and sub-panels
+```
+
+- `BiasRadarPanel` is used outside MindGames (from SummaryView, NewspaperHome)
+- `DailyQuiz` bridges cognitive and bias-radar, importing TechniquePicker + TechniqueCard
+
+### Deployment
+
+- **Frontend**: Vercel (build command: `cd client && npm install && npm run build`, output: `client/dist`)
+- **Backend**: Railway (root directory: `server`, start: `node index.js`, needs `PORT` env var)
+- **Database persistence**: Attach a Railway volume (e.g. mounted at `/data`), then set `DB_PATH=/data/newsreader.db`
+- `vercel.json` and `server/nixpacks.toml` configure deployment
+- After deploying backend, set `VITE_API_URL` in Vercel env vars and redeploy

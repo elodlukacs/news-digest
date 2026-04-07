@@ -236,9 +236,7 @@ news-reader/
 │   │   ├── ai-filter.js        # AI relevance filtering
 │   │   └── common.js           # Shared job utilities
 │   └── middleware/             # Express middleware
-├── CLAUDE.md                   # AI assistant guidance
-├── CODEBASE.md                 # Codebase reference
-├── CHANGELOG.md                # Project changelog
+├── AGENTS.md                   # Agent instructions & architecture reference
 └── vercel.json                 # Vercel deployment config
 ```
 
