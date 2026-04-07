@@ -432,26 +432,35 @@ export function SummaryView({
         </div>
       )}
 
-      {radarSection && (
-        <BiasRadarPanel
-          headline={radarSection.title}
-          content={radarSection.content}
-          originalContent={radarSection.originalContent}
-          currentArticle={{
-            id: radarSection.url || radarSection.title,
-            title: radarSection.title,
-            url: radarSection.url,
-            source: categoryName,
-            biasRating: 'center',
-            publishedAt: summary?.generated_at || '',
-            excerpt: radarSection.content,
-          }}
-          sourceName={categoryName}
-          onClose={() => setRadarSection(null)}
-          initialTab="decode"
-          sections={sections}
-          categoryName={categoryName}
-        />
+      {radarSection && (() => {
+        let sourceDomain = categoryName;
+        try {
+          if (radarSection.url) {
+            sourceDomain = new URL(radarSection.url).hostname.replace(/^www\./, '');
+          }
+        } catch {}
+        return (
+          <BiasRadarPanel
+            headline={radarSection.title}
+            content={radarSection.content}
+            originalContent={radarSection.originalContent}
+            currentArticle={{
+              id: radarSection.url || radarSection.title,
+              title: radarSection.title,
+              url: radarSection.url,
+              source: sourceDomain,
+              biasRating: 'center',
+              publishedAt: summary?.generated_at || '',
+              excerpt: radarSection.content,
+            }}
+            sourceName={sourceDomain}
+            onClose={() => setRadarSection(null)}
+            initialTab="decode"
+            sections={sections}
+            categoryName={categoryName}
+          />
+        );
+      })()}
       )}
     </div>
   );
