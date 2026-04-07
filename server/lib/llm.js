@@ -20,12 +20,11 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
       const google = AI_PROVIDERS.find(p => p.id === 'google');
       if (!google?.key()) throw new Error('GOOGLE_API_KEY not configured');
       providers = [{ ...google, model: providerId }];
-    } else if (providerId.includes('/')) {
+    } else {
+      // Treat any other model ID (including plain Groq model names like llama-3.1-8b-instant) as a Groq model
       const groq = AI_PROVIDERS.find(p => p.id === 'llama');
       if (!groq?.key()) throw new Error('No matching provider configured for model: ' + providerId);
       providers = [{ ...groq, model: providerId }];
-    } else {
-      throw new Error(`Unknown provider: ${providerId}`);
     }
   }
 
