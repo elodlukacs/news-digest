@@ -1,5 +1,5 @@
 const { parser } = require('../rss');
-const { getBiasRating } = require('./biasRatings');
+const { getBiasRating, getBiasRatingByName } = require('./biasRatings');
 
 const STOPWORDS = new Set([
   'the', 'a', 'an', 'is', 'are', 'was', 'were', 'in', 'on', 'at',
@@ -157,11 +157,17 @@ async function searchGoogleNews(title, language = 'English') {
             }
           } catch {}
 
+          // Try URL-based rating first, fall back to publisher name lookup
+          let biasRating = getBiasRating(ratingUrl);
+          if (biasRating === 'unknown' && source) {
+            biasRating = getBiasRatingByName(source);
+          }
+
           return {
             title: articleTitle,
             url: item.link,
             source,
-            biasRating: getBiasRating(ratingUrl) || 'unknown',
+            biasRating,
             publishedAt: item.pubDate || '',
             excerpt: item.contentSnippet?.slice(0, 200) || '',
             matchType: 'google',

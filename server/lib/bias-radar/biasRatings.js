@@ -163,6 +163,67 @@ const BIAS_COLORS = {
   unknown: '#6b7280',
 };
 
+// Reverse lookup: publisher display name → domain (for Google News results where URL is a redirect)
+const nameToRating = {};
+for (const [domain, rating] of Object.entries(ratings)) {
+  // "bbc.com" → "bbc", "nytimes.com" → "nytimes", "foxnews.com" → "foxnews"
+  const name = domain.split('.')[0].toLowerCase();
+  if (!nameToRating[name]) nameToRating[name] = rating;
+}
+// Add common display names that don't match domain patterns
+Object.assign(nameToRating, {
+  'bbc': 'center',
+  'bbc news': 'center',
+  'cnn': 'lean-left',
+  'fox news': 'right',
+  'fox business': 'right',
+  'nbc news': 'lean-left',
+  'cbs news': 'lean-left',
+  'abc news': 'lean-left',
+  'associated press': 'center',
+  'ap': 'center',
+  'ap news': 'center',
+  'new york times': 'lean-left',
+  'the new york times': 'lean-left',
+  'washington post': 'lean-left',
+  'the washington post': 'lean-left',
+  'the guardian': 'lean-left',
+  'wall street journal': 'lean-right',
+  'the wall street journal': 'lean-right',
+  'the hill': 'center',
+  'the atlantic': 'lean-left',
+  'the economist': 'center',
+  'financial times': 'center',
+  'daily mail': 'lean-right',
+  'the telegraph': 'lean-right',
+  'the independent': 'center',
+  'sky news': 'center',
+  'al jazeera': 'center',
+  'usa today': 'lean-left',
+  'huffpost': 'lean-left',
+  'huffington post': 'lean-left',
+  'new york post': 'lean-right',
+  'daily beast': 'lean-left',
+  'the daily beast': 'lean-left',
+  'national review': 'right',
+  'the intercept': 'left',
+  'business insider': 'lean-left',
+  'the verge': 'lean-left',
+  'ars technica': 'center',
+  'hollywood reporter': 'center',
+  'the hollywood reporter': 'center',
+  'the wrap': 'lean-left',
+  'rolling stone': 'lean-left',
+  'vanity fair': 'lean-left',
+  'politico': 'lean-left',
+  'the conversation': 'center',
+  'deutsche welle': 'center',
+  'france 24': 'center',
+  'south china morning post': 'center',
+  'global news': 'center',
+  'euronews': 'center',
+});
+
 function getBiasRating(url) {
   if (!url) return null;
   try {
@@ -185,6 +246,11 @@ function getBiasRating(url) {
   }
 }
 
+function getBiasRatingByName(name) {
+  if (!name) return 'unknown';
+  return nameToRating[name.toLowerCase()] || 'unknown';
+}
+
 function getBiasLabel(rating) {
   return BIAS_LABELS[rating] || 'Unknown';
 }
@@ -195,6 +261,7 @@ function getBiasColor(rating) {
 
 module.exports = {
   getBiasRating,
+  getBiasRatingByName,
   getBiasLabel,
   getBiasColor,
   BIAS_LABELS,
