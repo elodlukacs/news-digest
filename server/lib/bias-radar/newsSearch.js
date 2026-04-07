@@ -116,14 +116,15 @@ async function searchGDELT(title, language = 'English') {
 
 async function searchGoogleNews(title, language = 'English') {
   if (!title) return [];
-  
+
   const [exactQuery, orQuery] = buildSmartQuery(title);
-  const queriesToTry = [exactQuery, orQuery];
+  // Try full title first (Google News handles natural language well), then keyword queries
+  const queriesToTry = [title, exactQuery, orQuery].filter(Boolean);
   const langConfig = getLanguageConfig(language);
 
   for (const query of queriesToTry) {
     if (!query) continue;
-    
+
     try {
       const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=${langConfig.hl}&gl=${langConfig.gl}`;
       const parsed = await parser.parseURL(url);
