@@ -202,9 +202,14 @@ async function searchAllSources(title, excludeSource = null, language = 'English
 
   let filtered = results;
   if (excludeSource) {
-    filtered = results.filter(
-      a => !a.source.toLowerCase().includes(excludeSource.toLowerCase())
-    );
+    const excl = excludeSource.toLowerCase().replace(/^www\./, '');
+    // Extract base name from domain: "bbc.com" → "bbc", "foxnews.com" → "foxnews"
+    const exclBase = excl.split('.')[0];
+    filtered = results.filter((a) => {
+      const src = a.source.toLowerCase();
+      // Match domain ("bbc.com" in "bbc.com") or publisher name ("bbc" starts with "bbc")
+      return !src.includes(excl) && !excl.includes(src) && !src.split(/[\s.]+/)[0].includes(exclBase);
+    });
   }
 
   // Relevance filter: require at least one keyword overlap with search title
