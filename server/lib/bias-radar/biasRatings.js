@@ -248,7 +248,18 @@ function getBiasRating(url) {
 
 function getBiasRatingByName(name) {
   if (!name) return 'unknown';
-  return nameToRating[name.toLowerCase()] || 'unknown';
+  const lower = name.toLowerCase().trim();
+  // Exact match: "BBC News" → "bbc news"
+  if (nameToRating[lower]) return nameToRating[lower];
+  // Try as domain: "aol.com" → look up via getBiasRating
+  if (lower.includes('.')) {
+    const urlRating = getBiasRating('https://' + lower);
+    if (urlRating !== 'unknown') return urlRating;
+  }
+  // Try first word: "BBC News" → "bbc"
+  const firstWord = lower.split(/[\s.]+/)[0];
+  if (nameToRating[firstWord]) return nameToRating[firstWord];
+  return 'unknown';
 }
 
 function getBiasLabel(rating) {
