@@ -103,6 +103,11 @@ db.exec(`
     filtered_at TEXT NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS saved_jobs (
+    job_id TEXT PRIMARY KEY,
+    saved_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
   -- Cognitive Resilience: "Mental Antibody" Dashboard (Foolproof model)
   CREATE TABLE IF NOT EXISTS cognitive_users (
     id TEXT PRIMARY KEY,

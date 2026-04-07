@@ -94,7 +94,7 @@ export interface ReleasesResponse {
   totalPages: number;
 }
 
-export type JobStatus = 'new' | 'applied' | 'ignored';
+export type JobStatus = 'new';
 export type JobSource = 'remoteok' | 'weworkremotely' | 'himalayas' | 'remotive' | 'arbeitnow' | 'linkedin' | 'indeed' | 'hackernews';
 export type RemoteAssessment = 'yes' | 'no' | 'possible';
 
@@ -110,10 +110,11 @@ export interface Job {
   workType: string;
   description?: string;
   aiRemote?: RemoteAssessment;
+  saved: boolean;
 }
 
 export interface JobFilters {
-  status: string;
+  saved: boolean;
   source: string;
   workType: string;
   search: string;
@@ -124,8 +125,7 @@ export interface JobFilters {
 export interface JobCounts {
   total: number;
   new: number;
-  applied: number;
-  ignored: number;
+  saved: number;
   aiFiltered: number;
 }
 

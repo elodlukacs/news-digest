@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   Briefcase, ExternalLink, Search, X, RefreshCw, Sparkles,
-  ChevronLeft, ChevronRight, Check, EyeOff, MapPin, Globe,
+  ChevronLeft, ChevronRight, Bookmark, MapPin, Globe,
 } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
@@ -28,7 +28,8 @@ interface Props {
   fetching: boolean;
   aiFiltering: boolean;
   fetchJobs: () => void;
-  updateStatus: (id: string, status: string) => void;
+  saveJob: (id: string) => void;
+  unsaveJob: (id: string) => void;
   aiFilter: (providerId?: string) => void;
   selectedLlm: string;
 }
@@ -64,7 +65,7 @@ const WORK_TYPE_LABELS: Record<string, string> = {
 export function JobsPage({
   jobs, total, counts, sources, sourceCounts, filters, updateFilters,
   page, setPage, loading, fetching, aiFiltering,
-  fetchJobs, updateStatus, aiFilter, selectedLlm,
+  fetchJobs, saveJob, unsaveJob, aiFilter, selectedLlm,
 }: Props) {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const PER_PAGE = 100;
@@ -80,8 +81,8 @@ export function JobsPage({
               Career Opportunities
             </h1>
             <p className="text-xs sm:text-[13px] text-ink-muted mt-1.5 sm:mt-2 font-[family-name:var(--font-body)] truncate">
-              {counts.total > 0
-                ? `${counts.total} positions · ${sources.length} sources · ${counts.new} new · ${counts.applied} applied`
+               {counts.total > 0
+                ? `${counts.total} positions · ${sources.length} sources · ${counts.new} new · ${counts.saved} saved`
                 : 'Fetch jobs from 8 sources to get started'}
             </p>
           </div>
@@ -165,15 +166,9 @@ export function JobsPage({
           {/* Status */}
           <span className="text-[10px] font-bold text-ink-muted uppercase tracking-widest shrink-0">Status</span>
           <div className="flex items-center gap-1">
-            <FilterButton active={!filters.status} onClick={() => updateFilters({ status: '' })}>All</FilterButton>
-            <FilterButton active={filters.status === 'new'} onClick={() => updateFilters({ status: filters.status === 'new' ? '' : 'new' })}>
-              New{counts.new > 0 && <span className="opacity-60"> ({counts.new})</span>}
-            </FilterButton>
-            <FilterButton active={filters.status === 'applied'} onClick={() => updateFilters({ status: filters.status === 'applied' ? '' : 'applied' })}>
-              Applied{counts.applied > 0 && <span className="opacity-60"> ({counts.applied})</span>}
-            </FilterButton>
-            <FilterButton active={filters.status === 'ignored'} onClick={() => updateFilters({ status: filters.status === 'ignored' ? '' : 'ignored' })}>
-              Ignored{counts.ignored > 0 && <span className="opacity-60"> ({counts.ignored})</span>}
+            <FilterButton active={!filters.saved} onClick={() => updateFilters({ saved: false })}>All</FilterButton>
+            <FilterButton active={filters.saved} onClick={() => updateFilters({ saved: !filters.saved })}>
+              Saved{counts.saved > 0 && <span className="opacity-60"> ({counts.saved})</span>}
             </FilterButton>
           </div>
 
@@ -233,15 +228,9 @@ export function JobsPage({
             <div className="space-y-1.5">
               <p className="text-[10px] font-bold text-ink-muted uppercase tracking-widest">Status</p>
               <div className="flex items-center gap-1.5 flex-wrap">
-                <FilterButton active={!filters.status} onClick={() => updateFilters({ status: '' })}>All</FilterButton>
-                <FilterButton active={filters.status === 'new'} onClick={() => updateFilters({ status: filters.status === 'new' ? '' : 'new' })}>
-                  New{counts.new > 0 && <span className="opacity-60"> ({counts.new})</span>}
-                </FilterButton>
-                <FilterButton active={filters.status === 'applied'} onClick={() => updateFilters({ status: filters.status === 'applied' ? '' : 'applied' })}>
-                  Applied{counts.applied > 0 && <span className="opacity-60"> ({counts.applied})</span>}
-                </FilterButton>
-                <FilterButton active={filters.status === 'ignored'} onClick={() => updateFilters({ status: filters.status === 'ignored' ? '' : 'ignored' })}>
-                  Ignored{counts.ignored > 0 && <span className="opacity-60"> ({counts.ignored})</span>}
+                <FilterButton active={!filters.saved} onClick={() => updateFilters({ saved: false })}>All</FilterButton>
+                <FilterButton active={filters.saved} onClick={() => updateFilters({ saved: !filters.saved })}>
+                  Saved{counts.saved > 0 && <span className="opacity-60"> ({counts.saved})</span>}
                 </FilterButton>
               </div>
             </div>
@@ -347,25 +336,25 @@ export function JobsPage({
                   )}
                 </div>
 
-                {/* Status actions */}
+                {/* Save action */}
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-ink-muted mr-1">Status:</span>
-                  {(['new', 'applied', 'ignored'] as const).map(s => (
-                    <Button
-                      key={s}
-                      variant={selectedJob.status === s ? 'default' : 'outline'}
-                      size="sm"
-                      className="h-7 text-xs capitalize"
-                      onClick={() => {
-                        updateStatus(selectedJob.id, s);
-                        setSelectedJob({ ...selectedJob, status: s });
-                      }}
-                    >
-                      {s === 'applied' && <Check size={12} />}
-                      {s === 'ignored' && <EyeOff size={12} />}
-                      {s}
-                    </Button>
-                  ))}
+                  <Button
+                    variant={selectedJob.saved ? 'default' : 'outline'}
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => {
+                      if (selectedJob.saved) {
+                        unsaveJob(selectedJob.id);
+                        setSelectedJob({ ...selectedJob, saved: false });
+                      } else {
+                        saveJob(selectedJob.id);
+                        setSelectedJob({ ...selectedJob, saved: true });
+                      }
+                    }}
+                  >
+                    <Bookmark size={12} className={selectedJob.saved ? 'fill-current' : ''} />
+                    {selectedJob.saved ? 'Saved' : 'Save'}
+                  </Button>
                 </div>
 
                 {selectedJob.description && (
@@ -422,8 +411,8 @@ function JobCard({ job, onClick }: { job: Job; onClick: () => void }) {
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick(); }}
       className={`group relative bg-paper-dark rounded px-3 py-2.5 sm:px-3 sm:py-2 cursor-pointer transition-all duration-200 border border-rule/40 hover:border-ink/20 hover:shadow-sm ${
-        job.status === 'ignored' ? 'opacity-40' : ''
-      } ${job.status === 'applied' ? 'border-l-2 border-l-emerald-500' : ''}`}
+        job.saved ? 'border-l-2 border-l-amber-500' : ''
+      }`}
       onClick={onClick}
     >
       <div className="flex items-start justify-between gap-2">
@@ -461,7 +450,7 @@ function JobCard({ job, onClick }: { job: Job; onClick: () => void }) {
           </span>
         )}
         <span className="ml-auto text-[10px] sm:text-[9px]">{timeAgoDays(job.datePosted)}</span>
-        {job.status === 'applied' && <Check size={12} className="text-emerald-600 sm:size-3" />}
+        {job.saved && <Bookmark size={10} className="text-amber-500 fill-amber-500 sm:size-2.5" />}
       </div>
     </article>
   );

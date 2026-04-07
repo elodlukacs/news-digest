@@ -7,52 +7,34 @@ const callLLM = (messages, opts) => rawCallLLM(messages, { ...opts, db });
 
 const router = express.Router();
 
-
-function upsertJobs(jobs) {
-  const stmt = db.prepare(`
-    INSERT INTO jobs (id, title, company, url, source, date_posted, status, country, work_type, description, created_at)
-    VALUES (@id, @title, @company, @url, @source, @datePosted,
-      COALESCE((SELECT status FROM jobs WHERE id = @id AND status != 'new'), @status),
-      @country, @workType, @description, @createdAt)
-    ON CONFLICT(id) DO UPDATE SET
-      title = excluded.title, company = excluded.company, url = excluded.url,
-      date_posted = excluded.date_posted,
-      status = COALESCE((SELECT status FROM jobs WHERE id = excluded.id AND status != 'new'), excluded.status),
-      country = excluded.country, work_type = excluded.work_type, description = excluded.description
-  `);
-  const now = new Date().toISOString();
-  db.transaction(() => {
-    for (const job of jobs) {
-      stmt.run({ ...job, createdAt: now });
-    }
-  })();
-}
-
 router.get('/', (req, res) => {
-  const { status, source, workType, search, country, aiOnly, page = '1', limit = '50' } = req.query;
+  const { saved, source, workType, search, country, aiOnly, page = '1', limit = '50' } = req.query;
   const conditions = [];
   const params = {};
 
-  if (status) { conditions.push('j.status = @status'); params.status = status; }
+  if (saved === 'true') { conditions.push('sj.job_id IS NOT NULL'); }
   if (source) { conditions.push('j.source = @source'); params.source = source; }
   if (workType) { conditions.push('j.work_type = @workType'); params.workType = workType; }
   if (search) { conditions.push('(LOWER(j.title) LIKE @search OR LOWER(j.company) LIKE @search)'); params.search = `%${search.toLowerCase()}%`; }
   if (country) { conditions.push('LOWER(j.country) LIKE @country'); params.country = `%${country.toLowerCase()}%`; }
 
-  const join = aiOnly === 'true' ? 'INNER JOIN ai_filtered_jobs af ON j.id = af.job_id' : '';
+  const aiJoin = aiOnly === 'true' ? 'INNER JOIN ai_filtered_jobs af ON j.id = af.job_id' : '';
+  const savedJoin = 'LEFT JOIN saved_jobs sj ON j.id = sj.job_id';
   const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
   const offset = (Math.max(1, parseInt(page)) - 1) * parseInt(limit);
 
-  const countRow = db.prepare(`SELECT COUNT(*) as total FROM jobs j ${join} ${where}`).get(params);
+  const countRow = db.prepare(`SELECT COUNT(*) as total FROM jobs j ${savedJoin} ${aiJoin} ${where}`).get(params);
   const jobs = db.prepare(`
-    SELECT j.*, ${aiOnly === 'true' ? 'af.remote as ai_remote' : 'NULL as ai_remote'}
-    FROM jobs j ${join} ${where}
-    ORDER BY j.date_posted DESC LIMIT @limit OFFSET @offset
+    SELECT j.*, ${aiOnly === 'true' ? 'af.remote as ai_remote' : 'NULL as ai_remote'},
+           CASE WHEN sj.job_id IS NOT NULL THEN 1 ELSE 0 END as is_saved
+    FROM jobs j ${savedJoin} ${aiJoin} ${where}
+    ORDER BY is_saved DESC, j.date_posted DESC LIMIT @limit OFFSET @offset
   `).all({ ...params, limit: parseInt(limit), offset });
 
-  const counts = { total: 0, new: 0, applied: 0, ignored: 0 };
+  const counts = { total: 0, new: 0, saved: 0 };
   const countRows = db.prepare('SELECT status, COUNT(*) as count FROM jobs GROUP BY status').all();
   for (const r of countRows) { counts.total += r.count; counts[r.status] = r.count; }
+  counts.saved = db.prepare('SELECT COUNT(*) as count FROM saved_jobs').get().count;
   const aiCount = db.prepare('SELECT COUNT(*) as count FROM ai_filtered_jobs').get();
 
   const sources = db.prepare("SELECT DISTINCT source FROM jobs WHERE source != '' ORDER BY source").all().map(r => r.source);
@@ -67,6 +49,7 @@ router.get('/', (req, res) => {
       datePosted: r.date_posted, status: r.status, country: r.country,
       workType: r.work_type, description: r.description || undefined,
       aiRemote: r.ai_remote || undefined,
+      saved: r.is_saved === 1,
     })),
     total: countRow.total,
     counts: { ...counts, aiFiltered: aiCount.count },
@@ -81,9 +64,22 @@ router.post('/fetch', async (req, res) => {
     const { jobs, sources } = await fetchAllSources();
     db.transaction(() => {
       db.prepare('DELETE FROM ai_filtered_jobs').run();
-      db.prepare('DELETE FROM jobs').run();
+      db.prepare('DELETE FROM jobs WHERE id NOT IN (SELECT job_id FROM saved_jobs)').run();
     })();
-    if (jobs.length > 0) upsertJobs(jobs);
+    if (jobs.length > 0) {
+      const stmt = db.prepare(`
+        INSERT INTO jobs (id, title, company, url, source, date_posted, status, country, work_type, description, created_at)
+        VALUES (@id, @title, @company, @url, @source, @datePosted, @status, @country, @workType, @description, @createdAt)
+        ON CONFLICT(id) DO UPDATE SET
+          title = excluded.title, company = excluded.company, url = excluded.url,
+          date_posted = excluded.date_posted, country = excluded.country,
+          work_type = excluded.work_type, description = excluded.description
+      `);
+      const now = new Date().toISOString();
+      db.transaction(() => {
+        for (const job of jobs) stmt.run({ ...job, createdAt: now });
+      })();
+    }
     console.log(`[Jobs] Fetched ${jobs.length} jobs from ${sources.filter(s => !s.error).length} sources`);
     res.json({ fetched: jobs.length, sources });
   } catch (error) {
@@ -92,12 +88,15 @@ router.post('/fetch', async (req, res) => {
   }
 });
 
-router.patch('/:id/status', (req, res) => {
-  const { status } = req.body;
-  if (!['new', 'applied', 'ignored'].includes(status)) {
-    return res.status(400).json({ error: 'Invalid status' });
-  }
-  db.prepare('UPDATE jobs SET status = ? WHERE id = ?').run(status, req.params.id);
+router.post('/:id/save', (req, res) => {
+  const job = db.prepare('SELECT id FROM jobs WHERE id = ?').get(req.params.id);
+  if (!job) return res.status(404).json({ error: 'Job not found' });
+  db.prepare('INSERT OR IGNORE INTO saved_jobs (job_id, saved_at) VALUES (?, ?)').run(req.params.id, new Date().toISOString());
+  res.json({ ok: true });
+});
+
+router.delete('/:id/save', (req, res) => {
+  db.prepare('DELETE FROM saved_jobs WHERE job_id = ?').run(req.params.id);
   res.json({ ok: true });
 });
 

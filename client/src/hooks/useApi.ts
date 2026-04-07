@@ -470,12 +470,12 @@ export function useStudyAnalysis() {
   return { result, loading, error, analyze, history, historyLoading, loadHistory };
 }
 
-const DEFAULT_FILTERS: JobFilters = { status: '', source: '', workType: '', search: '', country: '', aiOnly: false };
+const DEFAULT_FILTERS: JobFilters = { saved: false, source: '', workType: '', search: '', country: '', aiOnly: false };
 
 export function useJobs() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [total, setTotal] = useState(0);
-  const [counts, setCounts] = useState<JobCounts>({ total: 0, new: 0, applied: 0, ignored: 0, aiFiltered: 0 });
+  const [counts, setCounts] = useState<JobCounts>({ total: 0, new: 0, saved: 0, aiFiltered: 0 });
   const [sourceCounts, setSourceCounts] = useState<SourceCounts>({});
   const [sources, setSources] = useState<string[]>([]);
   const [countries, setCountries] = useState<string[]>([]);
@@ -485,7 +485,7 @@ export function useJobs() {
   const [fetching, setFetching] = useState(false);
   const [aiFiltering, setAiFiltering] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
-  const statusAbortRef = useRef<AbortController | null>(null);
+  const saveAbortRef = useRef<AbortController | null>(null);
 
   const fetchList = useCallback(async (f: JobFilters, p: number) => {
     if (abortRef.current) abortRef.current.abort();
@@ -494,7 +494,7 @@ export function useJobs() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (f.status) params.set('status', f.status);
+      if (f.saved) params.set('saved', 'true');
       if (f.source) params.set('source', f.source);
       if (f.workType) params.set('workType', f.workType);
       if (f.search) params.set('search', f.search);
@@ -542,39 +542,59 @@ export function useJobs() {
     }
   }, [filters, fetchList]);
 
-  const updateStatus = useCallback(async (id: string, status: string) => {
-    if (statusAbortRef.current) statusAbortRef.current.abort();
+  const saveJob = useCallback(async (id: string) => {
+    if (saveAbortRef.current) saveAbortRef.current.abort();
     const controller = new AbortController();
-    statusAbortRef.current = controller;
+    saveAbortRef.current = controller;
     let previousJobs: Job[] = [];
-    let previousCounts: JobCounts = { total: 0, new: 0, applied: 0, ignored: 0, aiFiltered: 0 };
+    let previousCounts: JobCounts = { total: 0, new: 0, saved: 0, aiFiltered: 0 };
     setJobs(prev => {
       previousJobs = prev;
-      return prev.map(j => j.id === id ? { ...j, status: status as Job['status'] } : j);
+      return prev.map(j => j.id === id ? { ...j, saved: true } : j);
     });
     setCounts(prev => {
       previousCounts = { ...prev };
-      const updated = { ...prev };
-      const job = previousJobs.find(j => j.id === id);
-      if (job) {
-        updated[job.status as keyof Pick<JobCounts, 'new' | 'applied' | 'ignored'>]--;
-        updated[status as keyof Pick<JobCounts, 'new' | 'applied' | 'ignored'>]++;
-      }
-      return updated;
+      return { ...prev, saved: prev.saved + 1 };
     });
     try {
-      const res = await fetch(`${BASE}/jobs/${id}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
+      const res = await fetch(`${BASE}/jobs/${id}/save`, {
+        method: 'POST',
         signal: controller.signal,
       });
-      if (!res.ok) throw new Error('Failed to update status');
+      if (!res.ok) throw new Error('Failed to save job');
     } catch (e: unknown) {
       if (e instanceof DOMException && e.name === 'AbortError') return;
       setJobs(previousJobs);
       setCounts(previousCounts);
-      console.error('Failed to update job status:', e instanceof Error ? e.message : 'Unknown error');
+      console.error('Failed to save job:', e instanceof Error ? e.message : 'Unknown error');
+    }
+  }, []);
+
+  const unsaveJob = useCallback(async (id: string) => {
+    if (saveAbortRef.current) saveAbortRef.current.abort();
+    const controller = new AbortController();
+    saveAbortRef.current = controller;
+    let previousJobs: Job[] = [];
+    let previousCounts: JobCounts = { total: 0, new: 0, saved: 0, aiFiltered: 0 };
+    setJobs(prev => {
+      previousJobs = prev;
+      return prev.map(j => j.id === id ? { ...j, saved: false } : j);
+    });
+    setCounts(prev => {
+      previousCounts = { ...prev };
+      return { ...prev, saved: Math.max(0, prev.saved - 1) };
+    });
+    try {
+      const res = await fetch(`${BASE}/jobs/${id}/save`, {
+        method: 'DELETE',
+        signal: controller.signal,
+      });
+      if (!res.ok) throw new Error('Failed to unsave job');
+    } catch (e: unknown) {
+      if (e instanceof DOMException && e.name === 'AbortError') return;
+      setJobs(previousJobs);
+      setCounts(previousCounts);
+      console.error('Failed to unsave job:', e instanceof Error ? e.message : 'Unknown error');
     }
   }, []);
 
@@ -596,7 +616,7 @@ export function useJobs() {
     jobs, total, counts, sources, countries, sourceCounts,
     filters, updateFilters, page, setPage,
     loading, fetching, aiFiltering,
-    fetchJobs, updateStatus, aiFilter,
+    fetchJobs, saveJob, unsaveJob, aiFilter,
     refresh: () => fetchList(filters, page),
   };
 }
