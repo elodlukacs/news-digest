@@ -1,5 +1,7 @@
 import { ScientistPanel } from './ScientistPanel';
 import { BridgePanel } from './BridgePanel';
+import { BiasMirrorPanel } from './BiasMirrorPanel';
+import { EchoChamberSimulator } from './EchoChamberSimulator';
 import { StressDiagnostic } from './StressDiagnostic';
 import { TabHeader } from '../common';
 import { Microscope, Activity } from 'lucide-react';
@@ -35,6 +37,8 @@ export function ReflectionTab() {
         </div>
       </div>
 
+      <BiasMirrorPanel />
+      <EchoChamberSimulator />
       <ScientistPanel />
       <BridgePanel />
 

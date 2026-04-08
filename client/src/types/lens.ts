@@ -53,6 +53,12 @@ export interface TechniqueResult {
 
 export type GutCheckReaction = 'outraged' | 'skeptical' | 'interested' | 'bored';
 
+export interface EmotionalResponse {
+  intensity: number;   // 1-10
+  valence: number;     // -1 (negative) to +1 (positive)
+  reaction?: GutCheckReaction;
+}
+
 export interface SteelmanResponse {
   counterArgument: string;
   followUpQuestion: string;

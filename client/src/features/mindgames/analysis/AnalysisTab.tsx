@@ -1,4 +1,5 @@
 import { ForensicPanel } from './ForensicPanel';
+import { LogicalFallacyDojo } from './LogicalFallacyDojo';
 import { CompareCoverage } from './CompareCoverage';
 import { NewsSpectrum } from './NewsSpectrum';
 import { TabHeader } from '../common';
@@ -13,6 +14,7 @@ export function AnalysisTab() {
         description="Pull apart an article to find logical fallacies, compare how different outlets cover the same story, and see where sources sit on the bias spectrum."
       />
 
+      <LogicalFallacyDojo />
       <ForensicPanel />
 
       <div className="grid md:grid-cols-2 gap-4 items-stretch">

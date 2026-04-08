@@ -393,7 +393,7 @@ export function ForensicPanel({ sections = [], categoryName = '', headline = '',
                             )}
                           </div>
                           {f.evidence && <p className="text-ink-muted italic mb-0.5">"{f.evidence}"</p>}
-                          {f.rationality_gap && <p className="text-ink-light">{f.rationality_gap}</p>}
+                          {f.explanation && <p className="text-ink-light">{f.explanation}</p>}
                         </div>
                       );
                     })}

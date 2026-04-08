@@ -33,6 +33,11 @@ router.post('/disinfo-map', async (req, res) => {
       generatedAt: new Date().toISOString(),
     };
 
+    db.prepare('INSERT INTO disinfo_maps (user_id, map_data) VALUES (?,?)').run(
+      req.body.userId || 'default',
+      JSON.stringify(response)
+    );
+
     res.json(response);
   } catch (err) {
     console.error('Disinfo map error:', err);

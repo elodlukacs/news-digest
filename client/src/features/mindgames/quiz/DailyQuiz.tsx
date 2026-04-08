@@ -16,7 +16,11 @@ interface QuizArticle {
 
 type Stage = 'loading' | 'reading' | 'guessing' | 'scanning' | 'result';
 
-export function DailyQuiz() {
+interface DailyQuizProps {
+  onCorrect?: () => void;
+}
+
+export function DailyQuiz({ onCorrect }: DailyQuizProps) {
   const selectedLlm = useLlm();
   const [stage, setStage] = useState<Stage>('loading');
   const [article, setArticle] = useState<QuizArticle | null>(null);
@@ -24,11 +28,19 @@ export function DailyQuiz() {
   const [result, setResult] = useState<TechniqueResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const rewardedRef = useRef(false);
 
   useEffect(() => {
-    fetch(`${API_BASE}/bias-radar/daily-quiz`)
-      .then((r) => r.json())
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    fetch(`${API_BASE}/bias-radar/daily-quiz`, { signal: controller.signal })
+      .then((r) => {
+        if (!r.ok) throw new Error('Failed to load daily quiz');
+        return r.json();
+      })
       .then((data) => {
+        if (controller.signal.aborted) return;
         if (data.error) {
           setError(data.error);
           setStage('result');
@@ -37,16 +49,15 @@ export function DailyQuiz() {
           setStage('reading');
         }
       })
-      .catch(() => {
-        setError('Failed to load daily quiz');
-        setStage('result');
+      .catch((err) => {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+        if (!controller.signal.aborted) {
+          setError('Failed to load daily quiz');
+          setStage('result');
+        }
       });
 
-    return () => {
-      if (abortRef.current) {
-        abortRef.current.abort();
-      }
-    };
+    return () => controller.abort();
   }, []);
 
   async function handleGuess(guess: TechniqueName) {
@@ -74,6 +85,12 @@ export function DailyQuiz() {
       }
       setResult(data as TechniqueResult);
       setStage('result');
+
+      const correct = guess === data.technique;
+      if (correct && onCorrect && !rewardedRef.current) {
+        rewardedRef.current = true;
+        onCorrect();
+      }
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') return;
       setError('Failed to analyze article');

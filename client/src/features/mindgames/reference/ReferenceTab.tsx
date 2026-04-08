@@ -1,5 +1,9 @@
 import { PromptLibrary } from './PromptLibrary';
 import { NarrativeMapPanel } from './NarrativeMapPanel';
+import { ConspiracyAnatomyPanel } from './ConspiracyAnatomyPanel';
+import { SourceCredibilityLab } from './SourceCredibilityLab';
+import { PropagandaTimeline } from './PropagandaTimeline';
+import { AskTheManipulator } from './AskTheManipulator';
 import { DisinfoMap } from './DisinfoMap';
 import { TabHeader } from '../common';
 import { Card } from '../../../components/ui/card';
@@ -14,6 +18,10 @@ export function ReferenceTab() {
         description="Learning resources and advanced visualizations. Prompts for critical thinking and maps of misinformation ecosystems."
       />
 
+      <ConspiracyAnatomyPanel />
+      <AskTheManipulator />
+      <SourceCredibilityLab />
+      <PropagandaTimeline />
       <Card className="p-5"><PromptLibrary /></Card>
       <NarrativeMapPanel />
       <Card className="p-5"><DisinfoMap /></Card>

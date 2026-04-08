@@ -154,6 +154,7 @@ export interface ReleaseDetail {
 
 export type { CryptoPrice, ForecastDay, Weather, Rates, Headline, Briefing } from './widgets';
 export type { BiasRating, SourceArticle, TechniqueName, TechniqueResult, GutCheckReaction } from './lens';
+export type { GamificationStats, ChallengeResult, RecoveryResult } from './gamification';
 
 export interface HomepageArticle {
   title: string;
@@ -176,6 +177,7 @@ export interface ForensicFallacy {
   name: string;
   evidence: string;
   rationality_gap: string;
+  explanation: string;
 }
 
 export interface MisbeliefFunnel {
