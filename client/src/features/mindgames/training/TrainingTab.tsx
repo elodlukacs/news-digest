@@ -1,4 +1,5 @@
 import { InoculationPanel } from './InoculationPanel';
+import { ManipulationLabPanel } from './ManipulationLabPanel';
 import { PatternTests } from './PatternTests';
 import { TabHeader } from '../common';
 import { Target } from 'lucide-react';
@@ -12,6 +13,7 @@ export function TrainingTab() {
         description="Practice catching manipulation in headlines and learn why your brain falls for patterns that aren't there."
       />
 
+      <ManipulationLabPanel />
       <InoculationPanel />
       <PatternTests />
     </div>

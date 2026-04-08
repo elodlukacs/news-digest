@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Brain, Search, Shield, Microscope, RotateCcw, Trash2, Activity, Target, Zap } from 'lucide-react';
+import { Brain, Search, Shield, Microscope, RotateCcw, Trash2, Activity, Target, Zap, FlaskConical, Eye, MessageSquare, History } from 'lucide-react';
 import { StressDiagnostic } from '../reflection/StressDiagnostic';
+import { StreakTracker } from '../quiz/StreakTracker';
 import { TabHeader } from '../common';
 import { API_BASE } from '../../../config';
+import { useGamification } from '../../../hooks/useGamification';
 
 interface DashboardStats {
   forensicCount: number;
@@ -20,6 +22,7 @@ export function OverviewTab() {
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [stressDiagOpen, setStressDiagOpen] = useState(false);
+  const { stats: gamiStats, loading: gamiLoading } = useGamification();
 
   const loadStats = useCallback(async () => {
     try {
@@ -82,6 +85,11 @@ export function OverviewTab() {
         description="Practice spotting manipulation, challenge your own beliefs, and see how your thinking changes over time."
       />
 
+      {/* Streak tracker */}
+      {!gamiLoading && gamiStats && (
+        <StreakTracker stats={gamiStats} />
+      )}
+
       {/* Quick Actions */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         <QuickActionCard
@@ -92,27 +100,57 @@ export function OverviewTab() {
           highlight
         />
         <QuickActionCard
-          icon={<Activity size={20} className="text-outrage" />}
-          title="Reading Mood"
-          description="How sharp is your guard today?"
-          onClick={() => setStressDiagOpen(true)}
+          icon={<Target size={20} className="text-curiosity" />}
+          title="Manipulation Lab"
+          description="Run a disinfo campaign"
+          onClick={() => navigate('/mindgames/training')}
         />
         <QuickActionCard
-          icon={<Target size={20} className="text-curiosity" />}
-          title="Spot It"
-          description="Can you catch the manipulation?"
-          onClick={() => navigate('/mindgames/training')}
+          icon={<Eye size={20} className="text-curiosity" />}
+          title="Bias Mirror"
+          description="Discover your bias fingerprint"
+          onClick={() => navigate('/mindgames/reflection')}
         />
         <QuickActionCard
           icon={<Search size={20} className="text-observation" />}
           title="Dissect an Article"
-          description="Pull apart a piece of writing"
+          description="Find logical fallacies"
           onClick={() => navigate('/mindgames/analysis')}
+        />
+        <QuickActionCard
+          icon={<FlaskConical size={20} className="text-outrage" />}
+          title="Conspiracy Lab"
+          description="Deconstruct conspiracy claims"
+          onClick={() => navigate('/mindgames/reference#conspiracy-anatomy')}
+        />
+        <QuickActionCard
+          icon={<Shield size={20} className="text-observation" />}
+          title="Source Check"
+          description="SIFT method evaluation"
+          onClick={() => navigate('/mindgames/reference#source-credibility')}
+        />
+        <QuickActionCard
+          icon={<MessageSquare size={20} className="text-outrage" />}
+          title="Ask a Manipulator"
+          description="Chat with disinfo personas"
+          onClick={() => navigate('/mindgames/reference#ask-manipulator')}
+        />
+        <QuickActionCard
+          icon={<History size={20} className="text-observation" />}
+          title="Propaganda History"
+          description="See how tactics repeat"
+          onClick={() => navigate('/mindgames/reference#propaganda-timeline')}
+        />
+        <QuickActionCard
+          icon={<Activity size={20} className="text-outrage" />}
+          title="Reading Mood"
+          description="How sharp is your guard?"
+          onClick={() => setStressDiagOpen(true)}
         />
         <QuickActionCard
           icon={<Microscope size={20} className="text-masthead" />}
           title="Think Harder"
-          description="Debate yourself and find common ground"
+          description="Debate your own beliefs"
           onClick={() => navigate('/mindgames/reflection')}
         />
       </div>
@@ -202,7 +240,7 @@ export function OverviewTab() {
       {/* Research Credits */}
       <div className="border-t border-rule pt-6">
         <p className="text-[11px] text-ink-muted text-center">
-          Based on research by Van der Linden, Grimes, Ariely, Adam Grant, and Monica Guzman
+          Based on research by Van der Linden, Grimes, Ariely, Kahneman, Tversky, Caulfield, and Douglas
         </p>
       </div>
 

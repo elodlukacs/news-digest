@@ -3,7 +3,7 @@ import { Card } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Badge } from '../../../components/ui/badge';
-import { Map, Loader2, AlertTriangle, Play, ChevronLeft, ChevronRight, TrendingUp, Users, Clock } from 'lucide-react';
+import { Map, Loader2, AlertTriangle, Play, ChevronLeft, ChevronRight, TrendingUp, Users, Clock, Zap, Shield, RotateCcw } from 'lucide-react';
 import { FeaturePanelHeader } from '../common';
 import { API_BASE } from '../../../config';
 import { useLlm } from '../../../contexts/LlmContext';
@@ -82,6 +82,9 @@ const STAGE_COLORS: Record<string, string> = {
   'Declining': 'var(--color-ink-muted)'
 };
 
+type Mode = 'analyze' | 'simulate';
+type SimPhase = 'idle' | 'injecting' | 'spreading' | 'done';
+
 export function NarrativeMapPanel() {
   const selectedLlm = useLlm();
   const [topic, setTopic] = useState('');
@@ -93,9 +96,24 @@ export function NarrativeMapPanel() {
   const [animatedConnections, setAnimatedConnections] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const simTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const simTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const simBlockedRef = useRef<Set<string>>(new Set());
+  const simInfectedRef = useRef<Set<string>>(new Set());
+
+  // Simulation state
+  const [mode, setMode] = useState<Mode>('analyze');
+  const [simPhase, setSimPhase] = useState<SimPhase>('idle');
+  const [simInfected, setSimInfected] = useState<Set<string>>(new Set());
+  const [simBlocked, setSimBlocked] = useState<Set<string>>(new Set());
+  const [simSourceId, setSimSourceId] = useState<string | null>(null);
 
   useEffect(() => {
-    return () => abortRef.current?.abort();
+    return () => {
+      abortRef.current?.abort();
+      if (simTimerRef.current) clearInterval(simTimerRef.current);
+      if (simTimeoutRef.current) clearTimeout(simTimeoutRef.current);
+    };
   }, []);
 
   const analyze = useCallback(async () => {
@@ -108,6 +126,7 @@ export function NarrativeMapPanel() {
     setResult(null);
     setSelectedStage(0);
     setAnimatedConnections(false);
+    resetSimulation();
 
     try {
       const res = await fetch(`${API_BASE}/cognitive/narrative-map`, {
@@ -128,7 +147,7 @@ export function NarrativeMapPanel() {
     } finally {
       if (!ctrl.signal.aborted) setLoading(false);
     }
-  }, [topic]);
+  }, [topic, selectedLlm]);
 
   const handleStageChange = (direction: 'prev' | 'next') => {
     if (!result) return;
@@ -169,11 +188,95 @@ export function NarrativeMapPanel() {
     return 18 + (virality / 100) * 28;
   };
 
+  /* ─── Simulation Logic ─── */
+
+  function resetSimulation() {
+    setSimPhase('idle');
+    setSimInfected(new Set());
+    setSimBlocked(new Set());
+    simInfectedRef.current = new Set();
+    simBlockedRef.current = new Set();
+    setSimSourceId(null);
+    if (simTimerRef.current) {
+      clearInterval(simTimerRef.current);
+      simTimerRef.current = null;
+    }
+    if (simTimeoutRef.current) {
+      clearTimeout(simTimeoutRef.current);
+      simTimeoutRef.current = null;
+    }
+  }
+
+  function handleSimNodeClick(platformId: string) {
+    if (!result) return;
+
+    if (simPhase === 'idle') {
+      // Inject: choose source
+      setSimSourceId(platformId);
+      const infected = new Set([platformId]);
+      setSimInfected(infected);
+      simInfectedRef.current = infected;
+      setSimPhase('injecting');
+
+      // Start spreading after a delay
+      simTimeoutRef.current = setTimeout(() => startSpread(), 800);
+    } else if (simPhase === 'spreading' || simPhase === 'injecting') {
+      // Intervene: block this node from spreading
+      if (!simInfectedRef.current.has(platformId)) {
+        setSimBlocked(prev => {
+          const next = new Set([...prev, platformId]);
+          simBlockedRef.current = next;
+          return next;
+        });
+      }
+    }
+  }
+
+  function startSpread() {
+    if (!result) return;
+    setSimPhase('spreading');
+
+    let step = 0;
+    const maxSteps = 8;
+
+    simTimerRef.current = setInterval(() => {
+      if (!result) return;
+      if (step >= maxSteps) {
+        if (simTimerRef.current) clearInterval(simTimerRef.current);
+        setSimPhase('done');
+        return;
+      }
+
+      const currentInfected = simInfectedRef.current;
+      const currentBlocked = simBlockedRef.current;
+      const newInfected = new Set(currentInfected);
+
+      for (const conn of result.connections) {
+        if (currentInfected.has(conn.from) && !currentBlocked.has(conn.to) && !newInfected.has(conn.to)) {
+          if (Math.random() < conn.weight / 10) {
+            newInfected.add(conn.to);
+          }
+        }
+        if (currentInfected.has(conn.to) && !currentBlocked.has(conn.from) && !newInfected.has(conn.from)) {
+          if (Math.random() < conn.weight / 15) {
+            newInfected.add(conn.from);
+          }
+        }
+      }
+
+      simInfectedRef.current = newInfected;
+      setSimInfected(new Set(newInfected));
+      step++;
+    }, 1200);
+  }
+
   const currentStage = result?.stages[selectedStage];
   const stagePlatformIds = currentStage?.platforms.map(p => {
     const found = result?.platforms.find(pl => pl.name === p || pl.id === p);
     return found?.id || p;
   }) || [];
+
+  const isSimMode = mode === 'simulate' && result;
 
   return (
     <Card className="p-5 md:p-6 h-full flex flex-col gap-4">
@@ -185,21 +288,14 @@ export function NarrativeMapPanel() {
           researcher="AI-based narrative cluster analysis"
           summary="Disinformation doesn't spread as isolated hoaxes — it travels in coordinated narrative clusters. This map shows the architecture of how a false idea moves from origin to mainstream."
           sections={[
-            { heading: 'The Shift in Fact-Checking', content: 'Researchers are moving from debunking individual claims to dismantling entire "narrative clusters" — interconnected false stories that reinforce each other. Addressing one claim without seeing the cluster leaves the network intact.' },
-            { heading: 'What It Visualises', items: [
-              'Origin point — where the narrative first appeared',
-              'Spread paths — which platforms and communities amplified it',
-              'Mutations — how the story changed as it travelled',
-              'Mainstream arrival — how it crossed from fringe to mainstream media',
-            ]},
-            { heading: 'Semantic Clustering', content: 'AI groups misinformation by underlying rhetorical strategy, not just keywords. This reveals patterns that keyword searches miss — for example, how an anti-vaccine narrative and a climate-denial narrative use the exact same "secret agenda" rhetorical structure.' },
-            { heading: 'Real Example', content: 'The 2024–2025 trend of wellness influencers pivoting from pandemic conspiracies to climate denial — a documented narrative migration that semantic analysis can track in real time.' },
+            { heading: 'The Shift in Fact-Checking', content: 'Researchers are moving from debunking individual claims to dismantling entire "narrative clusters" — interconnected false stories that reinforce each other.' },
+            { heading: 'Simulation Mode', content: 'Click "Simulate" to watch spread in real-time. Click nodes to inject the narrative, then click other nodes to intervene with fact-checks that block further spread.' },
           ]}
         />
       </div>
 
       <p className="text-sm text-ink-muted leading-relaxed -mt-1">
-        Analyze how narratives spread across social platforms. See the journey from origin to mainstream amplification.
+        Analyze how narratives spread across social platforms. Toggle to Simulate mode to see spread in action.
       </p>
 
       <div className="flex gap-2">
@@ -224,19 +320,66 @@ export function NarrativeMapPanel() {
 
       {result && (
         <>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-[11px] px-2" style={{ borderColor: STAGE_COLORS[result.stage] || 'var(--color-ink-muted)', color: STAGE_COLORS[result.stage] || 'var(--color-ink-muted)' }}>
-                {result.stage}
-              </Badge>
-              <span className="text-[11px] text-ink-muted">Virality: {result.viralityScore}/100</span>
-            </div>
-            <div className="flex items-center gap-1 text-[11px] text-ink-muted">
-              <Users size={12} />
-              <span>{result.platforms.length} platforms</span>
-            </div>
+          {/* Mode toggle */}
+          <div className="flex rounded-lg border border-rule overflow-hidden">
+            <button
+              onClick={() => { setMode('analyze'); resetSimulation(); }}
+              className={`flex-1 py-2 text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                mode === 'analyze'
+                  ? 'bg-ink text-paper'
+                  : 'bg-paper text-ink-muted hover:text-ink hover:bg-paper-dark'
+              }`}
+            >
+              <Map size={14} /> Analyze
+            </button>
+            <button
+              onClick={() => { setMode('simulate'); resetSimulation(); }}
+              className={`flex-1 py-2 text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 border-l border-rule ${
+                mode === 'simulate'
+                  ? 'bg-ink text-paper'
+                  : 'bg-paper text-ink-muted hover:text-ink hover:bg-paper-dark'
+              }`}
+            >
+              <Zap size={14} /> Simulate
+            </button>
           </div>
 
+          {/* Analyze mode header */}
+          {mode === 'analyze' && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-[11px] px-2" style={{ borderColor: STAGE_COLORS[result.stage], color: STAGE_COLORS[result.stage] }}>
+                  {result.stage}
+                </Badge>
+                <span className="text-[11px] text-ink-muted">Virality: {result.viralityScore}/100</span>
+              </div>
+              <div className="flex items-center gap-1 text-[11px] text-ink-muted">
+                <Users size={12} />
+                <span>{result.platforms.length} platforms</span>
+              </div>
+            </div>
+          )}
+
+          {/* Simulate mode header */}
+          {isSimMode && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {simPhase === 'idle' && <Badge variant="outline" className="text-[11px]">Click a node to inject</Badge>}
+                {simPhase === 'injecting' && <Badge className="text-[11px] bg-outrage text-white">Injecting...</Badge>}
+                {simPhase === 'spreading' && <Badge className="text-[11px] bg-outrage text-white animate-pulse">Spreading — click nodes to intervene</Badge>}
+                {simPhase === 'done' && <Badge variant="outline" className="text-[11px]">Spread complete</Badge>}
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-[11px] text-red-600 font-semibold">{simInfected.size} infected</span>
+                <span className="text-[11px] text-green-600">{simBlocked.size} blocked</span>
+                <button onClick={resetSimulation} className="text-ink-muted hover:text-ink transition-colors cursor-pointer">
+                  <RotateCcw size={13} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* SVG Graph */}
           <div className="relative flex-1 min-h-[280px] bg-paper-dark rounded-md border border-rule overflow-hidden">
             <svg ref={svgRef} viewBox="0 0 500 300" className="w-full h-full" style={{ maxHeight: '320px' }}>
               <defs>
@@ -254,43 +397,53 @@ export function NarrativeMapPanel() {
 
               {(() => {
                 const positions = platformPositions(500, 300);
-                const visiblePlatforms = result.platforms.filter(p => 
-                  selectedStage === 0 || stagePlatformIds.includes(p.id) || p.role === 'origin'
-                );
+                const visiblePlatforms = isSimMode
+                  ? result.platforms
+                  : result.platforms.filter(p =>
+                    selectedStage === 0 || stagePlatformIds.includes(p.id) || p.role === 'origin'
+                  );
+
+                const visibleConnections = isSimMode
+                  ? result.connections
+                  : result.connections.filter(c => {
+                    if (selectedStage === 0) return true;
+                    return stagePlatformIds.includes(c.from) || stagePlatformIds.includes(c.to);
+                  });
 
                 return (
                   <>
-                    {result.connections
-                      .filter(c => {
-                        if (selectedStage === 0) return true;
-                        const fromPlat = result.platforms.find(p => p.id === c.from);
-                        const toPlat = result.platforms.find(p => p.id === c.to);
-                        return fromPlat && toPlat && (stagePlatformIds.includes(c.from) || stagePlatformIds.includes(c.to));
-                      })
-                      .map((conn, i) => {
-                        const fromPos = positions[conn.from];
-                        const toPos = positions[conn.to];
-                        if (!fromPos || !toPos) return null;
-                        const isActive = animatedConnections;
-                        return (
-                          <g key={`conn-${i}`}>
-                            <line
-                              x1={fromPos.x}
-                              y1={fromPos.y}
-                              x2={toPos.x}
-                              y2={toPos.y}
-                              stroke={isActive ? 'var(--color-outrage)' : 'var(--color-rule)'}
-                              strokeWidth={conn.weight * 0.5}
-                              strokeOpacity={isActive ? 0.6 : 0.3}
-                              markerEnd="url(#arrowhead)"
-                              style={{
-                                transition: 'stroke 0.5s, stroke-opacity 0.5s',
-                                strokeDasharray: isActive ? 'none' : '4,4'
-                              }}
-                            />
-                          </g>
-                        );
-                      })}
+                    {visibleConnections.map((conn, i) => {
+                      const fromPos = positions[conn.from];
+                      const toPos = positions[conn.to];
+                      if (!fromPos || !toPos) return null;
+
+                      const isActive = isSimMode
+                        ? simInfected.has(conn.from) || simInfected.has(conn.to)
+                        : animatedConnections;
+
+                      const connColor = isSimMode && isActive
+                        ? '#ef4444'
+                        : isActive ? 'var(--color-outrage)' : 'var(--color-rule)';
+
+                      return (
+                        <g key={`conn-${i}`}>
+                          <line
+                            x1={fromPos.x}
+                            y1={fromPos.y}
+                            x2={toPos.x}
+                            y2={toPos.y}
+                            stroke={connColor}
+                            strokeWidth={conn.weight * 0.5}
+                            strokeOpacity={isActive ? 0.6 : 0.3}
+                            markerEnd={isSimMode ? undefined : 'url(#arrowhead)'}
+                            style={{
+                              transition: 'stroke 0.5s, stroke-opacity 0.5s',
+                              strokeDasharray: !isSimMode && !isActive ? '4,4' : 'none'
+                            }}
+                          />
+                        </g>
+                      );
+                    })}
 
                     {visiblePlatforms.map(platform => {
                       const pos = positions[platform.id];
@@ -298,25 +451,68 @@ export function NarrativeMapPanel() {
                       const size = getNodeSize(platform.virality);
                       const isHovered = hoveredPlatform === platform.id;
                       const color = PLATFORM_COLORS[platform.name] || 'var(--color-ink-muted)';
-                      
+
+                      // Simulation state
+                      const infected = simInfected.has(platform.id);
+                      const blocked = simBlocked.has(platform.id);
+                      const isSource = simSourceId === platform.id;
+
+                      let fillColor = color;
+                      let fillOpacity = isHovered ? 0.9 : 0.7;
+                      let strokeColor = color;
+                      let strokeWidth = 1;
+                      let extraIcon: React.ReactNode = null;
+
+                      if (isSimMode) {
+                        if (isSource) {
+                          fillColor = '#ef4444';
+                          fillOpacity = 0.9;
+                          strokeColor = '#dc2626';
+                          strokeWidth = 3;
+                        } else if (infected) {
+                          fillColor = '#ef4444';
+                          fillOpacity = 0.7;
+                          strokeColor = '#dc2626';
+                          strokeWidth = 2;
+                        } else if (blocked) {
+                          fillColor = '#22c55e';
+                          fillOpacity = 0.7;
+                          strokeColor = '#16a34a';
+                          strokeWidth = 2;
+                          extraIcon = (
+                            <Shield
+                              x={pos.x - 6}
+                              y={pos.y - 6}
+                              size={12}
+                              className="fill-white"
+                              style={{ pointerEvents: 'none' }}
+                            />
+                          );
+                        }
+                      } else if (platform.role === 'origin') {
+                        extraIcon = <circle cx={pos.x - size * 0.7} cy={pos.y - size * 0.7} r="6" fill="var(--color-curiosity)" />;
+                      }
+
                       return (
                         <g
                           key={platform.id}
                           onMouseEnter={() => setHoveredPlatform(platform.id)}
                           onMouseLeave={() => setHoveredPlatform(null)}
-                          style={{ cursor: 'pointer' }}
+                          onClick={() => isSimMode && handleSimNodeClick(platform.id)}
+                          style={{ cursor: isSimMode ? 'pointer' : 'default' }}
                         >
                           <circle
                             cx={pos.x}
                             cy={pos.y}
                             r={isHovered ? size + 4 : size}
-                            fill={color}
-                            fillOpacity={isHovered ? 0.9 : 0.7}
-                            stroke={isHovered ? 'var(--color-ink)' : color}
-                            strokeWidth={isHovered ? 2 : 1}
+                            fill={fillColor}
+                            fillOpacity={fillOpacity}
+                            stroke={isHovered ? 'var(--color-ink)' : strokeColor}
+                            strokeWidth={isHovered ? 2 : strokeWidth}
                             filter={isHovered ? 'url(#glow)' : undefined}
-                            style={{ transition: 'all 0.2s' }}
+                            style={{ transition: 'all 0.3s' }}
                           />
+                          {extraIcon}
                           <text
                             x={pos.x}
                             y={pos.y + size + 14}
@@ -326,9 +522,6 @@ export function NarrativeMapPanel() {
                           >
                             {escapeHtml(platform.name.length > 10 ? platform.name.slice(0, 8) + '…' : platform.name)}
                           </text>
-                          {platform.role === 'origin' && (
-                            <circle cx={pos.x - size * 0.7} cy={pos.y - size * 0.7} r="6" fill="var(--color-curiosity)" />
-                          )}
                         </g>
                       );
                     })}
@@ -337,6 +530,7 @@ export function NarrativeMapPanel() {
               })()}
             </svg>
 
+            {/* Tooltip */}
             {hoveredPlatform && result && (() => {
               const platform = result.platforms.find(p => p.id === hoveredPlatform);
               if (!platform) return null;
@@ -358,55 +552,75 @@ export function NarrativeMapPanel() {
             })()}
           </div>
 
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => handleStageChange('prev')}
-              disabled={selectedStage === 0}
-              className="p-1.5 rounded hover:bg-paper-dark disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <div className="flex items-center gap-2">
-              {result.stages.map((s, i) => (
+          {/* Analyze mode: stage navigation */}
+          {mode === 'analyze' && (
+            <>
+              <div className="flex items-center justify-between">
                 <button
-                  key={s.id}
-                  onClick={() => setSelectedStage(i)}
-                  className={`w-2 h-2 rounded-full transition-all ${
-                    i === selectedStage ? 'bg-masthead scale-125' : 'bg-ink-muted/40 hover:bg-ink-muted'
-                  }`}
-                />
-              ))}
-            </div>
-            <button
-              onClick={() => handleStageChange('next')}
-              disabled={selectedStage === result.stages.length - 1}
-              className="p-1.5 rounded hover:bg-paper-dark disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
-
-          {currentStage && (
-            <div className="bg-paper-dark rounded-md p-3 border border-rule">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-[12px] font-bold text-ink">{currentStage.label}</h4>
-                <div className="flex items-center gap-1 text-[10px] text-ink-muted">
-                  <Clock size={10} />
-                  <span>{currentStage.date}</span>
+                  onClick={() => handleStageChange('prev')}
+                  disabled={selectedStage === 0}
+                  className="p-1.5 rounded hover:bg-paper-dark disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <div className="flex items-center gap-2">
+                  {result.stages.map((s, i) => (
+                    <button
+                      key={s.id}
+                      onClick={() => setSelectedStage(i)}
+                      className={`w-2 h-2 rounded-full transition-all ${
+                        i === selectedStage ? 'bg-masthead scale-125' : 'bg-ink-muted/40 hover:bg-ink-muted'
+                      }`}
+                    />
+                  ))}
                 </div>
+                <button
+                  onClick={() => handleStageChange('next')}
+                  disabled={selectedStage === result.stages.length - 1}
+                  className="p-1.5 rounded hover:bg-paper-dark disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronRight size={16} />
+                </button>
               </div>
-              <p className="text-[11px] text-ink-light leading-relaxed mb-2">{currentStage.description}</p>
-              {currentStage.mutations.length > 0 && (
-                <div className="flex items-start gap-1.5">
-                  <TrendingUp size={11} className="text-outrage shrink-0 mt-0.5" />
-                  <p className="text-[10px] text-ink-muted">{currentStage.mutations[0]}</p>
+
+              {currentStage && (
+                <div className="bg-paper-dark rounded-md p-3 border border-rule">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-[12px] font-bold text-ink">{currentStage.label}</h4>
+                    <div className="flex items-center gap-1 text-[10px] text-ink-muted">
+                      <Clock size={10} />
+                      <span>{currentStage.date}</span>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-ink-light leading-relaxed mb-2">{currentStage.description}</p>
+                  {currentStage.mutations.length > 0 && (
+                    <div className="flex items-start gap-1.5">
+                      <TrendingUp size={11} className="text-outrage shrink-0 mt-0.5" />
+                      <p className="text-[10px] text-ink-muted">{currentStage.mutations[0]}</p>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
+
+              {result.summary && (
+                <p className="text-[11px] text-ink-muted leading-relaxed italic">{result.summary}</p>
+              )}
+            </>
           )}
 
-          {result.summary && (
-            <p className="text-[11px] text-ink-muted leading-relaxed italic">{result.summary}</p>
+          {/* Simulate mode: instruction */}
+          {isSimMode && simPhase === 'done' && (
+            <div className="bg-paper-dark rounded-md p-3 border border-rule text-center">
+              <p className="text-sm text-ink font-semibold">
+                {simInfected.size} of {result.platforms.length} platforms infected
+                {simBlocked.size > 0 && ` · ${simBlocked.size} fact-checked`}
+              </p>
+              <p className="text-xs text-ink-muted mt-1">
+                {simBlocked.size > 0
+                  ? 'Interventions slowed the spread. Without them, even more platforms would be infected.'
+                  : 'Without fact-check interventions, the narrative spread unchecked through the network.'}
+              </p>
+            </div>
           )}
         </>
       )}

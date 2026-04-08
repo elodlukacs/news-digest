@@ -40,6 +40,13 @@ app.use('/api/cognitive', require('./routes/disinfo'));
 app.use('/api/compare', require('./routes/compare'));
 app.use('/api/spectrum', require('./routes/spectrum'));
 app.use('/api/progress', require('./routes/cognitive'));
+app.use('/api/gamification', require('./routes/gamification'));
+app.use('/api/fallacy-dojo', require('./routes/fallacy-dojo'));
+app.use('/api/conspiracy-anatomy', require('./routes/conspiracy-anatomy'));
+app.use('/api/bias-mirror', require('./routes/bias-mirror'));
+app.use('/api/source-lab', require('./routes/source-lab'));
+app.use('/api/propaganda-timeline', require('./routes/propaganda-timeline'));
+app.use('/api/manipulator', require('./routes/manipulator'));
 
 app.listen(PORT, () => {
   console.log(`News Reader API running on http://localhost:${PORT}`);

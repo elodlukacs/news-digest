@@ -44,6 +44,7 @@ export default function BiasRadarPanel({
   categoryName = '',
 }: BiasRadarPanelProps) {
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
+  const [compareKey, setCompareKey] = useState(0);
   const [dragY, setDragY] = useState<number | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<HTMLDivElement>(null);
@@ -187,7 +188,10 @@ export default function BiasRadarPanel({
                 aria-selected={activeTab === tab}
                 aria-controls={`bias-radar-panel-${tab}`}
                 tabIndex={activeTab === tab ? 0 : -1}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => {
+                  setActiveTab(tab);
+                  if (tab === 'compare') setCompareKey(k => k + 1);
+                }}
                 className={`flex-1 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
                   activeTab === tab
                     ? 'border-b-2 border-ink text-ink'
@@ -207,6 +211,7 @@ export default function BiasRadarPanel({
                 role="tabpanel"
               >
                 <BiasRadarCompare
+                  key={compareKey}
                   currentArticle={currentArticle}
                   searchTitle={headline}
                   excludeSource={sourceName}

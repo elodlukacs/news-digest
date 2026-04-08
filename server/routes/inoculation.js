@@ -254,4 +254,110 @@ router.get('/sessions', (req, res) => {
   });
 });
 
+const AUDIENCE_TARGETS = [
+  { id: 'health-parents', label: 'Health-Conscious Parents', bias: 'Appeal to Fear for Children' },
+  { id: 'political-activists', label: 'Political Activists', bias: 'In-Group Polarization' },
+  { id: 'tech-enthusiasts', label: 'Tech Enthusiasts', bias: 'Appeal to Novelty' },
+  { id: 'seniors', label: 'Senior Citizens', bias: 'Authority Trust + Nostalgia' },
+  { id: 'investors', label: 'Retail Investors', bias: 'Greed + FOMO' },
+  { id: 'students', label: 'University Students', bias: 'Social Proof + Peer Pressure' },
+];
+
+// ─── GET /api/inoculation/targets — return audience targets ───
+router.get('/targets', (_req, res) => {
+  res.json(AUDIENCE_TARGETS);
+});
+
+// ─── POST /api/inoculation/campaign — generate campaign round ───
+router.post('/campaign', async (req, res) => {
+  const { targetId, round = 1, totalRounds = 3, topic, userId } = req.body;
+  if (!targetId) return res.status(400).json({ error: 'targetId required' });
+
+  const uid = userId || 'default';
+  const target = AUDIENCE_TARGETS.find(t => t.id === targetId);
+  if (!target) return res.status(400).json({ error: 'Unknown target. Use one of: ' + AUDIENCE_TARGETS.map(t => t.id).join(', ') });
+
+  try {
+    db.prepare('INSERT OR IGNORE INTO cognitive_users (id, antibody_count) VALUES (?, 0)').run(uid);
+    checkImmunityDecay(uid);
+
+    const campaignPrompt = getPrompt('manipulation_lab_campaign');
+    const renderedPrompt = renderPrompt(campaignPrompt.user_prompt, {
+      target: `${target.label} (${target.bias})`,
+      round: String(round),
+      totalRounds: String(totalRounds),
+    });
+
+    const result = await callLLM(
+      [
+        { role: 'system', content: campaignPrompt.system_message || '' },
+        { role: 'user', content: renderedPrompt + (topic ? `\n\nSpecific topic: ${topic}` : '') },
+      ],
+      { purpose: 'manipulation_campaign', temperature: 0.7, response_format: { type: 'json_object' }, db }
+    );
+
+    const parsed = parseJSON(result.content, {});
+
+    touchInoculationDate(uid);
+
+    res.json({
+      round,
+      totalRounds,
+      target: { id: target.id, label: target.label, bias: target.bias },
+      scenario: parsed.scenario || '',
+      headline: parsed.headline || '',
+      techniques_used: parsed.techniques_used || [],
+      target_vulnerability: parsed.target_vulnerability || '',
+      antibody: parsed.antibody || '',
+      provider: result.provider,
+    });
+  } catch (err) {
+    console.error('Campaign generation error:', err);
+    res.status(500).json({ error: err.message || 'Failed to generate campaign round' });
+  }
+});
+
+// ─── POST /api/inoculation/campaign/answer — score campaign answer ───
+router.post('/campaign/answer', (req, res) => {
+  const { correctTechniques, actualTechniques, timeToIdentify } = req.body;
+
+  if (!actualTechniques || !Array.isArray(actualTechniques)) {
+    return res.status(400).json({ error: 'actualTechniques array required' });
+  }
+
+  const correct = correctTechniques || [];
+  const identified = new Set(correct);
+  const actual = new Set(actualTechniques);
+
+  let hits = 0;
+  for (const t of identified) {
+    if (actual.has(t)) hits++;
+  }
+
+  const precision = identified.size > 0 ? hits / identified.size : 0;
+  const recall = actual.size > 0 ? hits / actual.size : 0;
+  const f1 = (precision + recall) > 0 ? (2 * precision * recall) / (precision + recall) : 0;
+
+  const timeFactor = timeToIdentify ? Math.max(0.3, 1 - (timeToIdentify / 60000)) : 0.7;
+  const chaosScore = Math.round(f1 * timeFactor * 100);
+
+  // Award antibodies based on performance
+  const antibodiesEarned = Math.max(0, Math.round(chaosScore / 10));
+  if (antibodiesEarned > 0) {
+    const uid = req.body.userId || 'default';
+    db.prepare('UPDATE cognitive_users SET antibody_count = antibody_count + ? WHERE id = ?').run(antibodiesEarned, uid);
+  }
+
+  res.json({
+    hits,
+    totalActual: actual.size,
+    totalIdentified: identified.size,
+    precision: Math.round(precision * 100),
+    recall: Math.round(recall * 100),
+    chaosScore,
+    antibodiesEarned,
+    timeFactor: Math.round(timeFactor * 100),
+  });
+});
+
 module.exports = router;

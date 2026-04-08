@@ -179,6 +179,53 @@ db.exec(`
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS narrative_maps (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL DEFAULT 'default',
+    topic TEXT NOT NULL,
+    map_data TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS disinfo_maps (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL DEFAULT 'default',
+    map_data TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS user_gamification (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL DEFAULT 'default',
+    current_streak INTEGER DEFAULT 0,
+    longest_streak INTEGER DEFAULT 0,
+    total_antibodies INTEGER DEFAULT 0,
+    last_challenge_date TEXT,
+    recovery_boosts_used INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(user_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS bias_fingerprints (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL DEFAULT 'default',
+    bias_type TEXT NOT NULL,
+    susceptibility_score REAL NOT NULL DEFAULT 0,
+    last_tested_date TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(user_id, bias_type)
+  );
+
+  CREATE TABLE IF NOT EXISTS fallacy_dojo_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    user_id TEXT NOT NULL DEFAULT 'default',
+    fallacy_type TEXT NOT NULL,
+    difficulty_tier TEXT NOT NULL DEFAULT 'beginner',
+    success INTEGER DEFAULT 0,
+    time_to_identify INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
 `);
 
 function addColumnIfNotExists(table, column, definition) {
@@ -210,6 +257,12 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_rethinking_user ON rethinking_journal(user_id);
   CREATE INDEX IF NOT EXISTS idx_inoculation_user ON inoculation_sessions(user_id);
   CREATE INDEX IF NOT EXISTS idx_bridge_user ON bridge_audits(user_id);
+  CREATE INDEX IF NOT EXISTS idx_narrative_user ON narrative_maps(user_id);
+  CREATE INDEX IF NOT EXISTS idx_disinfo_user ON disinfo_maps(user_id);
+  CREATE INDEX IF NOT EXISTS idx_gamification_user ON user_gamification(user_id);
+  CREATE INDEX IF NOT EXISTS idx_bias_fp_user ON bias_fingerprints(user_id);
+  CREATE INDEX IF NOT EXISTS idx_dojo_user ON fallacy_dojo_logs(user_id);
+  CREATE INDEX IF NOT EXISTS idx_dojo_session ON fallacy_dojo_logs(session_id);
   CREATE INDEX IF NOT EXISTS idx_study_user ON study_analyses(user_id);
   CREATE INDEX IF NOT EXISTS idx_study_date ON study_analyses(created_at);
 `);
@@ -884,6 +937,191 @@ Return JSON:
   "the_antibody": "how to recognize this manipulation pattern — the prebunking rationale",
   "red_flags": ["string", "string"]
 }`
+  );
+
+  upsert.run(
+    'manipulation_lab_campaign',
+    'Manipulation Lab — Campaign Round',
+    'Generates multi-technique manipulation scenarios for the Manipulation Lab campaign mode',
+    'mindgames',
+    `You are "The Architect", a disinformation campaign designer. You create educational scenarios showing how professional influence operations combine multiple manipulation techniques. Respond ONLY in strict JSON. Never include markdown or conversational text.`,
+    `You are designing a multi-technique disinformation campaign scenario for educational purposes.
+
+Audience Target: {{target}}
+Round: {{round}} of {{totalRounds}}
+Techniques available: impersonation, emotion, polarization, conspiracy, discredit, trolling
+
+For this round, create a scenario where a disinformation operator deploys 2-3 techniques simultaneously against the target audience. Make the scenario realistic but clearly educational.
+
+Return JSON:
+{
+  "scenario": "A brief narrative describing the campaign context (2-3 sentences)",
+  "headline": "The manipulative headline the operator would produce",
+  "techniques_used": [
+    {"id": "technique_id", "name": "Technique Name", "how_its_used": "Brief explanation of how this technique appears in the headline"}
+  ],
+  "target_vulnerability": "The cognitive bias being exploited in the target audience",
+  "antibody": "How to recognize this combination of techniques in the wild"
+}`
+  );
+
+  upsert.run(
+    'fallacy-dojo-generate',
+    'Fallacy Dojo — Generate Argument',
+    'Generates an argument with embedded logical fallacies at a specified difficulty',
+    'mindgames',
+    `You are "The Sensei", a logic professor who creates arguments with deliberately embedded logical fallacies for educational sparring practice. Respond ONLY in strict JSON. Never include markdown.`,
+    `Generate a persuasive argument about the following topic that contains exactly {{fallacyCount}} logical fallacy/fallacies at {{difficulty}} difficulty.
+
+Topic: {{topic}}
+
+Difficulty levels:
+- beginner: One obvious fallacy (ad hominem, false dichotomy, appeal to emotion, bandwagon). Easy to spot.
+- intermediate: Two fallacies, one may be subtle (post hoc, cherry picking, appeal to authority, straw man). Requires careful reading.
+- expert: 2-3 fallacies mixed together, embedded naturally in sophisticated rhetoric. Hard to distinguish.
+
+Available fallacies: Ad Hominem, False Dichotomy, Appeal to Nature, Post Hoc, Appeal to Emotion, Straw Man, Bandwagon, Slippery Slope, Appeal to Authority, Red Herring, Appeal to Tradition, False Equivalence, Gambler's Fallacy, Cherry Picking
+
+Return JSON:
+{
+  "argument": "The full argument text (3-5 sentences)",
+  "fallacies": [
+    {"name": "Fallacy Name", "evidence": "Exact quote from the argument showing the fallacy", "explanation": "Why this is a fallacy"}
+  ],
+  "hint": "A subtle hint for the user (without giving away the answer)"
+}`
+  );
+
+  upsert.run(
+    'conspiracy-anatomy',
+    'Conspiracy Anatomy — 5-Dimension Deconstruction',
+    'Deconstructs conspiracy theories across 5 psychological dimensions',
+    'mindgames',
+    `You are a psychology professor specializing in conspiracy theory research. You analyze conspiracy claims across five psychological dimensions identified by academic research. Respond ONLY in strict JSON. Never include markdown.`,
+    `Deconstruct the following conspiracy theory across 5 psychological dimensions:
+
+Claim: {{claim}}
+
+Dimensions to analyze:
+1. Emotional Need — What psychological void does this narrative fill? (fear of chaos, need for control, desire for special knowledge)
+2. Kernel of Truth — What legitimate grievance or real event does it build upon?
+3. Logical Leap — Where does the reasoning break from evidence to speculation?
+4. Unfalsifiability Trap — How is the theory structured so evidence against it becomes evidence for it?
+5. Social Function — What group identity, belonging, or in-group cohesion does it provide?
+
+Return JSON:
+{
+  "dimensions": [
+    {"name": "Emotional Need", "analysis": "string", "score": 8},
+    {"name": "Kernel of Truth", "analysis": "string", "score": 6},
+    {"name": "Logical Leap", "analysis": "string", "score": 9},
+    {"name": "Unfalsifiability Trap", "analysis": "string", "score": 7},
+    {"name": "Social Function", "analysis": "string", "score": 8}
+  ],
+  "overallVulnerability": 7,
+  "antibody": "How to recognize this pattern and engage constructively with someone who believes it",
+  "relatedConspiracies": ["string", "string"]
+}`
+  );
+
+  upsert.run(
+    'bias-mirror-generate',
+    'Bias Mirror — Quiz Scenario Generation',
+    'Generates cognitive bias quiz scenarios for the Bias Mirror profiling tool',
+    'mindgames',
+    `You are a cognitive psychology professor creating quiz scenarios. Generate realistic scenarios that test susceptibility to specific cognitive biases. Respond ONLY in strict JSON.`,
+    `Generate a short realistic scenario (2-3 sentences) that could trigger the "{{bias}}" cognitive bias.
+
+The scenario should be neutral enough that a biased person would react one way and an unbiased person another.
+
+Return JSON:
+{
+  "scenario": "The scenario description",
+  "biasedChoice": "The option a biased person would choose",
+  "unbiasedChoice": "The rational/unbiased option",
+  "explanation": "Why this scenario triggers the specific bias"
+}`
+  );
+
+  upsert.run(
+    'source-lab-sift',
+    'Source Credibility Lab — SIFT Analysis',
+    'Applies the SIFT method (Stop, Investigate, Find coverage, Trace claims) to a URL or claim',
+    'mindgames',
+    `You are a media literacy expert trained in Mike Caulfield's SIFT method for evaluating online information. Analyze sources using Stop, Investigate, Find better coverage, and Trace claims. Respond ONLY in strict JSON.`,
+    `Apply the SIFT method to analyze the following:
+
+URL/Claim: {{input}}
+Context: {{context}}
+
+SIFT Steps:
+1. STOP — Pause before sharing. What's your initial reaction? Why do you feel that way?
+2. INVESTIGATE the source — Who is behind this? What is their expertise and agenda?
+3. FIND better coverage — Are other credible outlets covering this? How do they frame it?
+4. TRACE claims — Where does the original claim come from? Is it supported by primary evidence?
+
+For each step, provide specific analysis. Rate overall credibility 1-10.
+
+Return JSON:
+{
+  "stop": {"initialReaction": "string", "gutCheck": "string", "pauseAdvice": "string"},
+  "investigate": {"sourceName": "string", "credibility": 7, "bias": "string", "expertise": "string", "agenda": "string"},
+  "findCoverage": {"outletsFound": [{"name": "string", "stance": "supports|contradicts|neutral", "excerpt": "string"}]},
+  "traceClaims": {"originalSource": "string", "evidenceQuality": "string", "chainIntact": true},
+  "overallCredibility": 7,
+  "verdict": "string",
+  "siftTips": ["string", "string"]
+}`
+  );
+
+  upsert.run(
+    'propaganda-timeline',
+    'Propaganda Timeline — Historical Campaigns',
+    'Generates a timeline of historical disinformation campaigns with modern parallels',
+    'mindgames',
+    `You are a historian specializing in propaganda and disinformation. Create a timeline of historical disinformation campaigns, showing how tactics repeat across eras. Respond ONLY in strict JSON.`,
+    `Generate a timeline of {{count}} historical disinformation campaigns, spanning different eras. For each, show the campaign details and a modern parallel using the same tactic.
+
+Focus on well-documented cases. Include:
+- The year and name
+- The tactic used
+- The target audience
+- The outcome
+- A modern parallel (2020s) using the same psychological mechanism
+
+Return JSON:
+{
+  "campaigns": [
+    {
+      "year": 1938,
+      "name": "Campaign Name",
+      "description": "Brief description of what happened",
+      "tactic": "The disinformation tactic used",
+      "target": "Who was targeted",
+      "outcome": "What happened as a result",
+      "modernParallel": "A 2020s example using the same tactic",
+      "modernTactic": "How the same tactic appears today"
+    }
+  ]
+}`
+  );
+
+  upsert.run(
+    'ask-the-manipulator',
+    'Ask the Manipulator — Persona Conversation',
+    'Generates responses as different manipulation personas for educational dialogue',
+    'mindgames',
+    `You are role-playing as {{personaName}} for educational purposes. {{personaDescription}}
+
+You must NEVER provide actual manipulation advice. Instead, explain how a {{personaName}} would THINK and OPERATE, using your persona's voice and perspective. This is purely educational — like a detective explaining how criminals think.
+
+Stay in character. Be insightful. Reveal psychological mechanisms. Always remind the user this is educational.`,
+    `User's question: {{message}}
+User's interests: {{interests}}
+
+Respond as {{personaName}}. Explain your perspective on how you would approach this topic or target this user, from your professional viewpoint. Be specific about psychological mechanisms, but keep it educational.
+
+Respond in plain text, not JSON. Stay in character.`
   );
 });
 updateInoculationPrompts();
