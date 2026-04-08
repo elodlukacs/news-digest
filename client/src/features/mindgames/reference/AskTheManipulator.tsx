@@ -36,7 +36,7 @@ export function AskTheManipulator() {
     fetch(`${API_BASE}/manipulator/personas`)
       .then(r => r.json())
       .then(setPersonas)
-      .catch(() => {});
+      .catch(() => setError('Failed to load personas. Please refresh.'));
   }, []);
 
   useEffect(() => {

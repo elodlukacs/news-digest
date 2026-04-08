@@ -121,25 +121,25 @@ export function OverviewTab() {
           icon={<FlaskConical size={20} className="text-outrage" />}
           title="Conspiracy Lab"
           description="Deconstruct conspiracy claims"
-          onClick={() => navigate('/mindgames/reference')}
+          onClick={() => navigate('/mindgames/reference#conspiracy-anatomy')}
         />
         <QuickActionCard
           icon={<Shield size={20} className="text-observation" />}
           title="Source Check"
           description="SIFT method evaluation"
-          onClick={() => navigate('/mindgames/reference')}
+          onClick={() => navigate('/mindgames/reference#source-credibility')}
         />
         <QuickActionCard
           icon={<MessageSquare size={20} className="text-outrage" />}
           title="Ask a Manipulator"
           description="Chat with disinfo personas"
-          onClick={() => navigate('/mindgames/reference')}
+          onClick={() => navigate('/mindgames/reference#ask-manipulator')}
         />
         <QuickActionCard
           icon={<History size={20} className="text-observation" />}
           title="Propaganda History"
           description="See how tactics repeat"
-          onClick={() => navigate('/mindgames/reference')}
+          onClick={() => navigate('/mindgames/reference#propaganda-timeline')}
         />
         <QuickActionCard
           icon={<Activity size={20} className="text-outrage" />}

@@ -1,4 +1,5 @@
 const express = require('express');
+const db = require('../db');
 const { callLLM } = require('../lib/llm');
 const { getPrompt, renderPrompt } = require('../lib/promptManager');
 
@@ -49,6 +50,9 @@ router.post('/chat', async (req, res) => {
   if (!message || message.trim().length < 2) {
     return res.status(400).json({ error: 'Message required' });
   }
+  if (message.length > 1000) {
+    return res.status(400).json({ error: 'Message must be 1000 characters or fewer' });
+  }
 
   try {
     const prompt = getPrompt('ask-the-manipulator');
@@ -63,7 +67,7 @@ router.post('/chat', async (req, res) => {
         { role: 'system', content: prompt.system_message.replace('{{personaName}}', persona.name).replace('{{personaDescription}}', persona.description) },
         { role: 'user', content: rendered },
       ],
-      { purpose: 'manipulator_chat', temperature: 0.7, providerId: provider || null, db: require('../db') }
+      { purpose: 'manipulator_chat', temperature: 0.7, providerId: provider || null, db }
     );
 
     res.json({

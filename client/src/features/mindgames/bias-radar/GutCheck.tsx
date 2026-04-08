@@ -23,18 +23,16 @@ export default function GutCheck({ onComplete, onEmotionalResponse }: GutCheckPr
   function handleSelect(value: GutCheckReaction) {
     if (submitted) return;
     setSelected(value);
-    onComplete(value);
-
-    if (onEmotionalResponse) {
-      setSubmitted(false);
-    } else {
+    if (!onEmotionalResponse) {
       setSubmitted(true);
+      onComplete(value);
     }
   }
 
   function handleSubmitIntensity() {
     if (!selected || submitted) return;
     setSubmitted(true);
+    onComplete(selected);
     onEmotionalResponse?.({ intensity, valence, reaction: selected });
   }
 

@@ -12,7 +12,9 @@ export function RecoveryBoost({ stats, onRecover }: RecoveryBoostProps) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  const todayDate = new Date(new Date().toISOString().split('T')[0] + 'T00:00:00Z');
+  todayDate.setUTCDate(todayDate.getUTCDate() - 1);
+  const yesterday = todayDate.toISOString().split('T')[0];
   const shouldShow =
     !stats.completed_today &&
     stats.current_streak > 0 &&

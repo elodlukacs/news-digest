@@ -32,7 +32,6 @@ const TOPICS = [
 // POST /api/fallacy-dojo/generate — generate argument with fallacies
 router.post('/generate', async (req, res) => {
   const { difficulty = 'beginner', topic, provider } = req.body;
-  const uid = req.body.userId || 'default';
 
   if (!['beginner', 'intermediate', 'expert'].includes(difficulty)) {
     return res.status(400).json({ error: 'difficulty must be beginner, intermediate, or expert' });
@@ -89,6 +88,13 @@ router.post('/answer', (req, res) => {
     return res.status(400).json({ error: 'sessionId, userFallacies, and actualFallacies required' });
   }
 
+  const validFallacyNames = new Set(FALLACY_NAMES.map(f => f.toLowerCase()));
+  for (const f of actualFallacies) {
+    if (!validFallacyNames.has(f.toLowerCase())) {
+      return res.status(400).json({ error: `Unknown fallacy: ${f}` });
+    }
+  }
+
   const userSet = new Set(userFallacies.map(f => f.toLowerCase()));
   const actualSet = new Set(actualFallacies.map(f => f.toLowerCase()));
 
@@ -114,12 +120,12 @@ router.post('/answer', (req, res) => {
     }
   }
 
-  // Award antibodies
+  // Award antibodies via user_gamification (single source of truth)
   const antibodiesEarned = allCorrect ? 5 : hits > 0 ? 2 : 0;
   if (antibodiesEarned > 0) {
     try {
-      db.prepare('INSERT OR IGNORE INTO cognitive_users (id, antibody_count) VALUES (?, 0)').run(uid);
-      db.prepare('UPDATE cognitive_users SET antibody_count = antibody_count + ? WHERE id = ?').run(antibodiesEarned, uid);
+      db.prepare('INSERT OR IGNORE INTO user_gamification (user_id) VALUES (?)').run(uid);
+      db.prepare('UPDATE user_gamification SET total_antibodies = total_antibodies + ? WHERE user_id = ?').run(antibodiesEarned, uid);
     } catch (e) {
       console.error('Failed to award antibodies:', e.message);
     }
