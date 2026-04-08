@@ -297,4 +297,58 @@ router.get('/releases/:type/:id', async (req, res) => {
   }
 });
 
+// ─── Daily Weird Fact ───
+let weirdFactCache = { data: null, fetchedAt: 0 };
+router.get('/weird-fact', async (req, res) => {
+  const TTL = 24 * 60 * 60 * 1000;
+  if (weirdFactCache.data && Date.now() - weirdFactCache.fetchedAt < TTL) {
+    return res.json(weirdFactCache.data);
+  }
+  try {
+    const parsed = await parser.parseURL('https://www.atlasobscura.com/feeds/latest');
+    const item = parsed.items[0];
+    if (!item) return res.json(null);
+    const data = {
+      title: item.title || '',
+      link: item.link || '',
+      source: 'Atlas Obscura',
+      pubDate: item.pubDate || '',
+    };
+    weirdFactCache = { data, fetchedAt: Date.now() };
+    res.json(data);
+  } catch (err) {
+    console.error('Weird fact error:', err);
+    if (weirdFactCache.data) return res.json(weirdFactCache.data);
+    res.status(500).json({ error: 'Failed to fetch weird fact' });
+  }
+});
+
+// ─── On This Day ───
+let onThisDayCache = { data: null, fetchedAt: 0 };
+router.get('/on-this-day', async (req, res) => {
+  const TTL = 24 * 60 * 60 * 1000;
+  if (onThisDayCache.data && Date.now() - onThisDayCache.fetchedAt < TTL) {
+    return res.json(onThisDayCache.data);
+  }
+  try {
+    const now = new Date();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const url = `https://api.wikimedia.org/feed/v1/wikipedia/en/onthisday/all/${mm}/${dd}`;
+    const resp = await fetchWithTimeout(url, {}, 5000);
+    const data = await resp.json();
+    const events = (data.selected || data.events || []).slice(0, 3).map(e => ({
+      year: e.year,
+      text: e.text,
+      link: e.pages?.[0]?.content_urls?.desktop?.page || null,
+    }));
+    onThisDayCache = { data: events, fetchedAt: Date.now() };
+    res.json(events);
+  } catch (err) {
+    console.error('On this day error:', err);
+    if (onThisDayCache.data) return res.json(onThisDayCache.data);
+    res.status(500).json({ error: 'Failed to fetch on this day' });
+  }
+});
+
 module.exports = router;

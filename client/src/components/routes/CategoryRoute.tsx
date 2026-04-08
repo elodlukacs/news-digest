@@ -2,26 +2,33 @@ import { useParams, useOutletContext, useNavigate } from 'react-router-dom';
 import { useState, useCallback } from 'react';
 import { SummaryView } from '../SummaryView';
 import { LeftSidebar } from '../LeftSidebar';
-import { useSummary, useSummaryHistory } from '../../hooks/useApi';
+import { useSummary, useSummaryHistory, useLens } from '../../hooks/useApi';
 import { slugify } from '../../utils/slugify';
 import type { AppOutletContext } from '../../types/routing';
+import type { PromptLens } from '../PromptLensSelector';
 
 export function CategoryRoute() {
   const { categoryName } = useParams<{ categoryName: string }>();
   const ctx = useOutletContext<AppOutletContext>();
   const navigate = useNavigate();
   const [selectedSnapshotId, setSelectedSnapshotId] = useState<number | null>(null);
+  const [selectedLens, setSelectedLens] = useState<PromptLens | null>(null);
 
   const category = ctx.categories.find((c) => slugify(c.name) === categoryName);
 
   const categoryId = category?.id ?? 0;
   const { summary, loading, refreshing, error, refresh } = useSummary(categoryId, selectedSnapshotId, ctx.selectedLlm);
   const { dates, refresh: refreshHistory } = useSummaryHistory(categoryId);
+  const lens = useLens(categoryId, ctx.selectedLlm);
 
   const handleRefresh = useCallback(async () => {
     await refresh();
     refreshHistory();
   }, [refresh, refreshHistory]);
+
+  const handleRunLens = useCallback(() => {
+    if (selectedLens) lens.run(selectedLens.slug);
+  }, [lens, selectedLens]);
 
   const handleDelete = useCallback(async () => {
     await ctx.deleteCategory(categoryId);
@@ -50,6 +57,12 @@ export function CategoryRoute() {
             onManageFeeds={() => ctx.onManageFeeds(category.id)}
             onDelete={handleDelete}
             selectedLlm={ctx.selectedLlm}
+            selectedLens={selectedLens}
+            onLensChange={setSelectedLens}
+            onRunLens={handleRunLens}
+            lensLoading={lens.loading}
+            lensContent={lens.content}
+            lensName={lens.lensName}
           />
         ) : (
           <div className="py-24 text-center">

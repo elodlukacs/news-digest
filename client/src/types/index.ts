@@ -152,8 +152,8 @@ export interface ReleaseDetail {
   status: string | null;
 }
 
-export type { CryptoPrice, ForecastDay, Weather, Rates, Headline, Briefing } from './widgets';
-export type { BiasRating, SourceArticle, TechniqueName, TechniqueResult, GutCheckReaction } from './lens';
+export type { CryptoPrice, ForecastDay, Weather, Rates, Headline, Briefing, WeirdFactWidget, OnThisDayEvent } from './widgets';
+export type { BiasRating, SourceArticle, TechniqueName, TechniqueResult, GutCheckReaction, SteelmanResponse, RabbitHoleResponse } from './lens';
 export type { GamificationStats, ChallengeResult, RecoveryResult } from './gamification';
 
 export interface HomepageArticle {
@@ -163,6 +163,7 @@ export interface HomepageArticle {
   image: string;
   pubDate: string;
   source: string;
+  readTime?: number;
 }
 
 export interface HomepageBrief {

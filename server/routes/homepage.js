@@ -33,6 +33,7 @@ async function fetchHomepageBriefs() {
             image: extractImage(item),
             pubDate: item.pubDate || '',
             source: feed.name,
+            readTime: Math.max(1, Math.ceil(snippet.length / 5 / 200)),
           };
         }).filter(a => a.image);
 

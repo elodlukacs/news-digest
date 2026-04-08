@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { API_BASE } from '../config';
 import type { CryptoPrice, HackerNewsItem, UpcomingRelease, Weather, Rates, Headline } from '../types';
+import type { WeirdFactWidget, OnThisDayEvent } from '../types/widgets';
 
 export function useWidgets() {
   const [weather, setWeather] = useState<Weather | null>(null);
@@ -10,6 +11,8 @@ export function useWidgets() {
   const [hackerNews, setHackerNews] = useState<HackerNewsItem[]>([]);
   const [releases, setReleases] = useState<UpcomingRelease[]>([]);
   const [trending, setTrending] = useState<{ tag: string; count: number }[]>([]);
+  const [weirdFact, setWeirdFact] = useState<WeirdFactWidget | null>(null);
+  const [onThisDay, setOnThisDay] = useState<OnThisDayEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -25,7 +28,9 @@ export function useWidgets() {
       fetch(`${API_BASE}/widgets/hackernews`, { signal: controller.signal }).then(r => { if (!r.ok) return null; return r.json(); }).catch(() => null),
       fetch(`${API_BASE}/widgets/releases`, { signal: controller.signal }).then(r => { if (!r.ok) return null; return r.json(); }).then(d => d?.items ?? d).catch(() => null),
       fetch(`${API_BASE}/tags/trending`, { signal: controller.signal }).then(r => { if (!r.ok) return null; return r.json(); }).catch(() => null),
-    ]).then(([w, r, h, c, hn, rel, t]) => {
+      fetch(`${API_BASE}/widgets/weird-fact`, { signal: controller.signal }).then(r => { if (!r.ok) return null; return r.json(); }).catch(() => null),
+      fetch(`${API_BASE}/widgets/on-this-day`, { signal: controller.signal }).then(r => { if (!r.ok) return null; return r.json(); }).catch(() => null),
+    ]).then(([w, r, h, c, hn, rel, t, wf, otd]) => {
       if (controller.signal.aborted) return;
       if (w) setWeather(w);
       if (r) setRates(r);
@@ -34,11 +39,13 @@ export function useWidgets() {
       if (hn) setHackerNews(hn);
       if (rel) setReleases(rel);
       if (t) setTrending(t);
+      if (wf) setWeirdFact(wf);
+      if (otd) setOnThisDay(otd);
       setLoading(false);
     });
 
     return () => { controller.abort(); abortRef.current = null; };
   }, []);
 
-  return { weather, rates, headlines, crypto, hackerNews, releases, trending, loading };
+  return { weather, rates, headlines, crypto, hackerNews, releases, trending, weirdFact, onThisDay, loading };
 }

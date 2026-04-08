@@ -5,6 +5,7 @@ import { Search } from 'lucide-react';
 import BiasRadarCompare from './BiasRadarCompare';
 import BiasRadarDecode from './BiasRadarDecode';
 import BiasRadarSteelman from './BiasRadarSteelman';
+import BiasRadarRabbitHole from './BiasRadarRabbitHole';
 import type { SourceArticle } from '../../../types/lens';
 import type { ParsedSection } from '../../../components/SummaryView';
 
@@ -21,12 +22,13 @@ interface BiasRadarPanelProps {
   categoryName?: string;
 }
 
-type Tab = 'compare' | 'decode' | 'steelman';
+type Tab = 'compare' | 'decode' | 'steelman' | 'rabbit-hole';
 
 const TAB_LABELS: Record<Tab, string> = {
   compare: 'Compare',
   decode: 'Decode',
   steelman: 'Steelman',
+  'rabbit-hole': 'Rabbit Hole',
 };
 
 const DISMISS_THRESHOLD = 120;
@@ -235,6 +237,15 @@ export default function BiasRadarPanel({
                 role="tabpanel"
               >
                 <BiasRadarSteelman headline={headline} content={content} language={language} />
+              </div>
+            )}
+            {activeTab === 'rabbit-hole' && (
+              <div
+                id="bias-radar-panel-rabbit-hole"
+                aria-labelledby="bias-radar-tab-rabbit-hole"
+                role="tabpanel"
+              >
+                <BiasRadarRabbitHole headline={headline} content={content} language={language} />
               </div>
             )}
           </div>

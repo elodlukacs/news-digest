@@ -1,5 +1,5 @@
-import { Wind, Droplets, ExternalLink } from 'lucide-react';
-import type { CryptoPrice, Weather, Rates, Headline } from '../types';
+import { Wind, Droplets, ExternalLink, Sparkles, CalendarDays } from 'lucide-react';
+import type { CryptoPrice, Weather, Rates, Headline, WeirdFactWidget, OnThisDayEvent } from '../types';
 import { formatDay } from '../utils/date';
 import { WeatherIcon, WidgetHeader } from './SharedWidgets';
 import { Badge } from './ui/badge';
@@ -10,9 +10,11 @@ interface Props {
   headlines: Headline[];
   crypto: CryptoPrice[];
   trending: { tag: string; count: number }[];
+  weirdFact: WeirdFactWidget | null;
+  onThisDay: OnThisDayEvent[];
 }
 
-export function WidgetSidebar({ weather, rates, headlines, crypto, trending }: Props) {
+export function WidgetSidebar({ weather, rates, headlines, crypto, trending, weirdFact, onThisDay }: Props) {
 
   return (
     <aside className="w-72 shrink-0 hidden lg:block pt-8 font-widget">
@@ -150,6 +152,48 @@ export function WidgetSidebar({ weather, rates, headlines, crypto, trending }: P
                   </p>
                   {i < headlines.length - 1 && <div className="mt-3.5" />}
                 </a>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Daily Weird Fact */}
+        {weirdFact && (
+          <section>
+            <WidgetHeader title="Weird Fact" />
+            <a href={weirdFact.link} target="_blank" rel="noopener noreferrer" className="group block px-4 py-3 cursor-pointer">
+              <div className="flex items-start gap-2.5">
+                <Sparkles size={16} className="text-masthead shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-[13px] leading-snug text-ink group-hover:text-ink-muted transition-colors font-medium">
+                    {weirdFact.title}
+                  </p>
+                  <p className="text-[10px] text-ink-muted mt-1">{weirdFact.source}</p>
+                </div>
+              </div>
+            </a>
+          </section>
+        )}
+
+        {/* On This Day */}
+        {onThisDay.length > 0 && (
+          <section>
+            <WidgetHeader title="On This Day" />
+            <div className="px-4 py-3 space-y-3">
+              {onThisDay.map((event, i) => (
+                <div key={i} className="flex items-start gap-2.5">
+                  <CalendarDays size={14} className="text-masthead shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-[11px] font-bold text-masthead tracking-wider">{event.year}</p>
+                    <p className="text-[12px] leading-snug text-ink">
+                      {event.link ? (
+                        <a href={event.link} target="_blank" rel="noopener noreferrer" className="hover:text-ink-muted transition-colors cursor-pointer">
+                          {event.text}
+                        </a>
+                      ) : event.text}
+                    </p>
+                  </div>
+                </div>
               ))}
             </div>
           </section>

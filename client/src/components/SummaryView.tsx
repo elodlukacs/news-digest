@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { RefreshCw, AlertCircle, Clock, Zap, Settings, Trash2, ExternalLink, MoreVertical, Search, MessageCircle } from 'lucide-react';
 // Sentiment ribbon — positioned absolute top-right, no layout impact
 const RIBBON_COLORS: Record<string, string> = {
@@ -175,6 +176,8 @@ function RateLimitDialog({ error, open, onClose }: { error: string; open: boolea
   );
 }
 
+import { PromptLensSelector, type PromptLens } from './PromptLensSelector';
+
 interface Props {
   categoryId: number;
   categoryName: string;
@@ -186,6 +189,12 @@ interface Props {
   onManageFeeds: () => void;
   onDelete: () => void;
   selectedLlm: string;
+  selectedLens: PromptLens | null;
+  onLensChange: (lens: PromptLens | null) => void;
+  onRunLens: () => void;
+  lensLoading: boolean;
+  lensContent: string | null;
+  lensName: string | null;
 }
 
 export function SummaryView({
@@ -199,6 +208,12 @@ export function SummaryView({
   onManageFeeds,
   onDelete,
   selectedLlm,
+  selectedLens,
+  onLensChange,
+  onRunLens,
+  lensLoading,
+  lensContent,
+  lensName,
 }: Props) {
   const [rateLimitDismissed, setRateLimitDismissed] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
@@ -261,7 +276,7 @@ export function SummaryView({
           </div>
         )}
 
-        <div className="md:hidden mt-4">
+        <div className="md:hidden mt-4 space-y-2">
           <button
             onClick={onRefresh}
             disabled={busy}
@@ -277,6 +292,7 @@ export function SummaryView({
             </div>
             <RefreshCw size={18} className={`shrink-0 ml-3 ${busy ? 'animate-spin' : ''}`} />
           </button>
+          <PromptLensSelector selectedSlug={selectedLens?.slug ?? null} onSelect={onLensChange} onRun={onRunLens} running={lensLoading} disabled={busy} />
         </div>
 
         {/* Desktop: labeled action buttons */}
@@ -285,6 +301,7 @@ export function SummaryView({
             <RefreshCw size={14} className={busy ? 'animate-spin' : ''} />
             {refreshing ? 'Refreshing...' : 'Refresh the Articles'}
           </Button>
+          <PromptLensSelector selectedSlug={selectedLens?.slug ?? null} onSelect={onLensChange} onRun={onRunLens} running={lensLoading} disabled={busy} />
           <Button variant="outline" size="sm" className="gap-2" onClick={onManageFeeds}>
             <Settings size={14} />
             Feeds & Settings
@@ -295,6 +312,63 @@ export function SummaryView({
           </Button>
         </div>
       </div>
+
+      {/* Lens loading / result — matches summary card style */}
+      {(lensLoading || lensContent) && (
+        <div className="mt-6 md:mt-8">
+          <article className="-mx-4 px-4 py-1.5 border-y border-rule/60 bg-paper-dark/70 md:mx-0 md:px-0 md:py-0 md:bg-transparent md:border-y-0">
+            <Card className="relative border-0 bg-transparent md:bg-paper-dark md:border md:border-rule overflow-visible md:overflow-hidden min-w-0 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.06)]">
+              <CardHeader className="pb-0 px-0 md:px-5 pt-5">
+                <div className="flex items-center gap-2">
+                  {selectedLens && <span className="text-base">{selectedLens.icon}</span>}
+                  <CardTitle className="text-lg md:text-xl">{lensLoading ? (selectedLens?.name || 'Lens') : (lensName || 'Lens')}</CardTitle>
+                </div>
+                <p className="text-[11px] text-ink-muted mt-1 font-[family-name:var(--font-widget)]">A different perspective on today's stories</p>
+              </CardHeader>
+              <CardContent className="px-0 md:px-5 pb-5 pt-2">
+                {lensLoading ? (
+                  <div className="flex items-center gap-3 py-6">
+                    <div className="flex gap-1">
+                      {[0, 1, 2].map((i) => (
+                        <div
+                          key={i}
+                          className="w-1.5 h-1.5 rounded-full bg-masthead/40 animate-pulse"
+                          style={{ animationDelay: `${i * 200}ms` }}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-[13px] font-[family-name:var(--font-body)] text-ink-light italic">Thinking...</span>
+                  </div>
+                ) : lensContent ? (
+                  <div className="pt-2">
+                    <ReactMarkdown
+                      components={{
+                        h1: ({ children }) => <h1 className="font-serif text-2xl font-bold text-ink mt-6 mb-3 leading-tight">{children}</h1>,
+                        h2: ({ children }) => <h2 className="font-serif text-xl font-bold text-ink mt-5 mb-2 leading-snug">{children}</h2>,
+                        h3: ({ children }) => <h3 className="font-serif text-lg font-semibold text-ink mt-4 mb-2 leading-snug">{children}</h3>,
+                        p: ({ children }) => <p className="text-[16px] leading-[1.8] text-ink font-[family-name:var(--font-body)] break-words [overflow-wrap:anywhere] mb-4">{children}</p>,
+                        ul: ({ children }) => <ul className="space-y-3 my-4 list-disc pl-5">{children}</ul>,
+                        ol: ({ children }) => <ol className="space-y-3 my-4 list-decimal pl-5">{children}</ol>,
+                        li: ({ children }) => <li className="text-[16px] leading-[1.8] text-ink font-[family-name:var(--font-body)]">{children}</li>,
+                        strong: ({ children }) => <strong className="font-bold text-ink">{children}</strong>,
+                        a: ({ href, children }) => (
+                          <a href={href} target="_blank" rel="noopener noreferrer" className="text-masthead underline decoration-masthead/30 underline-offset-2 hover:decoration-masthead transition-colors cursor-pointer">
+                            {children}
+                          </a>
+                        ),
+                        hr: () => <div className="my-4 h-px bg-rule" />,
+                        blockquote: ({ children }) => <blockquote className="border-l-2 border-masthead/40 pl-4 italic text-ink-light my-4">{children}</blockquote>,
+                      }}
+                    >
+                      {lensContent}
+                    </ReactMarkdown>
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
+          </article>
+        </div>
+      )}
 
       {/* Mobile: bottom drawer with actions */}
       <Drawer open={actionsOpen} onOpenChange={setActionsOpen} direction="bottom">

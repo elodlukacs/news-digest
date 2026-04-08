@@ -63,3 +63,11 @@ export interface SteelmanResponse {
   counterArgument: string;
   followUpQuestion: string;
 }
+
+export interface RabbitHoleResponse {
+  topic: string;
+  whyItConnects: string;
+  wikiSummary: string;
+  searchQuery: string;
+  funFact: string;
+}

@@ -269,3 +269,85 @@ router.post('/:id/refresh', validateId, async (req, res) => {
 });
 
 module.exports = router;
+
+// ─── Lens endpoint: fun/focused summarization using a selected prompt ───
+router.post('/:id/lens', validateId, async (req, res) => {
+  try {
+    const { lensSlug } = req.body || {};
+    if (!lensSlug?.trim()) {
+      return res.status(400).json({ error: 'lensSlug required' });
+    }
+
+    const category = db.prepare('SELECT * FROM categories WHERE id = ?').get(req.params.id);
+    if (!category) return res.status(404).json({ error: 'Category not found' });
+
+    const feeds = db.prepare('SELECT * FROM feeds WHERE category_id = ?').all(req.params.id);
+    if (feeds.length === 0) return res.status(400).json({ error: 'No feeds in this category' });
+
+    // Fetch the lens prompt
+    const lensPrompt = db.prepare('SELECT * FROM prompts WHERE slug = ?').get(lensSlug.trim());
+    if (!lensPrompt) return res.status(400).json({ error: `Unknown lens: ${lensSlug}` });
+
+    // Fetch articles from feeds (same as refresh)
+    const feedResults = await Promise.allSettled(
+      feeds.map(async (feed) => {
+        try {
+          const parsed = await parser.parseURL(feed.url);
+          return parsed.items.slice(0, 10).map((item) => ({
+            title: item.title || '',
+            description: (item.contentSnippet || item.content || '').slice(0, 3000),
+            link: item.link || '',
+            pubDate: item.pubDate || '',
+            source: feed.name,
+          }));
+        } catch (err) {
+          console.warn(`Lens: failed to fetch feed "${feed.name}":`, err.message);
+          return [];
+        }
+      })
+    );
+
+    const allArticles = feedResults
+      .filter((r) => r.status === 'fulfilled')
+      .flatMap((r) => r.value)
+      .sort((a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime())
+      .slice(0, 15);
+
+    if (allArticles.length === 0) {
+      return res.status(400).json({ error: 'Could not fetch any articles from the feeds' });
+    }
+
+    const articleText = allArticles
+      .map((a, i) => `[${i + 1}] ${a.title} (${a.source})\n${a.description}\nLink: ${a.link}`)
+      .join('\n\n');
+
+    // Build messages using the lens prompt's system + user prompt
+    const renderedUser = (lensPrompt.user_prompt || '')
+      .replace(/\{\{category\}\}/g, category.name || '')
+      .replace(/\{\{articles\}\}/g, articleText);
+
+    const messages = [];
+    if (lensPrompt.system_message) {
+      messages.push({ role: 'system', content: lensPrompt.system_message });
+    }
+    messages.push({ role: 'user', content: renderedUser });
+
+    const result = await callLLM(messages, {
+      purpose: 'lens',
+      categoryId: Number(req.params.id),
+      temperature: 0.7,
+    });
+
+    res.json({
+      lens: lensSlug,
+      lensName: lensPrompt.name,
+      content: result.content,
+      provider: result.provider,
+      generated_at: new Date().toISOString(),
+      article_count: allArticles.length,
+    });
+  } catch (err) {
+    console.error('Lens error:', err);
+    res.status(500).json({ error: err.message || 'Failed to generate lens summary' });
+  }
+});

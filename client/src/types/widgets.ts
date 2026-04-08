@@ -41,3 +41,16 @@ export interface Briefing {
   generated_at: string;
   provider?: string;
 }
+
+export interface WeirdFactWidget {
+  title: string;
+  link: string;
+  source: string;
+  pubDate: string;
+}
+
+export interface OnThisDayEvent {
+  year: number;
+  text: string;
+  link?: string | null;
+}

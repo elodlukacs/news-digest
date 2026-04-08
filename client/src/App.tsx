@@ -19,6 +19,7 @@ import { JobsRoute } from './components/routes/JobsRoute';
 import { ReleasesRoute } from './components/routes/ReleasesRoute';
 import { MindGamesRoute } from './components/routes/MindGamesRoute';
 import { PromptManagerRoute } from './components/routes/PromptManagerRoute';
+import { BreakRoute } from './components/routes/BreakRoute';
 import {
   MindGamesOverviewRoute,
   MindGamesTrainingRoute,
@@ -113,6 +114,7 @@ function App() {
         <Route index element={<HomeRoute />} />
         <Route path="category/:categoryName" element={<CategoryRoute />} />
         <Route path="briefing" element={<BriefingRoute />} />
+        <Route path="break" element={<BreakRoute />} />
         <Route path="jobs" element={<JobsRoute />} />
         <Route path="releases" element={<ReleasesRoute />} />
         <Route path="prompts" element={<PromptManagerRoute />} />

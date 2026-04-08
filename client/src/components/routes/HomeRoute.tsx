@@ -20,6 +20,7 @@ export function HomeRoute() {
         rates={rates}
         headlines={headlines}
         hackerNews={hackerNews}
+        categoryNames={ctx.categories.map(c => c.name)}
       />
     </div>
   );

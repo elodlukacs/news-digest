@@ -8,6 +8,8 @@ import { Button } from './ui/button';
 import { Skeleton } from './ui/skeleton';
 import { Badge } from './ui/badge';
 import { BiasRadarPanel } from '../features/mindgames/bias-radar';
+import { ReadingTimeFilter } from './ReadingTimeFilter';
+import { MoodPicker } from './MoodPicker';
 
 /* ─── Types ──────────────────────────────────────────────── */
 
@@ -20,6 +22,7 @@ interface Props {
   rates: Rates | null;
   headlines: Headline[];
   hackerNews: HackerNewsItem[];
+  categoryNames: string[];
 }
 
 /* ─── Helpers ────────────────────────────────────────────── */
@@ -265,11 +268,17 @@ export function NewspaperHome({
   rates,
   headlines,
   hackerNews,
+  categoryNames,
 }: Props) {
   const [selectedArticle, setSelectedArticle] = useState<HomepageArticle | null>(null);
   const [selectedSource, setSelectedSource] = useState<string>('');
+  const [readTimeFilter, setReadTimeFilter] = useState<number | null>(null);
 
-  const allCards = useMemo(() => flattenBriefs(briefs), [briefs]);
+  const allCards = useMemo(() => {
+    const items = flattenBriefs(briefs);
+    if (readTimeFilter === null) return items;
+    return items.filter((card) => (card.article.readTime ?? 1) <= readTimeFilter);
+  }, [briefs, readTimeFilter]);
 
   function handleAnalyze(article: HomepageArticle, source: string) {
     setSelectedArticle(article);
@@ -338,6 +347,12 @@ export function NewspaperHome({
 
   return (
     <div>
+      {/* Reading Time Filter + Mood Picker */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4 pt-4">
+        <ReadingTimeFilter selected={readTimeFilter} onChange={setReadTimeFilter} />
+        <MoodPicker onSelectCategory={onSelectCategory} availableCategories={categoryNames} />
+      </div>
+
       {/* ─── Above the Fold: 5-Column Grid ─── */}
       <div className="newspaper-grid">
         {/* COLUMN 1: Text-only articles from different categories */}
