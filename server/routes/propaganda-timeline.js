@@ -1,4 +1,5 @@
 const express = require('express');
+const db = require('../db');
 const { callLLM } = require('../lib/llm');
 const { getPrompt, renderPrompt } = require('../lib/promptManager');
 const { parseJSON } = require('../lib/parseJSON');
@@ -28,7 +29,7 @@ router.post('/generate', async (req, res) => {
         { role: 'system', content: prompt.system_message || '' },
         { role: 'user', content: rendered },
       ],
-      { purpose: 'propaganda_timeline', temperature: 0.6, response_format: { type: 'json_object' }, providerId: provider || null, db: require('../db') }
+      { purpose: 'propaganda_timeline', temperature: 0.6, response_format: { type: 'json_object' }, providerId: provider || null, db }
     );
 
     const parsed = parseJSON(result.content, {});
