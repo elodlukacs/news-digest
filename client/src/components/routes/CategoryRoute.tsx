@@ -26,6 +26,11 @@ export function CategoryRoute() {
     refreshHistory();
   }, [refresh, refreshHistory]);
 
+  const handleLensChange = useCallback((l: PromptLens | null) => {
+    setSelectedLens(l);
+    if (!l) lens.clear();
+  }, [lens]);
+
   const handleRunLens = useCallback(() => {
     if (selectedLens) lens.run(selectedLens.slug);
   }, [lens, selectedLens]);
@@ -47,7 +52,6 @@ export function CategoryRoute() {
       <main className="flex-1 min-w-0">
         {category ? (
           <SummaryView
-            categoryId={category.id}
             categoryName={category.name}
             summary={summary}
             loading={loading}
@@ -58,11 +62,13 @@ export function CategoryRoute() {
             onDelete={handleDelete}
             selectedLlm={ctx.selectedLlm}
             selectedLens={selectedLens}
-            onLensChange={setSelectedLens}
+            onLensChange={handleLensChange}
             onRunLens={handleRunLens}
             lensLoading={lens.loading}
             lensContent={lens.content}
             lensName={lens.lensName}
+            lensError={lens.error}
+            onDismissLens={lens.clear}
           />
         ) : (
           <div className="py-24 text-center">

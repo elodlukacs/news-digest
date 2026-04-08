@@ -268,14 +268,15 @@ router.post('/:id/refresh', validateId, async (req, res) => {
   }
 });
 
-module.exports = router;
-
 // ─── Lens endpoint: fun/focused summarization using a selected prompt ───
 router.post('/:id/lens', validateId, async (req, res) => {
   try {
-    const { lensSlug } = req.body || {};
+    const { lensSlug, provider } = req.body || {};
     if (!lensSlug?.trim()) {
       return res.status(400).json({ error: 'lensSlug required' });
+    }
+    if (lensSlug.trim().length > 100) {
+      return res.status(400).json({ error: 'Invalid lensSlug' });
     }
 
     const category = db.prepare('SELECT * FROM categories WHERE id = ?').get(req.params.id);
@@ -286,7 +287,7 @@ router.post('/:id/lens', validateId, async (req, res) => {
 
     // Fetch the lens prompt
     const lensPrompt = db.prepare('SELECT * FROM prompts WHERE slug = ?').get(lensSlug.trim());
-    if (!lensPrompt) return res.status(400).json({ error: `Unknown lens: ${lensSlug}` });
+    if (!lensPrompt) return res.status(400).json({ error: 'Unknown lens' });
 
     // Fetch articles from feeds (same as refresh)
     const feedResults = await Promise.allSettled(
@@ -335,6 +336,7 @@ router.post('/:id/lens', validateId, async (req, res) => {
     const result = await callLLM(messages, {
       purpose: 'lens',
       categoryId: Number(req.params.id),
+      providerId: provider || null,
       temperature: 0.7,
     });
 
@@ -351,3 +353,5 @@ router.post('/:id/lens', validateId, async (req, res) => {
     res.status(500).json({ error: err.message || 'Failed to generate lens summary' });
   }
 });
+
+module.exports = router;
