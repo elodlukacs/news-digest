@@ -174,6 +174,20 @@ export function PromptManager() {
           <p className="text-xs sm:text-[13px] text-ink-muted mt-1.5 sm:mt-2 font-[family-name:var(--font-body)]">
             Edit the prompts used by AI features. Use <code className="bg-paper-dark px-1 rounded text-xs">{'{{variable}}'}</code> placeholders for dynamic content.
           </p>
+          <div className="mt-4 grid sm:grid-cols-2 gap-3">
+            <div className="bg-paper-dark border border-rule rounded px-3 py-2.5">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted mb-1">System Message</p>
+              <p className="text-xs text-ink-muted leading-relaxed">
+                Sets the AI's role and persistent rules for the entire session. Sent once, before anything else. Use it to define <em>who the AI is</em> — its expertise, tone, and constraints. Example: <span className="font-mono text-[10px] bg-paper px-1 rounded">You are a bias detection expert…</span>
+              </p>
+            </div>
+            <div className="bg-paper-dark border border-rule rounded px-3 py-2.5">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted mb-1">User Prompt Template</p>
+              <p className="text-xs text-ink-muted leading-relaxed">
+                The actual task sent per request. <code className="bg-paper px-1 rounded text-[10px]">{'{{variable}}'}</code> placeholders are swapped out at runtime with real content (article text, category, etc.). This drives <em>what the AI is asked to do</em> each time.
+              </p>
+            </div>
+          </div>
         </div>
 
         {error && (
@@ -316,8 +330,8 @@ function PromptCard({
           <Textarea
             value={form.system_message}
             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onFieldChange('system_message', e.target.value)}
-            rows={3}
-            className="text-sm font-mono resize-y min-h-[60px]"
+            rows={10}
+            className="text-sm font-mono resize min-h-[180px]"
           />
         </div>
       )}
@@ -328,7 +342,7 @@ function PromptCard({
           value={form.user_prompt}
           onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onFieldChange('user_prompt', e.target.value)}
           rows={10}
-          className="text-sm font-mono resize-y min-h-[120px]"
+          className="text-sm font-mono resize min-h-[120px]"
         />
       </div>
     </div>
