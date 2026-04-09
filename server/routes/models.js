@@ -21,56 +21,51 @@ const GOOGLE_MODELS = [
   },
 ];
 
-const OPENROUTER_MODELS = [
-  {
-    id: 'qwen/qwen3.5-flash-02-23',
-    name: 'Qwen3.5 Flash 02-23',
-    owned_by: 'Qwen',
-    context_window: 1048576,
-    max_completion_tokens: 8192,
-    provider: 'OpenRouter',
-  },
-  {
-    id: 'qwen/qwen3.5-27b',
-    name: 'Qwen3.5 27B',
-    owned_by: 'Qwen',
-    context_window: 262144,
-    max_completion_tokens: 8192,
-    provider: 'OpenRouter',
-  },
-  {
-    id: 'qwen/qwen3.5-35b-a3b',
-    name: 'Qwen3.5 35B A3B',
-    owned_by: 'Qwen',
-    context_window: 262144,
-    max_completion_tokens: 8192,
-    provider: 'OpenRouter',
-  },
-  {
-    id: 'qwen/qwen3-max-thinking',
-    name: 'Qwen3 Max Thinking',
-    owned_by: 'Qwen',
-    context_window: 262144,
-    max_completion_tokens: 16384,
-    provider: 'OpenRouter',
-  },
-  {
-    id: 'minimax/minimax-m2.7',
-    name: 'MiniMax M2.7',
-    owned_by: 'MiniMax',
-    context_window: 204800,
-    max_completion_tokens: 8192,
-    provider: 'OpenRouter',
-  },
-  {
-    id: 'moonshotai/kimi-k2.5',
-    name: 'Kimi K2.5',
-    owned_by: 'Moonshot',
-    context_window: 262144,
-    max_completion_tokens: 8192,
-    provider: 'OpenRouter',
-  },
-];
+async function fetchOpenRouterModels() {
+  const apiKey = env('OPENROUTER_API_KEY');
+  if (!apiKey) return [];
+
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/models?sort=popular', {
+      headers: { 'Authorization': `Bearer ${apiKey}` },
+    });
+    if (!response.ok) {
+      console.warn(`[Models] OpenRouter API returned ${response.status}`);
+      return [];
+    }
+    const data = await response.json();
+    const freeIds = new Set();
+    for (const m of data.data || []) {
+      if (parseFloat(m.pricing?.prompt || 1) === 0) freeIds.add(m.id);
+    }
+    const SUMMARIZATION_MODELS = [
+      'qwen/qwen3.5-flash-02-23',
+      'qwen/qwen3.5-27b',
+      'qwen/qwen3.5-35b-a3b',
+      'qwen/qwen3.6-plus',
+      'qwen/qwen3-max-thinking',
+      'deepseek/deepseek-v3.2',
+      'minimax/minimax-m2.7',
+      'moonshotai/kimi-k2.5',
+      'google/gemini-3.1-pro-preview',
+    ];
+    const paid = (data.data || [])
+      .filter(m => SUMMARIZATION_MODELS.includes(m.id))
+      .slice(0, 10)
+      .map(m => ({
+        id: m.id,
+        name: (m.name || m.id).replace(/^[^\s]+:\s*/, ''),
+        owned_by: m.owned_by || m.id.split('/')[0],
+        context_window: m.context_length,
+        max_completion_tokens: m.top_provider?.max_tokens || 8192,
+        provider: 'OpenRouter',
+      }));
+    return paid;
+  } catch (err) {
+    console.error('[Models] Failed to fetch OpenRouter models:', err.message);
+    return [];
+  }
+}
 
 async function fetchGroqModels() {
   const apiKey = env('GROQ_API_KEY');
@@ -105,7 +100,7 @@ async function fetchGroqModels() {
 router.get('/', async (req, res) => {
   const groqModels = await fetchGroqModels();
   const googleModels = env('GOOGLE_API_KEY') ? GOOGLE_MODELS : [];
-  const openrouterModels = env('OPENROUTER_API_KEY') ? OPENROUTER_MODELS : [];
+  const openrouterModels = await fetchOpenRouterModels();
   res.json([...groqModels, ...googleModels, ...openrouterModels]);
 });
 
