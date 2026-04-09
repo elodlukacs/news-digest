@@ -16,27 +16,27 @@ interface Props {
 }
 
 const headingComponents = {
-  h1: ({ children }: { children: React.ReactNode }) => (
+  h1: ({ children }: { children?: React.ReactNode }) => (
     <h1 className="font-serif text-2xl font-bold text-ink leading-tight">{children}</h1>
   ),
-  h2: ({ children }: { children: React.ReactNode }) => (
+  h2: ({ children }: { children?: React.ReactNode }) => (
     <h2 className="font-serif text-xl font-bold text-ink leading-snug">{children}</h2>
   ),
-  h3: ({ children }: { children: React.ReactNode }) => (
+  h3: ({ children }: { children?: React.ReactNode }) => (
     <h3 className="text-[10px] uppercase tracking-[0.15em] font-bold text-ink-muted">{children}</h3>
   ),
 };
 
 const contentComponents = {
-  p: ({ children }: { children: React.ReactNode }) => (
+  p: ({ children }: { children?: React.ReactNode }) => (
     <p className="text-[16px] leading-[1.8] text-ink font-[family-name:var(--font-body)] break-words [overflow-wrap:anywhere]">
       {children}
     </p>
   ),
-  strong: ({ children }: { children: React.ReactNode }) => (
+  strong: ({ children }: { children?: React.ReactNode }) => (
     <strong className="font-bold text-ink">{children}</strong>
   ),
-  a: ({ href, children }: { href?: string; children: React.ReactNode }) => (
+  a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
     <a
       href={href}
       target="_blank"
