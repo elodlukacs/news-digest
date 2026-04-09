@@ -123,7 +123,7 @@ export function PromptLensSelector({ selectedSlug, onSelect, onRun, running, dis
                 <ChevronDown size={16} className="text-ink-muted shrink-0" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" sideOffset={6} className="w-[calc(100vw-2rem)]">
+            <DropdownMenuContent align="start" sideOffset={6} className="w-[calc(100vw-2rem)] max-h-[60vh] overflow-y-auto">
               <LensMenuContent selected={selected} onSelect={onSelect} setOpen={setOpen} />
             </DropdownMenuContent>
           </DropdownMenu>
