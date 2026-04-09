@@ -35,7 +35,7 @@ function AppLayout() {
   const { categories, addCategory, deleteCategory, renameCategory } = useCategories();
   const [managingId, setManagingId] = useState<number | null>(null);
   const [showStats, setShowStats] = useState(false);
-  const [selectedLlm, setSelectedLlm] = useState('openai/gpt-oss-20b');
+  const [selectedLlm, setSelectedLlm] = useState('openai/gpt-oss-120b');
   const navigate = useNavigate();
 
   const { feeds, addFeed, deleteFeed } = useFeeds(managingId);

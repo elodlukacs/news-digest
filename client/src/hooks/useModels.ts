@@ -10,7 +10,7 @@ export interface GroqModel {
   provider: string;
 }
 
-const DEFAULT_MODEL = 'openai/gpt-oss-20b';
+const DEFAULT_MODEL = 'openai/gpt-oss-120b';
 
 export function useModels() {
   const [models, setModels] = useState<GroqModel[]>([]);

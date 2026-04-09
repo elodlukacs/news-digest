@@ -13,7 +13,12 @@ export function BriefingRoute() {
 
   return (
     <div className="max-w-[1600px] mx-auto px-4 pb-20 flex gap-8">
-      <aside className="w-44 shrink-0 hidden lg:block pt-8" />
+      <aside className="w-44 shrink-0 hidden lg:block pt-8 font-widget">
+        <div className="sticky top-8 space-y-8">
+          <WeirdFactCard weirdFact={weirdFact} />
+          <OnThisDayCard events={onThisDay} />
+        </div>
+      </aside>
 
       <main className="flex-1 min-w-0">
         <MorningBriefing
@@ -23,13 +28,6 @@ export function BriefingRoute() {
           onGenerate={generateBriefing}
         />
       </main>
-
-      <aside className="w-72 shrink-0 hidden lg:block pt-8 font-widget">
-        <div className="sticky top-8 space-y-5">
-          <WeirdFactCard weirdFact={weirdFact} />
-          <OnThisDayCard events={onThisDay} />
-        </div>
-      </aside>
     </div>
   );
 }
