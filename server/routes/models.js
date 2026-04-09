@@ -10,6 +10,17 @@ const ALLOWED_IDS = [
   'openai/gpt-oss-20b',
 ];
 
+const GOOGLE_MODELS = [
+  {
+    id: 'gemma-4-31b-it',
+    name: 'Gemma 4 31B',
+    owned_by: 'Google',
+    context_window: 262144,
+    max_completion_tokens: 32768,
+    provider: 'Google AI Studio',
+  },
+];
+
 async function fetchGroqModels() {
   const apiKey = env('GROQ_API_KEY');
   if (!apiKey) return [];
@@ -42,7 +53,8 @@ async function fetchGroqModels() {
 
 router.get('/', async (req, res) => {
   const groqModels = await fetchGroqModels();
-  res.json(groqModels);
+  const googleModels = env('GOOGLE_API_KEY') ? GOOGLE_MODELS : [];
+  res.json([...groqModels, ...googleModels]);
 });
 
 module.exports = router;

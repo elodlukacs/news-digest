@@ -16,7 +16,7 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
     if (target) {
       if (!target.key()) throw new Error(`API key not configured for ${target.name}. Set the required env var.`);
       providers = [target];
-    } else if (providerId.startsWith('gemini-')) {
+    } else if (providerId.startsWith('gemini-') || providerId.startsWith('gemma-')) {
       const google = AI_PROVIDERS.find(p => p.id === 'google');
       if (!google?.key()) throw new Error('GOOGLE_API_KEY not configured');
       providers = [{ ...google, model: providerId }];
@@ -92,7 +92,10 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
         );
       }
 
-      const content = data.choices?.[0]?.message?.content || '';
+      let content = data.choices?.[0]?.message?.content || '';
+      if (content.includes('<thought>') && content.includes('</thought>')) {
+        content = content.replace(/<thought>[\s\S]*?<\/thought>\s*/g, '');
+      }
       if (!content.trim()) {
         console.warn(`[LLM] ${provider.name} (${provider.model}) returned empty content`);
         lastError = `${provider.name} returned empty response`;
