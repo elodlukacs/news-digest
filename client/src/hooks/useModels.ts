@@ -23,10 +23,15 @@ export function useModels() {
 
     (async () => {
       try {
-        const res = await fetch(`${BASE}/models`, { signal: controller.signal });
-        if (!res.ok) throw new Error('Failed to fetch models');
-        const data = await res.json();
-        if (!controller.signal.aborted) setModels(data);
+        const [paidRes, freeRes] = await Promise.all([
+          fetch(`${BASE}/models`, { signal: controller.signal }),
+          fetch(`${BASE}/models/free`, { signal: controller.signal }),
+        ]);
+        if (!paidRes.ok) throw new Error('Failed to fetch models');
+        const paidData = await paidRes.json();
+        let freeData: GroqModel[] = [];
+        if (freeRes.ok) freeData = await freeRes.json();
+        if (!controller.signal.aborted) setModels([...paidData, ...freeData]);
       } catch (e) {
         if (e instanceof DOMException && e.name === 'AbortError') return;
         console.error('Failed to fetch models', e);

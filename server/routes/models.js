@@ -21,6 +21,57 @@ const GOOGLE_MODELS = [
   },
 ];
 
+const OPENROUTER_MODELS = [
+  {
+    id: 'qwen/qwen3.5-flash-02-23',
+    name: 'Qwen3.5 Flash 02-23',
+    owned_by: 'Qwen',
+    context_window: 1048576,
+    max_completion_tokens: 8192,
+    provider: 'OpenRouter',
+  },
+  {
+    id: 'qwen/qwen3.5-27b',
+    name: 'Qwen3.5 27B',
+    owned_by: 'Qwen',
+    context_window: 262144,
+    max_completion_tokens: 8192,
+    provider: 'OpenRouter',
+  },
+  {
+    id: 'qwen/qwen3.5-35b-a3b',
+    name: 'Qwen3.5 35B A3B',
+    owned_by: 'Qwen',
+    context_window: 262144,
+    max_completion_tokens: 8192,
+    provider: 'OpenRouter',
+  },
+  {
+    id: 'qwen/qwen3-max-thinking',
+    name: 'Qwen3 Max Thinking',
+    owned_by: 'Qwen',
+    context_window: 262144,
+    max_completion_tokens: 16384,
+    provider: 'OpenRouter',
+  },
+  {
+    id: 'minimax/minimax-m2.7',
+    name: 'MiniMax M2.7',
+    owned_by: 'MiniMax',
+    context_window: 204800,
+    max_completion_tokens: 8192,
+    provider: 'OpenRouter',
+  },
+  {
+    id: 'moonshotai/kimi-k2.5',
+    name: 'Kimi K2.5',
+    owned_by: 'Moonshot',
+    context_window: 262144,
+    max_completion_tokens: 8192,
+    provider: 'OpenRouter',
+  },
+];
+
 async function fetchGroqModels() {
   const apiKey = env('GROQ_API_KEY');
   if (!apiKey) return [];
@@ -54,7 +105,43 @@ async function fetchGroqModels() {
 router.get('/', async (req, res) => {
   const groqModels = await fetchGroqModels();
   const googleModels = env('GOOGLE_API_KEY') ? GOOGLE_MODELS : [];
-  res.json([...groqModels, ...googleModels]);
+  const openrouterModels = env('OPENROUTER_API_KEY') ? OPENROUTER_MODELS : [];
+  res.json([...groqModels, ...googleModels, ...openrouterModels]);
+});
+
+router.get('/free', async (req, res) => {
+  const apiKey = env('OPENROUTER_API_KEY');
+  if (!apiKey) return res.json([]);
+
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/models?sort=popular', {
+      headers: { 'Authorization': `Bearer ${apiKey}` },
+    });
+    if (!response.ok) {
+      console.warn(`[Models] OpenRouter API returned ${response.status}`);
+      return res.json([]);
+    }
+    const data = await response.json();
+    const free = (data.data || [])
+      .filter(m => {
+        const p = m.pricing || {};
+        return parseFloat(p.prompt || 1) === 0 && (m.context_length || 0) >= 32000;
+      })
+      .sort((a, b) => (b.context_length || 0) - (a.context_length || 0))
+      .slice(0, 10)
+      .map(m => ({
+        id: m.id,
+        name: ((m.name || m.id.replace(/^[^\/]+\//, '')).replace(/:free$/, '').replace(/^[^\s]+\s/, '').replace('(free)', '').replace('(Free)', '').replace(/\s+/g, ' ').trim() + ' (' + (m.owned_by || m.id.split('/')[0]) + ')'),
+        owned_by: m.owned_by || 'Unknown',
+        context_window: m.context_length,
+        max_completion_tokens: m.top_provider?.max_tokens || 8192,
+        provider: 'Free',
+      }));
+    res.json(free);
+  } catch (err) {
+    console.error('[Models] Failed to fetch free models:', err.message);
+    res.json([]);
+  }
 });
 
 module.exports = router;

@@ -3,6 +3,7 @@ const env = (name) => process.env[name];
 const AI_PROVIDERS = [
   { id: 'llama', name: 'Groq', url: 'https://api.groq.com/openai/v1/chat/completions', key: () => env('GROQ_API_KEY'), model: 'openai/gpt-oss-20b' },
   { id: 'google', name: 'Google AI Studio', url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', key: () => env('GOOGLE_API_KEY'), model: 'gemini-2.0-flash' },
+  { id: 'openrouter', name: 'OpenRouter', url: 'https://openrouter.ai/api/v1/chat/completions', key: () => env('OPENROUTER_API_KEY'), model: 'qwen/qwen3.5-flash-02-23' },
 ];
 
 const providerQuotas = {};
@@ -20,6 +21,14 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
       const google = AI_PROVIDERS.find(p => p.id === 'google');
       if (!google?.key()) throw new Error('GOOGLE_API_KEY not configured');
       providers = [{ ...google, model: providerId }];
+    } else if (providerId.startsWith('openai/')) {
+      const groq = AI_PROVIDERS.find(p => p.id === 'llama');
+      if (!groq?.key()) throw new Error('No matching provider configured for model: ' + providerId);
+      providers = [{ ...groq, model: providerId }];
+    } else if (providerId.includes('/')) {
+      const openrouter = AI_PROVIDERS.find(p => p.id === 'openrouter');
+      if (!openrouter?.key()) throw new Error('OPENROUTER_API_KEY not configured');
+      providers = [{ ...openrouter, model: providerId }];
     } else {
       // Treat any other model ID (including plain Groq model names like llama-3.1-8b-instant) as a Groq model
       const groq = AI_PROVIDERS.find(p => p.id === 'llama');
