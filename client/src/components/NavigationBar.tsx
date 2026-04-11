@@ -43,7 +43,8 @@ export function NavigationBar({
 }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [adding, setAdding] = useState(false);
+  const [addingDesktop, setAddingDesktop] = useState(false);
+  const [addingMobile, setAddingMobile] = useState(false);
   const [newName, setNewName] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -66,7 +67,8 @@ export function NavigationBar({
     try {
       await onAdd(newName.trim());
       setNewName('');
-      setAdding(false);
+      setAddingDesktop(false);
+      setAddingMobile(false);
     } catch {
       // keep input open on failure
     }
@@ -221,27 +223,30 @@ export function NavigationBar({
                 />
               ))}
 
-              {adding ? (
-                <div className="flex items-center gap-1 shrink-0 px-2">
+              {addingDesktop ? (
+                <form
+                  onSubmit={(e) => { e.preventDefault(); handleAdd(); }}
+                  className="flex items-center gap-1 shrink-0 px-2"
+                >
                   <Input
                     autoFocus
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleAdd();
-                      if (e.key === 'Escape') { setAdding(false); setNewName(''); }
+                      if (e.key === 'Escape') { setAddingDesktop(false); setNewName(''); }
                     }}
+                    enterKeyHint="done"
                     placeholder="New section..."
                     className="w-28 px-2 py-0.5 text-[11px] uppercase tracking-wider font-medium border-b border-masthead bg-transparent text-ink placeholder-ink-muted focus:outline-none h-auto"
                   />
-                  <Button variant="ghost" size="icon" onClick={() => { setAdding(false); setNewName(''); }} className="h-6 w-6">
+                  <Button type="button" variant="ghost" size="icon" onClick={() => { setAddingDesktop(false); setNewName(''); }} className="h-6 w-6">
                     <X size={11} />
                   </Button>
-                </div>
+                </form>
               ) : (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" onClick={() => setAdding(true)} className="h-6 w-6 text-ink-muted/50">
+                    <Button variant="ghost" size="icon" onClick={() => setAddingDesktop(true)} className="h-6 w-6 text-ink-muted/50">
                       <Plus size={12} />
                     </Button>
                   </TooltipTrigger>
@@ -352,25 +357,31 @@ export function NavigationBar({
             </div>
 
             <div className="px-5 mt-1 pb-4">
-              {adding ? (
-                <div className="flex items-center gap-2">
+              {addingMobile ? (
+                <form
+                  onSubmit={(e) => { e.preventDefault(); handleAdd(); }}
+                  className="flex items-center gap-2"
+                >
                   <Input
                     autoFocus
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleAdd();
-                      if (e.key === 'Escape') { setAdding(false); setNewName(''); }
+                      if (e.key === 'Escape') { setAddingMobile(false); setNewName(''); }
                     }}
+                    enterKeyHint="done"
                     placeholder="Section name..."
                     className="flex-1 px-3 py-2 text-[12px] uppercase tracking-wider font-medium border-b border-ink bg-transparent text-ink placeholder-ink-muted focus:outline-none h-auto"
                   />
-                  <Button variant="ghost" size="icon" onClick={() => { setAdding(false); setNewName(''); }} className="h-7 w-7">
+                  <Button type="submit" variant="ghost" size="icon" disabled={!newName.trim()} className="h-7 w-7 text-ink" aria-label="Save section">
+                    <Check size={14} />
+                  </Button>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => { setAddingMobile(false); setNewName(''); }} className="h-7 w-7" aria-label="Cancel">
                     <X size={14} />
                   </Button>
-                </div>
+                </form>
               ) : (
-                <Button variant="outline" onClick={() => setAdding(true)} className="w-full border-dashed border-ink/20 hover:border-ink/50 gap-1.5 py-2 text-[10px] uppercase tracking-[0.2em] font-semibold">
+                <Button variant="outline" onClick={() => setAddingMobile(true)} className="w-full border-dashed border-ink/20 hover:border-ink/50 gap-1.5 py-2 text-[10px] uppercase tracking-[0.2em] font-semibold">
                   <Plus size={11} /> Add Section
                 </Button>
               )}
