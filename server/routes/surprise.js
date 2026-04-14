@@ -33,7 +33,7 @@ function pickArticle({ excludeId } = {}) {
   for (const row of primary) {
     const cleaned = cleanArticleText(row.body_text || row.description || '');
     if (cleaned.length >= MIN_CLEAN_LENGTH) {
-      return { ...row, description: cleaned };
+      return { ...row, _cleaned: cleaned };
     }
   }
 
@@ -51,24 +51,72 @@ function pickArticle({ excludeId } = {}) {
   for (const row of fallback) {
     const cleaned = cleanArticleText(row.body_text || row.description || '');
     if (cleaned.length >= FALLBACK_MIN_LENGTH) {
-      return { ...row, description: cleaned };
+      return { ...row, _cleaned: cleaned };
     }
   }
 
   return null;
 }
 
-router.get('/', (req, res) => {
+async function ensureBrief(article, cleaned) {
+  const cached = article.surprise_brief;
+  if (cached && typeof cached === 'string' && cached.trim().length >= 60) {
+    return cached.trim();
+  }
+  if (!cleaned) return '';
+  try {
+    const messages = buildMessages('surprise-brief', {
+      title: article.title || '',
+      source: article.feed_name || 'Unknown source',
+      content: cleaned,
+    });
+    const result = await callLLM(messages, {
+      purpose: 'surprise-brief',
+      max_tokens: 400,
+      temperature: 0.35,
+    });
+    const brief = String(result?.content || '').trim();
+    if (brief.length >= 60) {
+      db.prepare('UPDATE articles SET surprise_brief = ? WHERE id = ?').run(brief, article.id);
+      return brief;
+    }
+    return cleaned;
+  } catch (err) {
+    console.warn('Surprise brief generation failed:', err.message);
+    return cleaned;
+  }
+}
+
+router.get('/', async (req, res) => {
   const rawExclude = Number(req.query.exclude);
   const excludeId = Number.isFinite(rawExclude) && rawExclude > 0 ? rawExclude : undefined;
   const article = pickArticle({ excludeId });
   if (!article) return res.status(404).json({ error: 'No articles found. Generate some summaries first.' });
-  res.json(article);
+
+  const cleaned = article._cleaned || cleanArticleText(article.body_text || article.description || '');
+  const brief = await ensureBrief(article, cleaned);
+
+  // eslint-disable-next-line no-unused-vars
+  const { _cleaned, body_text, surprise_brief, surprise_expanded, ...rest } = article;
+  res.json({
+    ...rest,
+    description: brief || cleaned,
+    raw_content: cleaned,
+    has_expanded: !!(surprise_expanded && String(surprise_expanded).trim().length > 100),
+  });
 });
 
 router.post('/elaborate', async (req, res) => {
   const { article_id, title, content, source, provider: selectedProvider } = req.body || {};
   if (!title || !content) return res.status(400).json({ error: 'title and content are required' });
+
+  // Return cached elaboration if present
+  if (article_id) {
+    const row = db.prepare('SELECT surprise_expanded FROM articles WHERE id = ?').get(Number(article_id));
+    if (row?.surprise_expanded && String(row.surprise_expanded).trim().length > 100) {
+      return res.json({ content: row.surprise_expanded, article_id, cached: true });
+    }
+  }
 
   try {
     const messages = buildMessages('surprise-elaborate', {
@@ -79,10 +127,14 @@ router.post('/elaborate', async (req, res) => {
     const result = await callLLM(messages, {
       purpose: 'surprise-elaborate',
       providerId: selectedProvider || null,
-      max_tokens: 1500,
+      max_tokens: 2000,
       temperature: 0.5,
     });
-    res.json({ content: result.content, provider: result.provider, model: result.model, article_id: article_id ?? null });
+    const expanded = String(result?.content || '').trim();
+    if (article_id && expanded.length > 100) {
+      db.prepare('UPDATE articles SET surprise_expanded = ? WHERE id = ?').run(expanded, Number(article_id));
+    }
+    res.json({ content: expanded, provider: result.provider, model: result.model, article_id: article_id ?? null });
   } catch (err) {
     console.error('Surprise elaborate error:', err);
     res.status(500).json({ error: err.message || 'Failed to elaborate' });
