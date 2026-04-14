@@ -267,6 +267,8 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_study_date ON study_analyses(created_at);
 `);
 addColumnIfNotExists('articles', 'body_text', "TEXT DEFAULT ''");
+addColumnIfNotExists('articles', 'surprise_brief', 'TEXT DEFAULT NULL');
+addColumnIfNotExists('articles', 'surprise_expanded', 'TEXT DEFAULT NULL');
 addColumnIfNotExists('cognitive_users', 'antibody_count', 'INTEGER DEFAULT 0');
 addColumnIfNotExists('cognitive_users', 'last_inoculation_date', 'TEXT');
 addColumnIfNotExists('chat_messages', 'article_title', 'TEXT DEFAULT NULL');
@@ -1297,27 +1299,55 @@ const updateSurprisePrompts = db.transaction(() => {
     ON CONFLICT(slug) DO UPDATE SET system_message=excluded.system_message, user_prompt=excluded.user_prompt, updated_at=datetime('now')`);
 
   upsert.run(
+    'surprise-brief',
+    'Surprise — Brief',
+    'Produces a coherent, self-contained 2-4 sentence summary for the Break feature initial view',
+    'news',
+    `You are a concise, accurate news summarizer for a "Take a Break" feature. You turn raw RSS article blurbs — which are often truncated, mildly malformed, or cut off mid-sentence — into short, self-contained summaries that read as complete thoughts. You never invent facts. You never say "according to the article" or "the article states". You write naturally, as if reporting the story yourself, using only what is clearly present in the source. If the source is thin, you summarize what IS clearly stated and stop on a clean sentence boundary rather than speculating.`,
+    `Source: {{source}}
+Title: {{title}}
+
+Article content:
+{{content}}
+
+Write a self-contained summary of this story in 2 to 4 complete sentences.
+
+Requirements:
+- It must read as a coherent, finished piece of prose. No truncation, no "read more", no "[…]" markers, no trailing fragments.
+- End on a complete, well-formed sentence.
+- If the source is too thin to fully explain the story, summarize only what is clearly stated — do not guess or fill in.
+- Do NOT repeat the title verbatim as the first sentence.
+- Plain prose only. No Markdown, no headings, no bullet points, no preamble like "Here is a summary".
+- Write in the same language as the original article.`
+  );
+
+  upsert.run(
     'surprise-elaborate',
     'Surprise — Elaborate',
-    'Expands a short article blurb into a richer, more elaborated summary for the Break feature',
+    'Produces a substantially longer, richer treatment of the Break article with context and significance',
     'news',
-    `You are a thoughtful news editor. You take short article blurbs and expand them into richer, more elaborate summaries that give the reader genuine context and understanding. You never invent facts — if the source is thin, you explain what IS known and what remains unclear. You write in clear, engaging prose.`,
+    `You are a thoughtful news editor. You take short article blurbs and expand them into substantially longer, richer treatments — giving the reader real depth, context, and understanding. You never invent facts: if a detail is not present in the source, you do not include it. Where the source is thin on something important, you clearly flag it as unclear or unstated rather than filling it in. You write in flowing, journalistic prose.`,
     `Source: {{source}}
 Title: {{title}}
 
 Original text:
 {{content}}
 
-Write an elaborated summary of this article in 3 to 5 short paragraphs. Your job:
-- Explain the key facts and what actually happened, in plain language
-- Provide relevant context a general reader would need (who, what, where, why it matters)
-- Flag any uncertainty — if a claim is thin or unsupported in the source, say so
-- Do NOT invent specifics that aren't in the source (numbers, quotes, names)
-- If the source is very short, state clearly what's known and what isn't
-- Use Markdown: short paragraphs, bold for key terms if helpful
-- No intro like "Here is an elaborated summary" — start directly with the content
-- No conclusion or meta-commentary
-- Write in the same language as the original article`
+Produce a substantially longer, more detailed treatment of this story — 4 to 6 paragraphs, roughly 250-400 words. This should feel meaningfully richer than a short blurb.
+
+Structure:
+- Open with the core facts: who, what, when, where.
+- Explain the significance: why it matters, what is at stake, plausible downstream effects — but only insofar as the source supports it.
+- Provide context a general reader would need: relevant background, key actors, how this fits into broader trends.
+- Be explicit about uncertainty: if a detail is missing from the source, write "the report does not specify…" rather than guessing.
+
+Rules:
+- Do NOT invent numbers, quotes, names, dates, or specifics that are not present in the source.
+- If the source is very short, still produce a useful treatment by emphasizing context and significance — do NOT pad with invented facts.
+- Format as short paragraphs separated by blank lines. You may use **bold** sparingly for key terms or entities. No headings. No bullet lists unless truly needed.
+- No intro like "Here is an elaborated summary" — start directly with the content.
+- No conclusion, no meta-commentary, no sign-off.
+- Write in the same language as the original article.`
   );
 
   upsert.run(

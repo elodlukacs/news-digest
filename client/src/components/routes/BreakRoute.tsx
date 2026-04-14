@@ -11,10 +11,12 @@ interface SurpriseArticle {
   id: number;
   title: string;
   description: string;
+  raw_content?: string;
   link: string;
   source: string;
   pub_date: string;
   category_name?: string;
+  has_expanded?: boolean;
 }
 
 const SURPRISE_BASE = `${API_BASE}/homepage/surprise`;
@@ -85,7 +87,7 @@ export function BreakRoute() {
           article_id: article.id,
           title: article.title,
           source: article.source,
-          content: article.description,
+          content: article.raw_content || article.description,
         }),
       });
       if (!res.ok) {
@@ -117,7 +119,7 @@ export function BreakRoute() {
         body: JSON.stringify({
           article_id: article.id,
           title: article.title,
-          content: elaborated || article.description,
+          content: elaborated || article.raw_content || article.description,
           message: text,
         }),
       });
