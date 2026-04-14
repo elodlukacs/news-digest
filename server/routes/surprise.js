@@ -8,6 +8,8 @@ const router = express.Router();
 
 const MIN_CLEAN_LENGTH = 320;
 const FALLBACK_MIN_LENGTH = 180;
+const LLM_INPUT_TRIM = 1800; // chars — enough for a 2-4 sentence brief
+const PREWARM_COUNT = 3;
 
 function articleKey(id) {
   return `surprise:${id}`;
@@ -65,15 +67,17 @@ async function ensureBrief(article, cleaned) {
   }
   if (!cleaned) return '';
   try {
+    // Trim input — we only need enough context for a 2-4 sentence summary.
+    const trimmed = cleaned.length > LLM_INPUT_TRIM ? cleaned.slice(0, LLM_INPUT_TRIM) : cleaned;
     const messages = buildMessages('surprise-brief', {
       title: article.title || '',
       source: article.feed_name || 'Unknown source',
-      content: cleaned,
+      content: trimmed,
     });
     const result = await callLLM(messages, {
       purpose: 'surprise-brief',
-      max_tokens: 400,
-      temperature: 0.35,
+      max_tokens: 240,
+      temperature: 0.3,
     });
     const brief = String(result?.content || '').trim();
     if (brief.length >= 60) {
@@ -84,6 +88,34 @@ async function ensureBrief(article, cleaned) {
   } catch (err) {
     console.warn('Surprise brief generation failed:', err.message);
     return cleaned;
+  }
+}
+
+// Fire-and-forget pre-warming: generate briefs for other recent
+// candidates so subsequent /surprise calls hit the DB cache.
+async function prewarmBriefs(excludeIds = []) {
+  try {
+    const placeholders = excludeIds.length ? excludeIds.map(() => '?').join(',') : null;
+    const sql = `
+      SELECT a.*, c.name as category_name
+      FROM articles a
+      LEFT JOIN categories c ON a.category_id = c.id
+      WHERE a.pub_date > datetime('now', '-72 hours')
+        AND (a.surprise_brief IS NULL OR LENGTH(a.surprise_brief) < 60)
+        AND LENGTH(COALESCE(a.body_text, a.description, '')) > 400
+        ${placeholders ? `AND a.id NOT IN (${placeholders})` : ''}
+      ORDER BY RANDOM()
+      LIMIT ?
+    `;
+    const params = placeholders ? [...excludeIds, PREWARM_COUNT] : [PREWARM_COUNT];
+    const rows = db.prepare(sql).all(...params);
+    for (const row of rows) {
+      const cleaned = cleanArticleText(row.body_text || row.description || '');
+      if (cleaned.length < MIN_CLEAN_LENGTH) continue;
+      try { await ensureBrief(row, cleaned); } catch (e) { console.warn('Prewarm item failed:', e.message); }
+    }
+  } catch (err) {
+    console.warn('Prewarm failed:', err.message);
   }
 }
 
@@ -104,6 +136,15 @@ router.get('/', async (req, res) => {
     raw_content: cleaned,
     has_expanded: !!(surprise_expanded && String(surprise_expanded).trim().length > 100),
   });
+
+  // Kick off pre-warming so the next article click is instant.
+  setImmediate(() => { prewarmBriefs([article.id]); });
+});
+
+// Explicit pre-warm endpoint the client can hit on load as a best effort.
+router.post('/prewarm', (req, res) => {
+  setImmediate(() => { prewarmBriefs([]); });
+  res.json({ ok: true, scheduled: PREWARM_COUNT });
 });
 
 router.post('/elaborate', async (req, res) => {

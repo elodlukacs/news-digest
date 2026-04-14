@@ -1303,22 +1303,12 @@ const updateSurprisePrompts = db.transaction(() => {
     'Surprise — Brief',
     'Produces a coherent, self-contained 2-4 sentence summary for the Break feature initial view',
     'news',
-    `You are a concise, accurate news summarizer for a "Take a Break" feature. You turn raw RSS article blurbs — which are often truncated, mildly malformed, or cut off mid-sentence — into short, self-contained summaries that read as complete thoughts. You never invent facts. You never say "according to the article" or "the article states". You write naturally, as if reporting the story yourself, using only what is clearly present in the source. If the source is thin, you summarize what IS clearly stated and stop on a clean sentence boundary rather than speculating.`,
-    `Source: {{source}}
-Title: {{title}}
+    `Summarize news stories in 2-4 complete sentences. Never invent facts. Use only what is in the source. End on a complete sentence. No "read more", no "[…]", no preamble, no Markdown. Same language as the source.`,
+    `{{source}} — {{title}}
 
-Article content:
 {{content}}
 
-Write a self-contained summary of this story in 2 to 4 complete sentences.
-
-Requirements:
-- It must read as a coherent, finished piece of prose. No truncation, no "read more", no "[…]" markers, no trailing fragments.
-- End on a complete, well-formed sentence.
-- If the source is too thin to fully explain the story, summarize only what is clearly stated — do not guess or fill in.
-- Do NOT repeat the title verbatim as the first sentence.
-- Plain prose only. No Markdown, no headings, no bullet points, no preamble like "Here is a summary".
-- Write in the same language as the original article.`
+Write a 2-4 sentence self-contained summary.`
   );
 
   upsert.run(

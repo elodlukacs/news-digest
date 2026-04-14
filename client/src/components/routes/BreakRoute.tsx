@@ -72,6 +72,8 @@ export function BreakRoute() {
 
   useEffect(() => {
     fetchArticle();
+    // Best-effort background pre-warm so subsequent "Next" clicks are instant.
+    fetch(`${SURPRISE_BASE}/prewarm`, { method: 'POST' }).catch(() => {});
     return () => { abortRef.current?.abort(); };
   }, [fetchArticle]);
 
