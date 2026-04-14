@@ -111,7 +111,8 @@ function App() {
   return (
     <Routes>
       <Route element={<AppLayout />}>
-        <Route index element={<HomeRoute />} />
+        <Route index element={<BreakRoute />} />
+        <Route path="newspaper" element={<HomeRoute />} />
         <Route path="category/:categoryName" element={<CategoryRoute />} />
         <Route path="briefing" element={<BriefingRoute />} />
         <Route path="break" element={<BreakRoute />} />
