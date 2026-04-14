@@ -54,9 +54,9 @@ export function NavigationBar({
   const activeCategoryId = activeCategorySlug
     ? categories.find(c => slugify(c.name) === activeCategorySlug)?.id ?? null
     : null;
-  const isHome = path === '/';
-  const showBriefing = path === '/briefing';
   const showBreak = path === '/break';
+  const isHome = path === '/' || showBreak;
+  const showBriefing = path === '/briefing';
   const showReleases = path === '/releases';
   const showJobs = path === '/jobs';
   const showCognitive = path.startsWith('/mindgames');
@@ -81,7 +81,6 @@ export function NavigationBar({
   };
 
   const briefingAndClose = () => { navigate('/briefing'); setDrawerOpen(false); };
-  const breakAndClose = () => { navigate('/break'); setDrawerOpen(false); };
   const releasesAndClose = () => { navigate('/releases'); setDrawerOpen(false); };
   const jobsAndClose = () => { navigate('/jobs'); setDrawerOpen(false); };
   const cognitiveAndClose = () => { navigate('/mindgames'); setDrawerOpen(false); };
@@ -94,7 +93,7 @@ export function NavigationBar({
     year: 'numeric',
   });
 
-  const currentLabel = showBreak ? 'Break' : showJobs ? 'Jobs' : showReleases ? 'Releases' : showBriefing ? 'Briefing' : showCognitive ? 'MindGames' : showPrompts ? 'Prompts' : activeCategoryId ? (categories.find(c => c.id === activeCategoryId)?.name) : 'Home';
+  const currentLabel = showJobs ? 'Jobs' : showReleases ? 'Releases' : showBriefing ? 'Briefing' : showCognitive ? 'MindGames' : showPrompts ? 'Prompts' : activeCategoryId ? (categories.find(c => c.id === activeCategoryId)?.name) : 'Home';
 
   return (
     <>
@@ -262,8 +261,6 @@ export function NavigationBar({
             <div className="flex items-center justify-start gap-1">
               <NavBox label="Briefing" icon={<Coffee size={13} />} active={showBriefing} onClick={() => navigate('/briefing')} compact />
               <NavDivider />
-              <NavBox label="Break" icon={<Zap size={13} />} active={showBreak} onClick={() => navigate('/break')} compact />
-              <NavDivider />
               <NavBox label="Releases" icon={<Film size={13} />} active={showReleases} onClick={() => navigate('/releases')} compact />
               <NavDivider />
               <NavBox label="Jobs" icon={<Briefcase size={13} />} active={showJobs} onClick={() => navigate('/jobs')} compact />
@@ -315,9 +312,8 @@ export function NavigationBar({
 
           <div className="flex-1 overflow-y-auto">
             <div className="py-1">
-              <DrawerItem label="Home" icon={<Home size={14} />} active={isHome} onClick={homeAndClose} />
+              <DrawerItem label="Home" icon={<Zap size={14} />} active={isHome || showBreak} onClick={homeAndClose} />
               <DrawerItem label="Morning Briefing" icon={<Coffee size={14} />} active={showBriefing} onClick={briefingAndClose} />
-              <DrawerItem label="Break" icon={<Zap size={14} />} active={showBreak} onClick={breakAndClose} />
               <DrawerItem label="Releases" icon={<Film size={14} />} active={showReleases} onClick={releasesAndClose} />
               <DrawerItem label="Jobs" icon={<Briefcase size={14} />} active={showJobs} onClick={jobsAndClose} />
               <DrawerItem label="MindGames" icon={<Shield size={14} />} active={showCognitive} onClick={cognitiveAndClose} />
