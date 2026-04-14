@@ -1290,6 +1290,47 @@ Write it as if you're speaking to an audience. Use "so...", "you know what's wil
 });
 updateEnhancementPrompts();
 
+// Break / Surprise feature prompts — upserted on every startup
+const updateSurprisePrompts = db.transaction(() => {
+  const upsert = db.prepare(`INSERT INTO prompts (slug, name, description, category, system_message, user_prompt, created_at, updated_at)
+    VALUES (?,?,?,?,?,?,datetime('now'),datetime('now'))
+    ON CONFLICT(slug) DO UPDATE SET system_message=excluded.system_message, user_prompt=excluded.user_prompt, updated_at=datetime('now')`);
+
+  upsert.run(
+    'surprise-elaborate',
+    'Surprise — Elaborate',
+    'Expands a short article blurb into a richer, more elaborated summary for the Break feature',
+    'news',
+    `You are a thoughtful news editor. You take short article blurbs and expand them into richer, more elaborate summaries that give the reader genuine context and understanding. You never invent facts — if the source is thin, you explain what IS known and what remains unclear. You write in clear, engaging prose.`,
+    `Source: {{source}}
+Title: {{title}}
+
+Original text:
+{{content}}
+
+Write an elaborated summary of this article in 3 to 5 short paragraphs. Your job:
+- Explain the key facts and what actually happened, in plain language
+- Provide relevant context a general reader would need (who, what, where, why it matters)
+- Flag any uncertainty — if a claim is thin or unsupported in the source, say so
+- Do NOT invent specifics that aren't in the source (numbers, quotes, names)
+- If the source is very short, state clearly what's known and what isn't
+- Use Markdown: short paragraphs, bold for key terms if helpful
+- No intro like "Here is an elaborated summary" — start directly with the content
+- No conclusion or meta-commentary
+- Write in the same language as the original article`
+  );
+
+  upsert.run(
+    'surprise-chat',
+    'Surprise — Chat',
+    'Answers user questions about the current Break article',
+    'news',
+    `You are a helpful, grounded news analyst. Answer questions about the article below. Be concise, factual, and honest about uncertainty. If the article does not contain enough information to answer, say so plainly and suggest what the reader could look up. Never fabricate details.`,
+    `{{article}}`
+  );
+});
+updateSurprisePrompts();
+
 // Clean up deprecated prompt slugs
 try { db.prepare("DELETE FROM prompts WHERE slug IN ('inoculation-twister', 'inoculation-cdo')").run(); } catch (e) {}
 
