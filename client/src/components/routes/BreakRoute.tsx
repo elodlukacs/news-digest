@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { RefreshCw, ExternalLink, Sparkles, MessageCircle } from 'lucide-react';
+import { RefreshCw, ExternalLink, Sparkles, MessageCircle, Trash2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { API_BASE } from '../../config';
 import { Skeleton } from '../ui/skeleton';
@@ -35,6 +35,8 @@ export function BreakRoute() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatSending, setChatSending] = useState(false);
+
+  const [purging, setPurging] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
   const lastIdRef = useRef<number | null>(null);
@@ -76,6 +78,22 @@ export function BreakRoute() {
     fetch(`${SURPRISE_BASE}/prewarm`, { method: 'POST' }).catch(() => {});
     return () => { abortRef.current?.abort(); };
   }, [fetchArticle]);
+
+  const handlePurge = useCallback(async () => {
+    if (purging) return;
+    if (!window.confirm('Delete all seen articles and anything older than 3 days?')) return;
+    setPurging(true);
+    try {
+      const res = await fetch(`${SURPRISE_BASE}/purge`, { method: 'POST' });
+      if (!res.ok) throw new Error('Purge failed');
+      lastIdRef.current = null;
+      await fetchArticle();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Purge failed');
+    } finally {
+      setPurging(false);
+    }
+  }, [purging, fetchArticle]);
 
   const handleElaborate = useCallback(async () => {
     if (!article || elaborating) return;
@@ -146,9 +164,21 @@ export function BreakRoute() {
   return (
     <div className="relative min-h-[calc(100vh-8rem)]">
       <div className="max-w-[720px] mx-auto px-5 md:px-8 pt-6 md:pt-12 pb-[10.5rem] md:pb-44">
-        <p className="text-[10px] md:text-[11px] font-[family-name:var(--font-widget)] uppercase tracking-[0.35em] text-ink-muted/70 font-semibold mb-6 md:mb-10">
-          Take a Break
-        </p>
+        <div className="flex items-center justify-between mb-6 md:mb-10">
+          <p className="text-[10px] md:text-[11px] font-[family-name:var(--font-widget)] uppercase tracking-[0.35em] text-ink-muted/70 font-semibold">
+            Take a Break
+          </p>
+          <button
+            onClick={handlePurge}
+            disabled={purging}
+            title="Delete seen articles and anything older than 3 days"
+            aria-label="Purge old articles"
+            className="inline-flex items-center gap-1.5 px-2 py-1 text-[10px] md:text-[11px] font-[family-name:var(--font-widget)] uppercase tracking-[0.2em] text-ink-muted/70 hover:text-accent transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Trash2 size={12} className={purging ? 'animate-pulse' : ''} />
+            {purging ? 'Purging…' : 'Purge'}
+          </button>
+        </div>
 
         {loading && (
           <div className="space-y-5">

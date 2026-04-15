@@ -14,7 +14,7 @@ const db = require('../db');
 const { callLLM } = require('../lib/llm');
 const { buildMessages } = require('../lib/promptManager');
 const { cleanArticleText } = require('../lib/cleanText');
-const { generateMissingBriefs } = require('../lib/surpriseWorker');
+const { generateMissingBriefs, purgeOldArticles } = require('../lib/surpriseWorker');
 
 const router = express.Router();
 
@@ -33,12 +33,13 @@ function pickArticle({ excludeId } = {}) {
   const excludeClause = excludeId ? 'AND a.id != ?' : '';
   const params = excludeId ? [excludeId] : [];
 
-  // Primary: recent + has a brief already.
+  // Primary: recent + has a brief already + not yet seen.
   const primary = db.prepare(`
     SELECT a.*, c.name as category_name
     FROM articles a
     LEFT JOIN categories c ON a.category_id = c.id
     WHERE a.pub_date > datetime('now', '-72 hours')
+      AND a.surprise_seen_at IS NULL
       AND a.surprise_brief IS NOT NULL
       AND LENGTH(a.surprise_brief) >= ?
       ${excludeClause}
@@ -54,6 +55,7 @@ function pickArticle({ excludeId } = {}) {
     FROM articles a
     LEFT JOIN categories c ON a.category_id = c.id
     WHERE a.pub_date > datetime('now', '-72 hours')
+      AND a.surprise_seen_at IS NULL
       AND LENGTH(COALESCE(a.body_text, a.description, '')) > 400
       ${excludeClause}
     ORDER BY RANDOM()
@@ -73,6 +75,7 @@ function pickArticle({ excludeId } = {}) {
     FROM articles a
     LEFT JOIN categories c ON a.category_id = c.id
     WHERE a.pub_date > datetime('now', '-7 days')
+      AND a.surprise_seen_at IS NULL
       ${excludeClause}
     ORDER BY RANDOM()
     LIMIT 10
@@ -111,11 +114,36 @@ router.get('/', (req, res) => {
     has_expanded: !!(surprise_expanded && String(surprise_expanded).trim().length >= EXPANDED_MIN_LENGTH),
   });
 
+  // Mark this article as seen so it won't come back and won't be re-briefed.
+  try {
+    db.prepare(`
+      UPDATE articles
+      SET surprise_seen_at = datetime('now')
+      WHERE id = ? AND surprise_seen_at IS NULL
+    `).run(article.id);
+  } catch (err) {
+    console.warn('[surprise] failed to stamp seen:', err.message);
+  }
+
   // Nudge the worker in the background so the pool stays warm.
   setImmediate(() => {
     generateMissingBriefs({ limit: 8, includeElaborate: true, elaborateLimit: 2 })
       .catch((err) => console.warn('[surprise] nudge sweep failed:', err.message));
   });
+});
+
+// Manual purge — deletes seen articles and any older than 3 days.
+router.post('/purge', (req, res) => {
+  try {
+    const seenDeleted = db
+      .prepare('DELETE FROM articles WHERE surprise_seen_at IS NOT NULL')
+      .run().changes;
+    const oldDeleted = purgeOldArticles({ olderThanDays: 3 });
+    res.json({ ok: true, seenDeleted, oldDeleted });
+  } catch (err) {
+    console.error('[surprise] manual purge failed:', err);
+    res.status(500).json({ error: err.message || 'Purge failed' });
+  }
 });
 
 // Explicit prewarm endpoint — the client hits this on Break route mount.

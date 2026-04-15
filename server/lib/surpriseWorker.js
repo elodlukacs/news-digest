@@ -123,6 +123,7 @@ async function generateMissingBriefs({
     const briefSql = `
       SELECT a.* FROM articles a
       WHERE a.pub_date > datetime('now', '-72 hours')
+        AND a.surprise_seen_at IS NULL
         AND (a.surprise_brief IS NULL OR LENGTH(a.surprise_brief) < ?)
         AND (a.brief_generated_at IS NULL OR a.brief_generated_at < ?)
         AND LENGTH(COALESCE(a.body_text, a.description, '')) > 150
@@ -148,6 +149,7 @@ async function generateMissingBriefs({
       const expandSql = `
         SELECT a.* FROM articles a
         WHERE a.pub_date > datetime('now', '-72 hours')
+          AND a.surprise_seen_at IS NULL
           AND a.surprise_brief IS NOT NULL AND LENGTH(a.surprise_brief) >= ?
           AND (a.surprise_expanded IS NULL OR LENGTH(a.surprise_expanded) < ?)
           ${categoryClause}
@@ -168,20 +170,31 @@ async function generateMissingBriefs({
       console.log(`[surprise] sweep done (scope=${scopeKey}): ${briefsGenerated} briefs, ${expandedGenerated} expansions`);
     }
 
-    const MAX_BRIEFS = 20;
-    const currentCount = database.prepare('SELECT COUNT(*) as c FROM articles WHERE surprise_brief IS NOT NULL AND LENGTH(surprise_brief) >= ?').get(BRIEF_MIN_LENGTH).c;
+    const MAX_BRIEFS = 30;
+    const currentCount = database.prepare(`
+      SELECT COUNT(*) as c FROM articles
+      WHERE surprise_brief IS NOT NULL AND LENGTH(surprise_brief) >= ?
+        AND surprise_seen_at IS NULL
+    `).get(BRIEF_MIN_LENGTH).c;
     if (currentCount > MAX_BRIEFS) {
       const toDelete = currentCount - MAX_BRIEFS;
+      // Retire overflow briefs by stamping surprise_seen_at so the sweep
+      // doesn't regenerate them (prior bug: nulling brief_generated_at made
+      // them immediately eligible again, wasting LLM calls).
       database.prepare(`
-        UPDATE articles SET surprise_brief = NULL, surprise_expanded = NULL, brief_generated_at = NULL
+        UPDATE articles
+        SET surprise_brief = NULL,
+            surprise_expanded = NULL,
+            surprise_seen_at = datetime('now')
         WHERE id IN (
           SELECT id FROM articles
           WHERE surprise_brief IS NOT NULL AND LENGTH(surprise_brief) >= ?
+            AND surprise_seen_at IS NULL
           ORDER BY brief_generated_at ASC
           LIMIT ?
         )
       `).run(BRIEF_MIN_LENGTH, toDelete);
-      console.log(`[surprise] cleaned up ${toDelete} old briefs (${currentCount} -> ${MAX_BRIEFS})`);
+      console.log(`[surprise] retired ${toDelete} overflow briefs (${currentCount} -> ${MAX_BRIEFS})`);
     }
     return { briefsGenerated, expandedGenerated };
   } finally {
@@ -189,10 +202,28 @@ async function generateMissingBriefs({
   }
 }
 
+// Hard-delete old articles from the DB. Default: anything older than 14 days.
+// Articles are not referenced by FK from any other table, so this is safe.
+function purgeOldArticles({ olderThanDays = 3 } = {}) {
+  const database = require('../db');
+  const result = database
+    .prepare(`DELETE FROM articles WHERE pub_date IS NOT NULL AND pub_date < datetime('now', ?)`)
+    .run(`-${olderThanDays} days`);
+  if (result.changes > 0) {
+    console.log(`[surprise] purged ${result.changes} articles older than ${olderThanDays} days`);
+  }
+  return result.changes;
+}
+
 function startPeriodicSweep({ intervalMs = 3 * 60 * 60 * 1000, initialDelayMs = 15 * 1000 } = {}) {
   const run = () => {
     generateMissingBriefs({ limit: 20, includeElaborate: true })
       .catch((err) => console.warn('[surprise] periodic sweep failed:', err.message));
+    try {
+      purgeOldArticles();
+    } catch (err) {
+      console.warn('[surprise] purge failed:', err.message);
+    }
   };
   setTimeout(run, initialDelayMs);
   setInterval(run, intervalMs);
@@ -202,5 +233,6 @@ module.exports = {
   generateMissingBriefs,
   generateBriefForArticle,
   generateExpandedForArticle,
+  purgeOldArticles,
   startPeriodicSweep,
 };
