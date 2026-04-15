@@ -147,7 +147,7 @@ router.post('/elaborate', async (req, res) => {
     });
     const result = await callLLM(messages, {
       purpose: 'surprise-elaborate',
-      providerId: selectedProvider || null,
+      providerId: 'openrouter',
       max_tokens: 2000,
       temperature: 0.5,
     });
@@ -202,7 +202,7 @@ router.post('/chat', async (req, res) => {
 
     const result = await callLLM(messages, {
       purpose: 'surprise-chat',
-      providerId: selectedProvider || null,
+      providerId: 'openrouter',
       max_tokens: 1024,
       temperature: 0.5,
     });

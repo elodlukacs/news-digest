@@ -45,6 +45,7 @@ async function generateBriefForArticle(database, article) {
     });
     const result = await callLLM(messages, {
       purpose: 'surprise-brief',
+      providerId: 'openrouter',
       max_tokens: 240,
       temperature: 0.3,
     });
@@ -76,6 +77,7 @@ async function generateExpandedForArticle(database, article) {
     });
     const result = await callLLM(messages, {
       purpose: 'surprise-elaborate',
+      providerId: 'openrouter',
       max_tokens: 2000,
       temperature: 0.5,
     });
