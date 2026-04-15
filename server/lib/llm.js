@@ -3,10 +3,51 @@ const env = (name) => process.env[name];
 const AI_PROVIDERS = [
   { id: 'llama', name: 'Groq', url: 'https://api.groq.com/openai/v1/chat/completions', key: () => env('GROQ_API_KEY'), model: 'openai/gpt-oss-20b' },
   { id: 'google', name: 'Google AI Studio', url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', key: () => env('GOOGLE_API_KEY'), model: 'gemini-2.0-flash' },
-  { id: 'openrouter', name: 'OpenRouter', url: 'https://openrouter.ai/api/v1/chat/completions', key: () => env('OPENROUTER_API_KEY'), model: 'qwen/qwen3.5-flash-02-23' },
+  { id: 'openrouter', name: 'OpenRouter', url: 'https://openrouter.ai/api/v1/chat/completions', key: () => env('OPENROUTER_API_KEY'), model: 'meta-llama/llama-3.3-70b-instruct:free' },
 ];
 
 const providerQuotas = {};
+
+const FREE_MODEL_CACHE_TTL = 60 * 60 * 1000;
+let freeModelCache = { models: [], fetchedAt: 0 };
+
+function isTextOnlyModel(model) {
+  const id = model.id || '';
+  const reasoningIndicators = ['think', 'reasoning', 'thought', 'think_budget', 'thinking', 'o1-', 'o3-'];
+  if (reasoningIndicators.some(r => id.toLowerCase().includes(r))) return false;
+  const mod = model.architecture?.modality;
+  return !mod || mod === 'text->text' || mod === 'text';
+}
+
+async function getOpenRouterFreeModel(apiKey, currentModel) {
+  if (Date.now() - freeModelCache.fetchedAt < FREE_MODEL_CACHE_TTL) {
+    const cached = freeModelCache.models;
+    if (cached.length > 0) {
+      if (cached.find(m => m.id === currentModel)) return currentModel;
+      return cached[0].id;
+    }
+  }
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/models?sort=pricing-lowest', {
+      headers: { 'Authorization': `Bearer ${apiKey}` },
+    });
+    if (!response.ok) return currentModel;
+    const data = await response.json();
+    const freeTextModels = (data.data || [])
+      .filter(m => {
+        if (parseFloat(m.pricing?.prompt || 1) !== 0) return false;
+        if ((m.context_length || 0) < 32000) return false;
+        return isTextOnlyModel(m);
+      })
+      .sort((a, b) => (b.context_length || 0) - (a.context_length || 0));
+    freeModelCache = { models: freeTextModels, fetchedAt: Date.now() };
+    if (freeTextModels.length === 0) return currentModel;
+    if (freeTextModels.find(m => m.id === currentModel)) return currentModel;
+    return freeTextModels[0].id;
+  } catch {
+    return currentModel;
+  }
+}
 
 async function callLLM(messages, { purpose = 'unknown', categoryId = null, temperature = 0.3, max_tokens = 8192, providerId = null, response_format = null, db } = {}) {
   let providers = AI_PROVIDERS.filter(p => p.key());
@@ -39,9 +80,22 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
 
   let lastError = null;
   for (const provider of providers) {
+    let resolvedModel = provider.model;
+
+    if (provider.id === 'openrouter' && !providerId?.includes('/')) {
+      const apiKey = provider.key();
+      if (apiKey) {
+        const checked = await getOpenRouterFreeModel(apiKey, provider.model);
+        if (checked !== provider.model) {
+          console.log(`[LLM] OpenRouter model no longer free, switching to ${checked}`);
+          resolvedModel = checked;
+        }
+      }
+    }
+
     try {
       const start = Date.now();
-      console.log(`[LLM] Trying ${provider.name} (${provider.model}) for ${purpose}...`);
+      console.log(`[LLM] Trying ${provider.name} (${resolvedModel}) for ${purpose}...`);
 
       const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${provider.key()}` };
       if (provider.id === 'openrouter') {
@@ -53,7 +107,7 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
         method: 'POST',
         headers,
         body: JSON.stringify({
-          model: provider.model,
+          model: resolvedModel,
           messages,
           temperature,
           max_tokens,
@@ -76,7 +130,7 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
       }
       const quota = {
         provider: provider.name,
-        model: provider.model,
+        model: resolvedModel,
         limit_tokens: parseHeader('x-ratelimit-limit-tokens'),
         remaining_tokens: parseHeader('x-ratelimit-remaining-tokens'),
         limit_requests: parseHeader('x-ratelimit-limit-requests'),
@@ -117,7 +171,7 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
         continue;
       }
       console.log(`[LLM] Success: ${provider.name} (${latency}ms, ${usage.total_tokens || '?'} tokens)`);
-      return { content, provider: `${provider.name} · ${provider.model}`, usage };
+      return { content, provider: `${provider.name} · ${resolvedModel}`, usage };
     } catch (err) {
       console.warn(`[LLM] ${provider.name} error:`, err.message);
       lastError = `${provider.name}: ${err.message}`;
