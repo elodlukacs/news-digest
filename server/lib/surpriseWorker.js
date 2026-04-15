@@ -189,7 +189,7 @@ async function generateMissingBriefs({
   }
 }
 
-function startPeriodicSweep({ intervalMs = 20 * 60 * 1000, initialDelayMs = 15 * 1000 } = {}) {
+function startPeriodicSweep({ intervalMs = 3 * 60 * 60 * 1000, initialDelayMs = 15 * 1000 } = {}) {
   const run = () => {
     generateMissingBriefs({ limit: 20, includeElaborate: true })
       .catch((err) => console.warn('[surprise] periodic sweep failed:', err.message));
