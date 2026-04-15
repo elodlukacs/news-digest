@@ -12,6 +12,7 @@ router.get('/', (req, res) => {
   const conditions = [];
   const params = {};
 
+  conditions.push("j.date_posted >= date('now', '-7 days')");
   if (saved === 'true') { conditions.push('sj.job_id IS NOT NULL'); }
   if (source) { conditions.push('j.source = @source'); params.source = source; }
   if (workType) { conditions.push('j.work_type = @workType'); params.workType = workType; }
@@ -28,18 +29,19 @@ router.get('/', (req, res) => {
     SELECT j.*, ${aiOnly === 'true' ? 'af.remote as ai_remote' : 'NULL as ai_remote'},
            CASE WHEN sj.job_id IS NOT NULL THEN 1 ELSE 0 END as is_saved
     FROM jobs j ${savedJoin} ${aiJoin} ${where}
-    ORDER BY is_saved DESC, j.date_posted DESC LIMIT @limit OFFSET @offset
+    ORDER BY j.date_posted DESC LIMIT @limit OFFSET @offset
   `).all({ ...params, limit: parseInt(limit), offset });
 
+  const recentFilter = "date_posted >= date('now', '-7 days')";
   const counts = { total: 0, new: 0, saved: 0 };
-  const countRows = db.prepare('SELECT status, COUNT(*) as count FROM jobs GROUP BY status').all();
+  const countRows = db.prepare(`SELECT status, COUNT(*) as count FROM jobs WHERE ${recentFilter} GROUP BY status`).all();
   for (const r of countRows) { counts.total += r.count; counts[r.status] = r.count; }
-  counts.saved = db.prepare('SELECT COUNT(*) as count FROM saved_jobs').get().count;
-  const aiCount = db.prepare('SELECT COUNT(*) as count FROM ai_filtered_jobs').get();
+  counts.saved = db.prepare(`SELECT COUNT(*) as count FROM saved_jobs WHERE job_id IN (SELECT id FROM jobs WHERE ${recentFilter})`).get().count;
+  const aiCount = db.prepare(`SELECT COUNT(*) as count FROM ai_filtered_jobs WHERE job_id IN (SELECT id FROM jobs WHERE ${recentFilter})`).get();
 
-  const sources = db.prepare("SELECT DISTINCT source FROM jobs WHERE source != '' ORDER BY source").all().map(r => r.source);
-  const countries = db.prepare("SELECT DISTINCT country FROM jobs WHERE country != '' ORDER BY country").all().map(r => r.country);
-  const sourceCountRows = db.prepare("SELECT source, COUNT(*) as count FROM jobs GROUP BY source").all();
+  const sources = db.prepare(`SELECT DISTINCT source FROM jobs WHERE source != '' AND ${recentFilter} ORDER BY source`).all().map(r => r.source);
+  const countries = db.prepare(`SELECT DISTINCT country FROM jobs WHERE country != '' AND ${recentFilter} ORDER BY country`).all().map(r => r.country);
+  const sourceCountRows = db.prepare(`SELECT source, COUNT(*) as count FROM jobs WHERE ${recentFilter} GROUP BY source`).all();
   const sourceCounts = {};
   for (const r of sourceCountRows) sourceCounts[r.source] = r.count;
 
@@ -47,7 +49,7 @@ router.get('/', (req, res) => {
     jobs: jobs.map(r => ({
       id: r.id, title: r.title, company: r.company, url: r.url, source: r.source,
       datePosted: r.date_posted, status: r.status, country: r.country,
-      workType: r.work_type, description: r.description || undefined,
+      workType: r.work_type,
       aiRemote: r.ai_remote || undefined,
       saved: r.is_saved === 1,
     })),

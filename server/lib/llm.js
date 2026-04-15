@@ -43,9 +43,15 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
       const start = Date.now();
       console.log(`[LLM] Trying ${provider.name} (${provider.model}) for ${purpose}...`);
 
+      const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${provider.key()}` };
+      if (provider.id === 'openrouter') {
+        headers['HTTP-Referer'] = 'https://news-reader.app';
+        headers['X-Title'] = `News Reader · ${purpose}`;
+      }
+
       const response = await fetch(provider.url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${provider.key()}` },
+        headers,
         body: JSON.stringify({
           model: provider.model,
           messages,

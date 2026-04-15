@@ -108,7 +108,6 @@ export interface Job {
   status: JobStatus;
   country: string;
   workType: string;
-  description?: string;
   aiRemote?: RemoteAssessment;
   saved: boolean;
 }
