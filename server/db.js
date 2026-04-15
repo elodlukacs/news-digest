@@ -269,6 +269,7 @@ db.exec(`
 addColumnIfNotExists('articles', 'body_text', "TEXT DEFAULT ''");
 addColumnIfNotExists('articles', 'surprise_brief', 'TEXT DEFAULT NULL');
 addColumnIfNotExists('articles', 'surprise_expanded', 'TEXT DEFAULT NULL');
+addColumnIfNotExists('articles', 'brief_generated_at', 'TEXT DEFAULT NULL');
 addColumnIfNotExists('cognitive_users', 'antibody_count', 'INTEGER DEFAULT 0');
 addColumnIfNotExists('cognitive_users', 'last_inoculation_date', 'TEXT');
 addColumnIfNotExists('chat_messages', 'article_title', 'TEXT DEFAULT NULL');

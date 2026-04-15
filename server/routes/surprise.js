@@ -1,27 +1,55 @@
+// Routes for the "Break / Surprise" homepage feature.
+//
+// GET /              → pure DB query. Returns a recent article with its
+//                      pre-generated brief (falling back to cleaned raw text
+//                      if the worker hasn't covered it yet). No LLM call.
+// POST /prewarm      → delegates to the background worker.
+// POST /elaborate    → returns cached expanded summary, or generates one
+//                      on-demand if not pre-computed.
+// POST /chat         → freeform chat about the article (LLM on request).
+// GET  /chat/:id     → prior chat history for an article.
+
 const express = require('express');
 const db = require('../db');
 const { callLLM } = require('../lib/llm');
 const { buildMessages } = require('../lib/promptManager');
 const { cleanArticleText } = require('../lib/cleanText');
+const { generateMissingBriefs } = require('../lib/surpriseWorker');
 
 const router = express.Router();
 
-const MIN_CLEAN_LENGTH = 320;
-const FALLBACK_MIN_LENGTH = 180;
-const LLM_INPUT_TRIM = 1800; // chars — enough for a 2-4 sentence brief
-const PREWARM_COUNT = 3;
+const BRIEF_MIN_LENGTH = 60;
+const EXPANDED_MIN_LENGTH = 200;
+const CLEAN_MIN_LENGTH = 180;
 
 function articleKey(id) {
   return `surprise:${id}`;
 }
 
+// Pick a recent article. Prefer ones with a pre-generated brief so the user
+// gets the curated summary; fall back to any recent substantial article
+// (we'll serve cleaned raw text as the brief in that case).
 function pickArticle({ excludeId } = {}) {
   const excludeClause = excludeId ? 'AND a.id != ?' : '';
   const params = excludeId ? [excludeId] : [];
 
-  // Primary: recent + substantial raw length. Fetch a batch and pick the
-  // first whose cleaned text meets the quality bar.
+  // Primary: recent + has a brief already.
   const primary = db.prepare(`
+    SELECT a.*, c.name as category_name
+    FROM articles a
+    LEFT JOIN categories c ON a.category_id = c.id
+    WHERE a.pub_date > datetime('now', '-72 hours')
+      AND a.surprise_brief IS NOT NULL
+      AND LENGTH(a.surprise_brief) >= ?
+      ${excludeClause}
+    ORDER BY RANDOM()
+    LIMIT 1
+  `).all(BRIEF_MIN_LENGTH, ...params);
+
+  if (primary.length) return primary[0];
+
+  // Fallback: any recent article with enough raw content; we'll clean on the fly.
+  const fallback = db.prepare(`
     SELECT a.*, c.name as category_name
     FROM articles a
     LEFT JOIN categories c ON a.category_id = c.id
@@ -29,30 +57,30 @@ function pickArticle({ excludeId } = {}) {
       AND LENGTH(COALESCE(a.body_text, a.description, '')) > 400
       ${excludeClause}
     ORDER BY RANDOM()
-    LIMIT 15
+    LIMIT 10
   `).all(...params);
 
-  for (const row of primary) {
+  for (const row of fallback) {
     const cleaned = cleanArticleText(row.body_text || row.description || '');
-    if (cleaned.length >= MIN_CLEAN_LENGTH) {
+    if (cleaned.length >= CLEAN_MIN_LENGTH) {
       return { ...row, _cleaned: cleaned };
     }
   }
 
-  // Fallback: 7-day window with a lower quality bar
-  const fallback = db.prepare(`
+  // Last-resort: older window.
+  const old = db.prepare(`
     SELECT a.*, c.name as category_name
     FROM articles a
     LEFT JOIN categories c ON a.category_id = c.id
     WHERE a.pub_date > datetime('now', '-7 days')
       ${excludeClause}
     ORDER BY RANDOM()
-    LIMIT 15
+    LIMIT 10
   `).all(...params);
 
-  for (const row of fallback) {
+  for (const row of old) {
     const cleaned = cleanArticleText(row.body_text || row.description || '');
-    if (cleaned.length >= FALLBACK_MIN_LENGTH) {
+    if (cleaned.length >= CLEAN_MIN_LENGTH) {
       return { ...row, _cleaned: cleaned };
     }
   }
@@ -60,101 +88,53 @@ function pickArticle({ excludeId } = {}) {
   return null;
 }
 
-async function ensureBrief(article, cleaned) {
-  const cached = article.surprise_brief;
-  if (cached && typeof cached === 'string' && cached.trim().length >= 60) {
-    return cached.trim();
-  }
-  if (!cleaned) return '';
-  try {
-    // Trim input — we only need enough context for a 2-4 sentence summary.
-    const trimmed = cleaned.length > LLM_INPUT_TRIM ? cleaned.slice(0, LLM_INPUT_TRIM) : cleaned;
-    const messages = buildMessages('surprise-brief', {
-      title: article.title || '',
-      source: article.feed_name || 'Unknown source',
-      content: trimmed,
-    });
-    const result = await callLLM(messages, {
-      purpose: 'surprise-brief',
-      max_tokens: 240,
-      temperature: 0.3,
-    });
-    const brief = String(result?.content || '').trim();
-    if (brief.length >= 60) {
-      db.prepare('UPDATE articles SET surprise_brief = ? WHERE id = ?').run(brief, article.id);
-      return brief;
-    }
-    return cleaned;
-  } catch (err) {
-    console.warn('Surprise brief generation failed:', err.message);
-    return cleaned;
-  }
-}
-
-// Fire-and-forget pre-warming: generate briefs for other recent
-// candidates so subsequent /surprise calls hit the DB cache.
-async function prewarmBriefs(excludeIds = []) {
-  try {
-    const placeholders = excludeIds.length ? excludeIds.map(() => '?').join(',') : null;
-    const sql = `
-      SELECT a.*, c.name as category_name
-      FROM articles a
-      LEFT JOIN categories c ON a.category_id = c.id
-      WHERE a.pub_date > datetime('now', '-72 hours')
-        AND (a.surprise_brief IS NULL OR LENGTH(a.surprise_brief) < 60)
-        AND LENGTH(COALESCE(a.body_text, a.description, '')) > 400
-        ${placeholders ? `AND a.id NOT IN (${placeholders})` : ''}
-      ORDER BY RANDOM()
-      LIMIT ?
-    `;
-    const params = placeholders ? [...excludeIds, PREWARM_COUNT] : [PREWARM_COUNT];
-    const rows = db.prepare(sql).all(...params);
-    for (const row of rows) {
-      const cleaned = cleanArticleText(row.body_text || row.description || '');
-      if (cleaned.length < MIN_CLEAN_LENGTH) continue;
-      try { await ensureBrief(row, cleaned); } catch (e) { console.warn('Prewarm item failed:', e.message); }
-    }
-  } catch (err) {
-    console.warn('Prewarm failed:', err.message);
-  }
-}
-
-router.get('/', async (req, res) => {
+router.get('/', (req, res) => {
   const rawExclude = Number(req.query.exclude);
   const excludeId = Number.isFinite(rawExclude) && rawExclude > 0 ? rawExclude : undefined;
+
   const article = pickArticle({ excludeId });
-  if (!article) return res.status(404).json({ error: 'No articles found. Generate some summaries first.' });
+  if (!article) {
+    return res.status(404).json({ error: 'No articles found. Generate some summaries first.' });
+  }
 
   const cleaned = article._cleaned || cleanArticleText(article.body_text || article.description || '');
-  const brief = await ensureBrief(article, cleaned);
+  const brief = (article.surprise_brief && article.surprise_brief.trim().length >= BRIEF_MIN_LENGTH)
+    ? article.surprise_brief.trim()
+    : cleaned;
 
   // eslint-disable-next-line no-unused-vars
   const { _cleaned, body_text, surprise_brief, surprise_expanded, ...rest } = article;
   res.json({
     ...rest,
-    description: brief || cleaned,
+    description: brief,
     raw_content: cleaned,
-    has_expanded: !!(surprise_expanded && String(surprise_expanded).trim().length > 100),
+    has_expanded: !!(surprise_expanded && String(surprise_expanded).trim().length >= EXPANDED_MIN_LENGTH),
   });
 
-  // Kick off pre-warming so the next article click is instant.
-  setImmediate(() => { prewarmBriefs([article.id]); });
+  // Nudge the worker in the background so the pool stays warm.
+  setImmediate(() => {
+    generateMissingBriefs({ limit: 8, includeElaborate: true, elaborateLimit: 2 })
+      .catch((err) => console.warn('[surprise] nudge sweep failed:', err.message));
+  });
 });
 
-// Explicit pre-warm endpoint the client can hit on load as a best effort.
+// Explicit prewarm endpoint — the client hits this on Break route mount.
 router.post('/prewarm', (req, res) => {
-  setImmediate(() => { prewarmBriefs([]); });
-  res.json({ ok: true, scheduled: PREWARM_COUNT });
+  setImmediate(() => {
+    generateMissingBriefs({ limit: 10, includeElaborate: true, elaborateLimit: 3 })
+      .catch((err) => console.warn('[surprise] prewarm failed:', err.message));
+  });
+  res.json({ ok: true });
 });
 
 router.post('/elaborate', async (req, res) => {
   const { article_id, title, content, source, provider: selectedProvider } = req.body || {};
   if (!title || !content) return res.status(400).json({ error: 'title and content are required' });
 
-  // Return cached elaboration if present
+  // Return cached elaboration if present.
   if (article_id) {
     const row = db.prepare('SELECT surprise_expanded FROM articles WHERE id = ?').get(Number(article_id));
-    if (row?.surprise_expanded && String(row.surprise_expanded).trim().length > 100) {
+    if (row?.surprise_expanded && String(row.surprise_expanded).trim().length >= EXPANDED_MIN_LENGTH) {
       return res.json({ content: row.surprise_expanded, article_id, cached: true });
     }
   }
