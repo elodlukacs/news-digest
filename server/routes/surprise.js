@@ -132,14 +132,22 @@ router.get('/', (req, res) => {
   });
 });
 
-// Manual purge — deletes seen articles and any older than 3 days.
+// Manual purge — deletes EVERY article that is (or was) a surprise-brief
+// candidate: anything with a brief, anything marked seen, and anything older
+// than 3 days. After this runs the surprise pool is empty until the next
+// RSS fetch + sweep repopulates it from fresh articles.
 router.post('/purge', (req, res) => {
   try {
-    const seenDeleted = db
-      .prepare('DELETE FROM articles WHERE surprise_seen_at IS NOT NULL')
+    const briefDeleted = db
+      .prepare(`
+        DELETE FROM articles
+        WHERE surprise_brief IS NOT NULL
+           OR surprise_seen_at IS NOT NULL
+      `)
       .run().changes;
     const oldDeleted = purgeOldArticles({ olderThanDays: 3 });
-    res.json({ ok: true, seenDeleted, oldDeleted });
+    console.log(`[surprise] manual purge: ${briefDeleted} brief/seen, ${oldDeleted} old`);
+    res.json({ ok: true, briefDeleted, oldDeleted });
   } catch (err) {
     console.error('[surprise] manual purge failed:', err);
     res.status(500).json({ error: err.message || 'Purge failed' });
