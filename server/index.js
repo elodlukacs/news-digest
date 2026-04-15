@@ -49,6 +49,7 @@ app.use('/api/bias-mirror', require('./routes/bias-mirror'));
 app.use('/api/source-lab', require('./routes/source-lab'));
 app.use('/api/propaganda-timeline', require('./routes/propaganda-timeline'));
 app.use('/api/manipulator', require('./routes/manipulator'));
+app.use('/api/logs', require('./routes/logs'));
 
 app.listen(PORT, () => {
   console.log(`News Reader API running on http://localhost:${PORT}`);

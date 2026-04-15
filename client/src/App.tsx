@@ -20,6 +20,7 @@ import { ReleasesRoute } from './components/routes/ReleasesRoute';
 import { MindGamesRoute } from './components/routes/MindGamesRoute';
 import { PromptManagerRoute } from './components/routes/PromptManagerRoute';
 import { BreakRoute } from './components/routes/BreakRoute';
+import { LogsRoute } from './components/routes/LogsRoute';
 import {
   MindGamesOverviewRoute,
   MindGamesTrainingRoute,
@@ -119,6 +120,7 @@ function App() {
         <Route path="jobs" element={<JobsRoute />} />
         <Route path="releases" element={<ReleasesRoute />} />
         <Route path="prompts" element={<PromptManagerRoute />} />
+        <Route path="logs" element={<LogsRoute />} />
         <Route path="mindgames" element={<MindGamesRoute />}>
           <Route index element={<MindGamesOverviewRoute />} />
           <Route path="training" element={<MindGamesTrainingRoute />} />
