@@ -16,7 +16,7 @@ const { callLLM } = require('./llm');
 const { buildMessages } = require('./promptManager');
 const { cleanArticleText } = require('./cleanText');
 
-const MIN_CLEAN_LENGTH = 320;
+const MIN_CLEAN_LENGTH = 150;
 const LLM_INPUT_TRIM = 1800;
 const BRIEF_MIN_LENGTH = 60;
 const EXPANDED_MIN_LENGTH = 200;
@@ -125,7 +125,7 @@ async function generateMissingBriefs({
       WHERE a.pub_date > datetime('now', '-72 hours')
         AND (a.surprise_brief IS NULL OR LENGTH(a.surprise_brief) < ?)
         AND (a.brief_generated_at IS NULL OR a.brief_generated_at < ?)
-        AND LENGTH(COALESCE(a.body_text, a.description, '')) > 400
+        AND LENGTH(COALESCE(a.body_text, a.description, '')) > 150
         ${categoryClause}
       ORDER BY a.pub_date DESC
       LIMIT ?
@@ -166,6 +166,22 @@ async function generateMissingBriefs({
 
     if (briefsGenerated || expandedGenerated) {
       console.log(`[surprise] sweep done (scope=${scopeKey}): ${briefsGenerated} briefs, ${expandedGenerated} expansions`);
+    }
+
+    const MAX_BRIEFS = 20;
+    const currentCount = database.prepare('SELECT COUNT(*) as c FROM articles WHERE surprise_brief IS NOT NULL AND LENGTH(surprise_brief) >= ?').get(BRIEF_MIN_LENGTH).c;
+    if (currentCount > MAX_BRIEFS) {
+      const toDelete = currentCount - MAX_BRIEFS;
+      database.prepare(`
+        UPDATE articles SET surprise_brief = NULL, surprise_expanded = NULL, brief_generated_at = NULL
+        WHERE id IN (
+          SELECT id FROM articles
+          WHERE surprise_brief IS NOT NULL AND LENGTH(surprise_brief) >= ?
+          ORDER BY brief_generated_at ASC
+          LIMIT ?
+        )
+      `).run(BRIEF_MIN_LENGTH, toDelete);
+      console.log(`[surprise] cleaned up ${toDelete} old briefs (${currentCount} -> ${MAX_BRIEFS})`);
     }
     return { briefsGenerated, expandedGenerated };
   } finally {

@@ -106,6 +106,7 @@ router.post('/:id/refresh', validateId, async (req, res) => {
           return parsed.items.slice(0, 10).map((item) => ({
             title: item.title || '',
             description: (item.contentSnippet || item.content || '').slice(0, 3000),
+            contentEncoded: (item['content:encoded'] || '').slice(0, 5000),
             link: item.link || '',
             pubDate: item.pubDate || '',
             source: feed.name,
@@ -135,7 +136,8 @@ router.post('/:id/refresh', validateId, async (req, res) => {
     const insertArticle = db.prepare('INSERT INTO articles (category_id, feed_name, title, description, link, pub_date, fetched_at, topic_id, body_text) VALUES (?,?,?,?,?,?,?,?,?)');
     const insertArticles = db.transaction((arts) => {
       for (const a of arts) {
-        insertArticle.run(req.params.id, a.source, a.title, a.description, a.link, a.pubDate, now, deriveTopicId(a.title), a.description);
+        const fullContent = a.contentEncoded || a.content || a.description || '';
+        insertArticle.run(req.params.id, a.source, a.title, a.description || '', a.link, a.pubDate, now, deriveTopicId(a.title), fullContent);
       }
     });
     insertArticles(allArticles);

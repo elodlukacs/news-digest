@@ -3,15 +3,21 @@ import { API_BASE } from '../../config';
 
 interface LogEntry {
   id: number;
-  provider: string;
-  model: string;
-  prompt_tokens: number;
-  completion_tokens: number;
-  total_tokens: number;
-  purpose: string;
-  category_id: number | null;
-  latency_ms: number;
-  created_at: string;
+  isSummary?: boolean;
+  day?: string;
+  prompt?: number;
+  completion?: number;
+  total?: number;
+  calls?: number;
+  provider?: string;
+  model?: string;
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  total_tokens?: number;
+  purpose?: string;
+  category_id?: number | null;
+  latency_ms?: number;
+  created_at?: string;
 }
 
 function LogsRoute() {
@@ -67,14 +73,20 @@ function LogsRoute() {
         />
       </div>
       {logs.map((log) => (
-        <pre key={log.id} className="text-green-500 font-mono text-sm leading-tight">
-          {log.created_at} |{' '}
-          {(log.purpose + '').padEnd(20)} |{' '}
-          {(log.provider + '').padEnd(12)} |{' '}
-          {(log.model + '').slice(0, 18).padEnd(18)} |{' '}
-          {fmtNum(log.prompt_tokens).padStart(5)} + {fmtNum(log.completion_tokens).padStart(5)} = {fmtNum(log.total_tokens).padStart(6)} |{' '}
-          {log.latency_ms}ms
-        </pre>
+        log.isSummary ? (
+          <pre key={`summary-${log.day}-${log.model}`} className="text-yellow-500 font-mono text-sm leading-tight border-t border-yellow-500 mt-2 pt-2">
+            === {log.day} | {(log.model + '').slice(0, 20).padEnd(20)} | {fmtNum(log.calls || 0)} calls | {fmtNum(log.prompt || 0).padStart(5)} + {fmtNum(log.completion || 0).padStart(5)} = {fmtNum(log.total || 0).padStart(6)}
+          </pre>
+        ) : (
+          <pre key={log.id} className="text-green-500 font-mono text-sm leading-tight">
+            {log.created_at} |{' '}
+            {(log.purpose + '').padEnd(20)} |{' '}
+            {(log.provider + '').padEnd(12)} |{' '}
+            {(log.model + '').slice(0, 18).padEnd(18)} |{' '}
+            {fmtNum(log.prompt_tokens || 0).padStart(5)} + {fmtNum(log.completion_tokens || 0).padStart(5)} = {fmtNum(log.total_tokens || 0).padStart(6)} |{' '}
+            {log.latency_ms}ms
+          </pre>
+        )
       ))}
       <pre className="text-green-500 font-mono text-sm mt-4">Press Enter or R to refresh</pre>
     </div>
