@@ -52,4 +52,8 @@ app.use('/api/manipulator', require('./routes/manipulator'));
 
 app.listen(PORT, () => {
   console.log(`News Reader API running on http://localhost:${PORT}`);
+  // Start background sweep that keeps surprise briefs pre-generated so the
+  // Break feature never blocks on an LLM call at request time.
+  const { startPeriodicSweep } = require('./lib/surpriseWorker');
+  startPeriodicSweep();
 });
