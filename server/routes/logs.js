@@ -3,6 +3,12 @@ const router = express.Router();
 
 const db = require('../db');
 
+function toRomaniaTime(isoString) {
+  const date = new Date(isoString);
+  date.setHours(date.getHours() + 3);
+  return date.toISOString().slice(0, 19).replace('T', ' ');
+}
+
 router.get('/', (req, res) => {
   const days = parseInt(req.query.days) || 3;
   const since = new Date(Date.now() - days * 86400000).toISOString();
@@ -24,7 +30,12 @@ router.get('/', (req, res) => {
     ORDER BY created_at DESC
   `).all(since);
 
-  res.json(rows);
+  const formatted = rows.map(r => ({
+    ...r,
+    created_at: toRomaniaTime(r.created_at)
+  }));
+
+  res.json(formatted);
 });
 
 module.exports = router;
