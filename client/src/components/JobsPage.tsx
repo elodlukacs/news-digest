@@ -41,17 +41,6 @@ const SOURCE_LABELS: Record<string, string> = {
   hackernews: 'HN',
 };
 
-const SOURCE_COLORS: Record<string, string> = {
-  remoteok: 'bg-[var(--color-source-remoteok-bg)] text-[var(--color-source-remoteok-text)]',
-  weworkremotely: 'bg-[var(--color-source-weworkremotely-bg)] text-[var(--color-source-weworkremotely-text)]',
-  himalayas: 'bg-[var(--color-source-himalayas-bg)] text-[var(--color-source-himalayas-text)]',
-  remotive: 'bg-[var(--color-source-remotive-bg)] text-[var(--color-source-remotive-text)]',
-  arbeitnow: 'bg-[var(--color-source-arbeitnow-bg)] text-[var(--color-source-arbeitnow-text)]',
-  linkedin: 'bg-[var(--color-source-linkedin-bg)] text-[var(--color-source-linkedin-text)]',
-  indeed: 'bg-[var(--color-source-indeed-bg)] text-[var(--color-source-indeed-text)]',
-  hackernews: 'bg-[var(--color-source-hackernews-bg)] text-[var(--color-source-hackernews-text)]',
-};
-
 const WORK_TYPE_LABELS: Record<string, string> = {
   remote: 'Remote',
   hybrid: 'Hybrid',
