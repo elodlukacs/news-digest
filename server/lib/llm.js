@@ -2,6 +2,7 @@ const env = (name) => process.env[name];
 
 const AI_PROVIDERS = [
   { id: 'llama', name: 'Groq', url: 'https://api.groq.com/openai/v1/chat/completions', key: () => env('GROQ_API_KEY'), model: 'openai/gpt-oss-20b' },
+  { id: 'llama8b', name: 'Groq', url: 'https://api.groq.com/openai/v1/chat/completions', key: () => env('GROQ_API_KEY'), model: 'Llama-8b-8192' },
   { id: 'google', name: 'Google AI Studio', url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', key: () => env('GOOGLE_API_KEY'), model: 'gemini-2.0-flash' },
   { id: 'openrouter', name: 'OpenRouter', url: 'https://openrouter.ai/api/v1/chat/completions', key: () => env('OPENROUTER_API_KEY'), model: 'meta-llama/llama-3.3-70b-instruct:free' },
 ];
