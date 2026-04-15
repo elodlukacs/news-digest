@@ -4,15 +4,19 @@ const router = express.Router();
 const db = require('../db');
 
 function toRomaniaTime(isoString) {
-  const date = new Date(isoString);
+  let date;
+  if (isoString.includes(' ')) {
+    date = new Date(isoString.replace(' ', 'T') + 'Z');
+  } else if (isoString.includes('T')) {
+    date = new Date(isoString);
+  } else {
+    date = new Date(isoString + 'Z');
+  }
   date.setHours(date.getHours() + 3);
   return date.toISOString().slice(0, 19).replace('T', ' ');
 }
 
 router.get('/', (req, res) => {
-  const days = parseInt(req.query.days) || 3;
-  const since = new Date(Date.now() - days * 86400000).toISOString();
-
   const rows = db.prepare(`
     SELECT 
       id,
@@ -26,9 +30,9 @@ router.get('/', (req, res) => {
       latency_ms,
       created_at
     FROM llm_usage 
-    WHERE created_at >= ? 
     ORDER BY created_at DESC
-  `).all(since);
+    LIMIT 500
+  `).all();
 
   const formatted = rows.map(r => ({
     ...r,
