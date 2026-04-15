@@ -48,6 +48,7 @@ async function generateBriefForArticle(database, article) {
       providerId: 'openrouter',
       max_tokens: 240,
       temperature: 0.3,
+      db: database,
     });
     const brief = String(result?.content || '').trim();
     if (brief.length >= BRIEF_MIN_LENGTH) {
@@ -80,6 +81,7 @@ async function generateExpandedForArticle(database, article) {
       providerId: 'openrouter',
       max_tokens: 2000,
       temperature: 0.5,
+      db: database,
     });
     const expanded = String(result?.content || '').trim();
     if (expanded.length >= EXPANDED_MIN_LENGTH) {
@@ -104,7 +106,6 @@ async function generateMissingBriefs({
   includeElaborate = false,
   elaborateLimit = 5,
 } = {}) {
-  // Lazy require to avoid potential init-order issues.
   const database = require('../db');
 
   const scopeKey = `cat:${categoryId ?? 'all'}`;

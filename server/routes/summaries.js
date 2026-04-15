@@ -156,7 +156,7 @@ router.post('/:id/refresh', validateId, async (req, res) => {
     });
 
     const { provider: selectedProvider } = req.body || {};
-    const result = await callLLM(messages, { purpose: 'summary', categoryId: Number(req.params.id), providerId: selectedProvider || null });
+    const result = await callLLM(messages, { purpose: 'summary', categoryId: Number(req.params.id), providerId: selectedProvider || null, db });
     const generated_at = new Date().toISOString();
     const dateKey = generated_at.split('T')[0];
 
@@ -350,6 +350,7 @@ router.post('/:id/lens', validateId, async (req, res) => {
       categoryId: Number(req.params.id),
       providerId: provider || null,
       temperature: 0.7,
+      db,
     });
 
     res.json({

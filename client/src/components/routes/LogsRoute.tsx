@@ -53,6 +53,8 @@ function LogsRoute() {
     );
   }
 
+  const fmtNum = (n: number) => n.toLocaleString();
+
   return (
     <div className="min-h-screen bg-black p-4">
       <div className="text-green-500 font-mono text-sm mb-2">
@@ -69,10 +71,8 @@ function LogsRoute() {
           {log.created_at} |{' '}
           {(log.purpose + '').padEnd(20)} |{' '}
           {(log.provider + '').padEnd(12)} |{' '}
-          {(log.model + '').slice(0, 20).padEnd(20)} |{' '}
-          {String(log.prompt_tokens).padStart(5)} +{' '}
-          {String(log.completion_tokens).padStart(5)} ={' '}
-          {String(log.total_tokens).padStart(5)} |{' '}
+          {(log.model + '').slice(0, 18).padEnd(18)} |{' '}
+          {fmtNum(log.prompt_tokens).padStart(5)} + {fmtNum(log.completion_tokens).padStart(5)} = {fmtNum(log.total_tokens).padStart(6)} |{' '}
           {log.latency_ms}ms
         </pre>
       ))}
