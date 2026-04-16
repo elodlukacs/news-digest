@@ -62,7 +62,6 @@ const PROMPT_LOCATIONS: Record<string, string> = {
   'category-summary': 'News → Category Summary',
   'chat': 'News → Summary Chat',
   'morning-briefing': 'News → Morning Briefing',
-  'telegram-digest': 'News → Morning Briefing → Telegram',
 };
 
 export function PromptManager() {

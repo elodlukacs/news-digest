@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { RefreshCw, ExternalLink, Sparkles, MessageCircle, Trash2 } from 'lucide-react';
+import { RefreshCw, ExternalLink, Sparkles, MessageCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { API_BASE } from '../../config';
 import { Skeleton } from '../ui/skeleton';
@@ -8,9 +8,9 @@ import { ArticleChatPopup } from '../ArticleChatPopup';
 import type { ChatMessage } from '../../types';
 
 interface SurpriseArticle {
-  id: number;
+  article_id: number | null;
   title: string;
-  description: string;
+  brief: string;
   raw_content?: string;
   link: string;
   source: string;
@@ -36,10 +36,8 @@ export function BreakRoute() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatSending, setChatSending] = useState(false);
 
-  const [purging, setPurging] = useState(false);
-
   const abortRef = useRef<AbortController | null>(null);
-  const lastIdRef = useRef<number | null>(null);
+  const lastUrlRef = useRef<string | null>(null);
 
   const fetchArticle = useCallback(async () => {
     if (abortRef.current) abortRef.current.abort();
@@ -54,14 +52,16 @@ export function BreakRoute() {
     setChatOpen(false);
 
     try {
-      const excludeParam = lastIdRef.current ? `?exclude=${lastIdRef.current}` : '';
+      const excludeParam = lastUrlRef.current
+        ? `?exclude_url=${encodeURIComponent(lastUrlRef.current)}`
+        : '';
       const res = await fetch(`${SURPRISE_BASE}${excludeParam}`, { signal: controller.signal });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || 'No articles found');
       }
       const data = (await res.json()) as SurpriseArticle;
-      lastIdRef.current = data.id;
+      lastUrlRef.current = data.link || null;
       setArticle(data);
       if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (e: unknown) {
@@ -74,26 +74,8 @@ export function BreakRoute() {
 
   useEffect(() => {
     fetchArticle();
-    // Best-effort background pre-warm so subsequent "Next" clicks are instant.
-    fetch(`${SURPRISE_BASE}/prewarm`, { method: 'POST' }).catch(() => {});
     return () => { abortRef.current?.abort(); };
   }, [fetchArticle]);
-
-  const handlePurge = useCallback(async () => {
-    if (purging) return;
-    if (!window.confirm('Delete all seen articles and anything older than 3 days?')) return;
-    setPurging(true);
-    try {
-      const res = await fetch(`${SURPRISE_BASE}/purge`, { method: 'POST' });
-      if (!res.ok) throw new Error('Purge failed');
-      lastIdRef.current = null;
-      await fetchArticle();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Purge failed');
-    } finally {
-      setPurging(false);
-    }
-  }, [purging, fetchArticle]);
 
   const handleElaborate = useCallback(async () => {
     if (!article || elaborating) return;
@@ -104,10 +86,10 @@ export function BreakRoute() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          article_id: article.id,
+          article_id: article.article_id,
           title: article.title,
           source: article.source,
-          content: article.raw_content || article.description,
+          content: article.raw_content || article.brief,
         }),
       });
       if (!res.ok) {
@@ -137,9 +119,9 @@ export function BreakRoute() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          article_id: article.id,
+          article_id: article.article_id,
           title: article.title,
-          content: elaborated || article.raw_content || article.description,
+          content: elaborated || article.raw_content || article.brief,
           message: text,
         }),
       });
@@ -159,7 +141,7 @@ export function BreakRoute() {
     }
   }, [article, chatSending, elaborated]);
 
-  const bodyText = elaborated ?? article?.description ?? '';
+  const bodyText = elaborated ?? article?.brief ?? '';
 
   return (
     <div className="relative min-h-[calc(100vh-8rem)]">
@@ -168,16 +150,6 @@ export function BreakRoute() {
           <p className="text-[10px] md:text-[11px] font-[family-name:var(--font-widget)] uppercase tracking-[0.35em] text-ink-muted/70 font-semibold">
             Take a Break
           </p>
-          <button
-            onClick={handlePurge}
-            disabled={purging}
-            title="Delete seen articles and anything older than 3 days"
-            aria-label="Purge old articles"
-            className="inline-flex items-center gap-1.5 px-2 py-1 text-[10px] md:text-[11px] font-[family-name:var(--font-widget)] uppercase tracking-[0.2em] text-ink-muted/70 hover:text-accent transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Trash2 size={12} className={purging ? 'animate-pulse' : ''} />
-            {purging ? 'Purging…' : 'Purge'}
-          </button>
         </div>
 
         {loading && (
@@ -219,10 +191,12 @@ export function BreakRoute() {
               {article.title}
             </h1>
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] font-[family-name:var(--font-widget)] text-ink-muted mb-7 md:mb-8">
-              <span className="font-semibold text-ink-light">{article.source}</span>
+              {article.source && (
+                <span className="font-semibold text-ink-light">{article.source}</span>
+              )}
               {article.pub_date && (
                 <>
-                  <span aria-hidden="true">·</span>
+                  {article.source && <span aria-hidden="true">·</span>}
                   <span>{timeAgo(article.pub_date)}</span>
                 </>
               )}
@@ -241,7 +215,7 @@ export function BreakRoute() {
             </div>
 
             {/* Elaborate CTA — inline, hidden after success */}
-            {!elaborated && !elaborating && (
+            {!elaborated && !elaborating && article.raw_content && (
               <button
                 onClick={handleElaborate}
                 className="mt-8 md:mt-10 inline-flex items-center gap-2 px-5 py-3 text-[13px] md:text-[14px] font-[family-name:var(--font-widget)] font-semibold border border-masthead/40 text-masthead hover:bg-masthead/5 transition-colors cursor-pointer"
@@ -282,29 +256,33 @@ export function BreakRoute() {
           </button>
           {article && !loading && (
             <>
-              <button
-                onClick={() => setChatOpen(true)}
-                aria-label="Chat about this article"
-                className="shrink-0 flex items-center justify-center h-14 w-14 border border-rule text-ink-muted hover:text-ink hover:border-ink-muted transition-colors cursor-pointer bg-paper"
-              >
-                <MessageCircle size={16} />
-              </button>
-              <a
-                href={article.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Read full article"
-                className="shrink-0 flex items-center justify-center h-14 w-14 md:w-auto md:px-4 md:gap-2 border border-rule text-ink-muted hover:text-ink hover:border-ink-muted transition-colors cursor-pointer bg-paper"
-              >
-                <ExternalLink size={16} />
-                <span className="hidden md:inline text-[13px] font-[family-name:var(--font-widget)] font-medium">Read full</span>
-              </a>
+              {article.article_id != null && (
+                <button
+                  onClick={() => setChatOpen(true)}
+                  aria-label="Chat about this article"
+                  className="shrink-0 flex items-center justify-center h-14 w-14 border border-rule text-ink-muted hover:text-ink hover:border-ink-muted transition-colors cursor-pointer bg-paper"
+                >
+                  <MessageCircle size={16} />
+                </button>
+              )}
+              {article.link && (
+                <a
+                  href={article.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Read full article"
+                  className="shrink-0 flex items-center justify-center h-14 w-14 md:w-auto md:px-4 md:gap-2 border border-rule text-ink-muted hover:text-ink hover:border-ink-muted transition-colors cursor-pointer bg-paper"
+                >
+                  <ExternalLink size={16} />
+                  <span className="hidden md:inline text-[13px] font-[family-name:var(--font-widget)] font-medium">Read full</span>
+                </a>
+              )}
             </>
           )}
         </div>
       </div>
 
-      {chatOpen && article && (
+      {chatOpen && article && article.article_id != null && (
         <ArticleChatPopup
           headline={article.title}
           sourceName={article.source}

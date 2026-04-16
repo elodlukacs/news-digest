@@ -5,7 +5,6 @@ const { callLLM: rawCallLLM } = require('../lib/llm');
 const validateId = require('../middleware/validateId');
 const { extractKeywords } = require('../lib/bias-radar/topicCluster');
 const { buildMessages } = require('../lib/promptManager');
-const { generateMissingBriefs } = require('../lib/surpriseWorker');
 
 const router = express.Router();
 
@@ -264,17 +263,6 @@ router.post('/:id/refresh', validateId, async (req, res) => {
       provider: result.provider,
       sentiment_data: sentimentData,
       tags_data: tagsData,
-    });
-
-    // Fire-and-forget: pre-generate surprise briefs (and a few expansions)
-    // for newly refreshed articles so the Break feed is instant.
-    setImmediate(() => {
-      generateMissingBriefs({
-        categoryId: Number(req.params.id),
-        limit: 15,
-        includeElaborate: true,
-        elaborateLimit: 3,
-      }).catch((err) => console.warn('[surprise] post-refresh sweep failed:', err.message));
     });
   } catch (err) {
     console.error('Summary error:', err);

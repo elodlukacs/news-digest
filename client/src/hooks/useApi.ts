@@ -412,7 +412,7 @@ export function useBriefing(providerId: string = 'openai/gpt-oss-20b') {
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  }, []);
+  }, [providerId]);
 
   useEffect(() => {
     loadLatest();

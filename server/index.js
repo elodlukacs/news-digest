@@ -23,7 +23,6 @@ app.use('/api/models', require('./routes/models'));
 app.use('/api/widgets', require('./routes/widgets'));
 app.use('/api/homepage', require('./routes/homepage'));
 app.use('/api/homepage/surprise', require('./routes/surprise'));
-app.use('/api/telegram', require('./routes/telegram'));
 app.use('/api/jobs', require('./routes/jobs'));
 app.use('/api/bias-radar/decode', require('./routes/bias-radar/decode'));
 app.use('/api/bias-radar/related', require('./routes/bias-radar/related'));
@@ -53,8 +52,4 @@ app.use('/api/logs', require('./routes/logs'));
 
 app.listen(PORT, () => {
   console.log(`News Reader API running on http://localhost:${PORT}`);
-  // Start background sweep that keeps surprise briefs pre-generated so the
-  // Break feature never blocks on an LLM call at request time.
-  const { startPeriodicSweep } = require('./lib/surpriseWorker');
-  startPeriodicSweep();
 });

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { FocusTrap } from 'focus-trap-react';
 import { Search } from 'lucide-react';
@@ -48,9 +48,14 @@ export default function BiasRadarPanel({
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [compareKey, setCompareKey] = useState(0);
   const [dragY, setDragY] = useState<number | null>(null);
+  const [closing, setClosing] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<HTMLDivElement>(null);
   const touchState = useRef({ active: false, startY: 0 });
+
+  const requestClose = useCallback(() => {
+    setClosing(true);
+  }, []);
 
   useEffect(() => {
     const panel = panelRef.current;
@@ -83,7 +88,7 @@ export default function BiasRadarPanel({
       touchState.current.active = false;
       setDragY((prev) => {
         if (prev !== null && prev > DISMISS_THRESHOLD) {
-          onClose();
+          requestClose();
         }
         return null;
       });
@@ -97,15 +102,15 @@ export default function BiasRadarPanel({
       handle.removeEventListener('touchmove', onTouchMove);
       handle.removeEventListener('touchend', onTouchEnd);
     };
-  }, [onClose]);
+  }, [requestClose]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') requestClose();
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  }, [requestClose]);
 
   useEffect(() => {
     const scrollY = window.scrollY;
@@ -124,6 +129,13 @@ export default function BiasRadarPanel({
     };
   }, []);
 
+  // Safety net — if animationend never fires (tab hidden, reduced motion), close anyway.
+  useEffect(() => {
+    if (!closing) return;
+    const t = setTimeout(onClose, 350);
+    return () => clearTimeout(t);
+  }, [closing, onClose]);
+
   const panelTransform = dragY !== null ? `translateY(${dragY}px)` : undefined;
   const panelOpacity = dragY !== null ? Math.max(0, 1 - dragY / 400) : undefined;
   const backdropOpacity = dragY !== null ? Math.max(0, 0.3 - dragY / 1000) : undefined;
@@ -131,8 +143,8 @@ export default function BiasRadarPanel({
   return createPortal(
     <>
       <div
-        className="fixed inset-0 bg-black/30 z-40"
-        onClick={onClose}
+        className={`fixed inset-0 bg-black/30 z-40 ${closing ? 'backdrop-fade-out' : 'backdrop-fade-in'}`}
+        onClick={requestClose}
         aria-hidden="true"
         style={backdropOpacity !== undefined ? { opacity: backdropOpacity } : undefined}
       />
@@ -148,7 +160,10 @@ export default function BiasRadarPanel({
           role="dialog"
           aria-modal="true"
           aria-label="Bias Radar"
-          className={`fixed z-50 bg-paper shadow-2xl flex flex-col border-rule panel-slide-in
+          onAnimationEnd={(e) => {
+            if (closing && e.target === e.currentTarget) onClose();
+          }}
+          className={`fixed z-50 bg-paper shadow-2xl flex flex-col border-rule ${closing ? 'panel-slide-out' : 'panel-slide-in'}
             inset-0 rounded-t-2xl border-t
             md:inset-y-0 md:right-0 md:left-auto md:rounded-none
             md:w-full md:max-w-[560px] md:border-l md:border-t-0

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { RefreshCw, AlertCircle, Clock, Zap, Settings, Trash2, ExternalLink, MoreVertical, Search, MessageCircle, X } from 'lucide-react';
+import { RefreshCw, AlertCircle, Clock, Zap, Settings, Trash2, ExternalLink, MoreVertical, MessageCircle, X, Brain, FlaskConical } from 'lucide-react';
 // Sentiment ribbon — positioned absolute top-right, no layout impact
 const RIBBON_COLORS: Record<string, string> = {
   positive: 'bg-[var(--color-positive-bg)] text-[var(--color-positive-text)]',
@@ -23,6 +23,7 @@ function SentimentRibbon({ sentiment }: { sentiment: 'positive' | 'negative' | '
   );
 }
 import { ArticleChatPopup } from './ArticleChatPopup';
+import { ChallengeQuiz } from './ChallengeQuiz';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Drawer, DrawerContent } from './ui/drawer';
 import { Button } from './ui/button';
@@ -221,6 +222,7 @@ export function SummaryView({
   const [actionsOpen, setActionsOpen] = useState(false);
   const [radarSection, setRadarSection] = useState<{ title: string; content: string; url: string; originalContent?: string } | null>(null);
   const [chatSection, setChatSection] = useState<{ title: string; content: string; originalContent?: string } | null>(null);
+  const [challengeIdx, setChallengeIdx] = useState<number | null>(null);
 
   const chatArticleContent = useMemo(() => {
     if (!chatSection) return null;
@@ -327,82 +329,80 @@ export function SummaryView({
       {/* Lens loading / result */}
       {(lensLoading || lensContent) && (
         <div className="mt-6 md:mt-8">
-          {/* Mobile: full-bleed with masthead tint */}
-          {/* Desktop: elevated card with accent border */}
-          <article className="-mx-4 md:mx-0 border-y border-masthead/20 bg-masthead/[0.04] md:border md:border-masthead/25 md:rounded-xl md:overflow-hidden md:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.12)]">
-            <div className="px-4 py-5 md:px-6 md:py-6 relative">
-              {/* Dismiss button */}
-              {!lensLoading && lensContent && (
-                <button
-                  onClick={onDismissLens}
-                  className="absolute top-4 right-4 p-1.5 rounded-full text-masthead/50 hover:text-masthead hover:bg-masthead/10 transition-colors cursor-pointer"
-                  aria-label="Dismiss lens result"
-                >
-                  <X size={15} />
-                </button>
-              )}
+          <article className="relative -mx-4 md:mx-0 overflow-hidden">
+            {/* Accent left bar */}
+            <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-masthead" />
 
-              {/* Header */}
-              <div className="flex items-start gap-3 mb-4 pr-8">
-                {(selectedLens || lensName) && (
-                  <span className="text-3xl leading-none shrink-0 mt-0.5">
-                    {selectedLens?.icon ?? '🔭'}
-                  </span>
+            {/* Subtle background */}
+            <div className="ml-0 md:ml-0 border-y md:border border-masthead/20 bg-gradient-to-br from-masthead/[0.06] to-masthead/[0.02]">
+              <div className="px-5 py-5 md:px-6 md:py-6 relative">
+
+                {/* Dismiss */}
+                {!lensLoading && lensContent && (
+                  <button
+                    onClick={onDismissLens}
+                    className="absolute top-4 right-4 p-1 text-masthead/40 hover:text-masthead transition-colors cursor-pointer"
+                    aria-label="Dismiss lens result"
+                  >
+                    <X size={14} />
+                  </button>
                 )}
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
+
+                {/* Header */}
+                <div className="flex items-center gap-2.5 mb-4 pr-6">
+                  {(selectedLens || lensName) && (
+                    <span className="text-2xl leading-none shrink-0">{selectedLens?.icon ?? '🔭'}</span>
+                  )}
+                  <div className="flex items-baseline gap-2 flex-wrap">
                     <h3 className="font-serif text-xl font-bold text-masthead leading-tight">
                       {lensLoading ? (selectedLens?.name || 'Lens') : (lensName || 'Lens')}
                     </h3>
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] uppercase tracking-widest font-bold bg-masthead/10 text-masthead leading-none">
-                      Lens
+                    <span className="text-[9px] uppercase tracking-[0.22em] font-bold text-masthead/50 font-[family-name:var(--font-widget)]">
+                      Lens View
                     </span>
                   </div>
-                  <p className="text-[11px] text-ink-muted mt-0.5 font-[family-name:var(--font-widget)]">
-                    A different perspective on today's stories
-                  </p>
                 </div>
-              </div>
 
-              {/* Content */}
-              {lensLoading ? (
-                <div className="flex items-center gap-3 py-4">
-                  <div className="flex gap-1">
-                    {[0, 1, 2].map((i) => (
-                      <div
-                        key={i}
-                        className="w-1.5 h-1.5 rounded-full bg-masthead/40 animate-pulse"
-                        style={{ animationDelay: `${i * 200}ms` }}
-                      />
-                    ))}
+                {/* Content */}
+                {lensLoading ? (
+                  <div className="flex items-center gap-3 py-3">
+                    <div className="flex gap-[5px]">
+                      {[0, 1, 2].map((i) => (
+                        <div
+                          key={i}
+                          className="w-[5px] h-[5px] rounded-full bg-masthead animate-[pulse_1s_ease-in-out_infinite]"
+                          style={{ animationDelay: `${i * 180}ms` }}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-[13px] font-[family-name:var(--font-body)] text-ink-light italic">Thinking…</span>
                   </div>
-                  <span className="text-[13px] font-[family-name:var(--font-body)] text-ink-light italic">Thinking...</span>
-                </div>
-              ) : lensContent ? (
-                <div className="border-t border-masthead/15 pt-4">
-                  <ReactMarkdown
-                    components={{
-                      h1: ({ children }) => <h1 className="font-serif text-2xl font-bold text-ink mt-6 mb-3 leading-tight">{children}</h1>,
-                      h2: ({ children }) => <h2 className="font-serif text-xl font-bold text-ink mt-5 mb-2 leading-snug">{children}</h2>,
-                      h3: ({ children }) => <h3 className="font-serif text-lg font-semibold text-ink mt-4 mb-2 leading-snug">{children}</h3>,
-                      p: ({ children }) => <p className="text-[16px] leading-[1.8] text-ink font-[family-name:var(--font-body)] break-words [overflow-wrap:anywhere] mb-4">{children}</p>,
-                      ul: ({ children }) => <ul className="space-y-3 my-4 list-disc pl-5">{children}</ul>,
-                      ol: ({ children }) => <ol className="space-y-3 my-4 list-decimal pl-5">{children}</ol>,
-                      li: ({ children }) => <li className="text-[16px] leading-[1.8] text-ink font-[family-name:var(--font-body)]">{children}</li>,
-                      strong: ({ children }) => <strong className="font-bold text-ink">{children}</strong>,
-                      a: ({ href, children }) => (
-                        <a href={href} target="_blank" rel="noopener noreferrer" className="text-masthead underline decoration-masthead/30 underline-offset-2 hover:decoration-masthead transition-colors cursor-pointer">
-                          {children}
-                        </a>
-                      ),
-                      hr: () => <div className="my-4 h-px bg-masthead/20" />,
-                      blockquote: ({ children }) => <blockquote className="border-l-2 border-masthead/40 pl-4 italic text-ink-light my-4">{children}</blockquote>,
-                    }}
-                  >
-                    {lensContent}
-                  </ReactMarkdown>
-                </div>
-              ) : null}
+                ) : lensContent ? (
+                  <div className="border-t border-masthead/15 pt-4">
+                    <ReactMarkdown
+                      components={{
+                        h1: ({ children }) => <h1 className="font-serif text-2xl font-bold text-ink mt-6 mb-3 leading-tight">{children}</h1>,
+                        h2: ({ children }) => <h2 className="font-serif text-xl font-bold text-ink mt-5 mb-2 leading-snug">{children}</h2>,
+                        h3: ({ children }) => <h3 className="font-serif text-lg font-semibold text-ink mt-4 mb-2 leading-snug">{children}</h3>,
+                        p: ({ children }) => <p className="text-[16px] leading-[1.8] text-ink font-[family-name:var(--font-body)] break-words [overflow-wrap:anywhere] mb-4">{children}</p>,
+                        ul: ({ children }) => <ul className="space-y-3 my-4 list-disc pl-5">{children}</ul>,
+                        ol: ({ children }) => <ol className="space-y-3 my-4 list-decimal pl-5">{children}</ol>,
+                        li: ({ children }) => <li className="text-[16px] leading-[1.8] text-ink font-[family-name:var(--font-body)]">{children}</li>,
+                        strong: ({ children }) => <strong className="font-bold text-ink">{children}</strong>,
+                        a: ({ href, children }) => (
+                          <a href={href} target="_blank" rel="noopener noreferrer" className="text-masthead underline decoration-masthead/30 underline-offset-2 hover:decoration-masthead transition-colors cursor-pointer">
+                            {children}
+                          </a>
+                        ),
+                        hr: () => <div className="my-4 h-px bg-masthead/20" />,
+                        blockquote: ({ children }) => <blockquote className="border-l-2 border-masthead/40 pl-4 italic text-ink-light my-4">{children}</blockquote>,
+                      }}
+                    >
+                      {lensContent}
+                    </ReactMarkdown>
+                  </div>
+                ) : null}
+              </div>
             </div>
           </article>
         </div>
@@ -483,18 +483,32 @@ export function SummaryView({
                     <Button variant="outline" size="sm" className="gap-1.5 text-xs" asChild>
                       <a href={section.url} target="_blank" rel="noopener noreferrer">
                         <ExternalLink size={12} />
-                        Read full article
+                        Read
                       </a>
                     </Button>
                   )}
                   <Button
                     variant="outline"
                     size="sm"
+                    className={`gap-1.5 text-xs transition-colors ${
+                      challengeIdx === idx
+                        ? 'border-masthead/60 bg-masthead/10 text-masthead hover:bg-masthead/15'
+                        : 'hover:border-masthead/50 hover:text-masthead'
+                    }`}
+                    onClick={() => setChallengeIdx(challengeIdx === idx ? null : idx)}
+                    aria-expanded={challengeIdx === idx}
+                  >
+                    <Brain size={14} strokeWidth={1.75} />
+                    {challengeIdx === idx ? 'Close challenge' : 'Challenge'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="gap-1.5 text-xs"
                     onClick={() => setRadarSection({ title: section.title, content: section.content, url: section.url, originalContent: section.originalContent })}
                   >
-                    <Search size={14} strokeWidth={1.5} />
-                    Bias Radar
+                    <FlaskConical size={14} strokeWidth={1.5} />
+                    Dissect
                   </Button>
                   {summary.id && (
                     <Button
@@ -508,6 +522,15 @@ export function SummaryView({
                     </Button>
                   )}
                 </CardFooter>
+                {challengeIdx === idx && (
+                  <div className="px-0 md:px-5 pb-4 md:pb-5">
+                    <ChallengeQuiz
+                      headline={section.title}
+                      content={section.originalContent || section.content}
+                      onClose={() => setChallengeIdx(null)}
+                    />
+                  </div>
+                )}
               </Card>
             </article>
           ))}

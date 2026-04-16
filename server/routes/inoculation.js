@@ -142,17 +142,22 @@ router.post('/answer', async (req, res) => {
 
     let sessionData;
     try { sessionData = JSON.parse(session.choices || '{}'); } catch { sessionData = {}; }
-    const targetIndex = typeof sessionData === 'object' && !Array.isArray(sessionData) ? sessionData.targetIndex : sessionData;
+    // Back-compat: legacy rows stored either { targetIndex } or a bare array/number.
+    const targetIndex = sessionData && typeof sessionData === 'object' && !Array.isArray(sessionData)
+      ? sessionData.targetIndex
+      : sessionData;
+    const history = sessionData && typeof sessionData === 'object' && Array.isArray(sessionData.history)
+      ? [...sessionData.history]
+      : (Array.isArray(sessionData) ? [...sessionData] : []);
 
     const correct = selectedIndex === targetIndex;
     const points = correct ? 10 : 0;
     const newScore = session.score + points;
 
-    const newChoices = typeof sessionData === 'object' && Array.isArray(sessionData) ? [...sessionData] : [];
-    newChoices.push({ selectedIndex, correct, points });
+    history.push({ selectedIndex, correct, points });
 
     db.prepare('UPDATE inoculation_sessions SET score = ?, choices = ? WHERE id = ?')
-      .run(newScore, JSON.stringify(newChoices), sessionId);
+      .run(newScore, JSON.stringify({ targetIndex, history }), sessionId);
 
     if (correct) {
       db.prepare('UPDATE cognitive_users SET antibody_count = antibody_count + ?, last_inoculation_date = datetime(\'now\') WHERE id = ?')

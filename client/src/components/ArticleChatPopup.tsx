@@ -26,6 +26,7 @@ export function ArticleChatPopup({
 }: ArticleChatPopupProps) {
   const [input, setInput] = useState('');
   const [dragY, setDragY] = useState<number | null>(null);
+  const [closing, setClosing] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -33,6 +34,10 @@ export function ArticleChatPopup({
   const touchState = useRef({ active: false, startY: 0 });
   const userScrolledRef = useRef(false);
   const pendingTextRef = useRef<string | null>(null);
+
+  const requestClose = useCallback(() => {
+    setClosing(true);
+  }, []);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -93,7 +98,7 @@ export function ArticleChatPopup({
     function onTouchEnd() {
       touchState.current.active = false;
       setDragY((prev) => {
-        if (prev !== null && prev > DISMISS_THRESHOLD) onClose();
+        if (prev !== null && prev > DISMISS_THRESHOLD) requestClose();
         return null;
       });
     }
@@ -106,16 +111,23 @@ export function ArticleChatPopup({
       handle.removeEventListener('touchmove', onTouchMove);
       handle.removeEventListener('touchend', onTouchEnd);
     };
-  }, [onClose]);
+  }, [requestClose]);
 
   // Escape to close
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') requestClose();
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  }, [requestClose]);
+
+  // Safety net — if animationend never fires, close anyway.
+  useEffect(() => {
+    if (!closing) return;
+    const t = setTimeout(onClose, 350);
+    return () => clearTimeout(t);
+  }, [closing, onClose]);
 
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
@@ -138,8 +150,8 @@ export function ArticleChatPopup({
   return createPortal(
     <>
       <div
-        className="fixed inset-0 bg-black/30 z-40"
-        onClick={onClose}
+        className={`fixed inset-0 bg-black/30 z-40 ${closing ? 'backdrop-fade-out' : 'backdrop-fade-in'}`}
+        onClick={requestClose}
         aria-hidden="true"
         style={backdropOpacity !== undefined ? { opacity: backdropOpacity } : undefined}
       />
@@ -150,7 +162,10 @@ export function ArticleChatPopup({
           role="dialog"
           aria-modal="true"
           aria-label="Chat about article"
-          className={`fixed z-50 bg-paper shadow-2xl flex flex-col border-rule panel-slide-in
+          onAnimationEnd={(e) => {
+            if (closing && e.target === e.currentTarget) onClose();
+          }}
+          className={`fixed z-50 bg-paper shadow-2xl flex flex-col border-rule ${closing ? 'panel-slide-out' : 'panel-slide-in'}
             inset-0 rounded-t-2xl border-t
             md:inset-y-0 md:right-0 md:left-auto md:rounded-none
             md:w-full md:max-w-[480px] md:border-l md:border-t-0
@@ -173,7 +188,7 @@ export function ArticleChatPopup({
               <span className="font-semibold text-ink">Ask about this story</span>
             </div>
             <button
-              onClick={onClose}
+              onClick={requestClose}
               className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-paper-dark transition-colors cursor-pointer"
               aria-label="Close chat"
             >

@@ -1,5 +1,5 @@
 import { useParams, useOutletContext, useNavigate } from 'react-router-dom';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { SummaryView } from '../SummaryView';
 import { LeftSidebar } from '../LeftSidebar';
 import { useSummary, useSummaryHistory, useLens } from '../../hooks/useApi';
@@ -25,6 +25,12 @@ export function CategoryRoute() {
     await refresh();
     refreshHistory();
   }, [refresh, refreshHistory]);
+
+  useEffect(() => {
+    lens.clear();
+    setSelectedLens(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryId]);
 
   const handleLensChange = useCallback((l: PromptLens | null) => {
     setSelectedLens(l);

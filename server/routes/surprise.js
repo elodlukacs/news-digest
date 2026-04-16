@@ -1,90 +1,164 @@
-// Routes for the "Break / Surprise" homepage feature.
+// Routes for the "Take a Break" homepage feature.
 //
-// GET /              → pure DB query. Returns a recent article with its
-//                      pre-generated brief (falling back to cleaned raw text
-//                      if the worker hasn't covered it yet). No LLM call.
-// POST /prewarm      → delegates to the background worker.
-// POST /elaborate    → returns cached expanded summary, or generates one
-//                      on-demand if not pre-computed.
-// POST /chat         → freeform chat about the article (LLM on request).
+// GET /              → pure DB read. Picks a random article from a recent
+//                      summary_history row (already LLM-summarised). No LLM
+//                      call on the request path.
+// POST /elaborate    → on-demand LLM call. Generates a longer, more informative
+//                      briefing from the original article body. Cached in
+//                      articles.surprise_expanded when article_id is known.
+// POST /chat         → freeform chat about the article (LLM on user action).
 // GET  /chat/:id     → prior chat history for an article.
 
 const express = require('express');
 const db = require('../db');
 const { callLLM } = require('../lib/llm');
 const { buildMessages } = require('../lib/promptManager');
-const { cleanArticleText } = require('../lib/cleanText');
-const { generateMissingBriefs, purgeOldArticles } = require('../lib/surpriseWorker');
 
 const router = express.Router();
 
-const BRIEF_MIN_LENGTH = 60;
 const EXPANDED_MIN_LENGTH = 200;
-const CLEAN_MIN_LENGTH = 180;
+const SUMMARY_LOOKBACK_DAYS = 7;
+const RANDOM_POOL_SIZE = 40; // sample N recent summary rows, pick one
 
 function articleKey(id) {
   return `surprise:${id}`;
 }
 
-// Pick a recent article. Prefer ones with a pre-generated brief so the user
-// gets the curated summary; fall back to any recent substantial article
-// (we'll serve cleaned raw text as the brief in that case).
-function pickArticle({ excludeId } = {}) {
-  const excludeClause = excludeId ? 'AND a.id != ?' : '';
-  const params = excludeId ? [excludeId] : [];
+// Parse the LLM-generated category summary markdown into individual article
+// sections. Mirrors the client-side parseSummaryMarkdown in SummaryView.tsx.
+function parseSummaryMarkdown(markdown) {
+  if (!markdown || typeof markdown !== 'string') return [];
+  const sections = [];
+  const parts = markdown.split(/\n---\n/);
 
-  // Primary: recent + has a brief already + not yet seen.
-  const primary = db.prepare(`
-    SELECT a.*, c.name as category_name
-    FROM articles a
-    LEFT JOIN categories c ON a.category_id = c.id
-    WHERE a.pub_date > datetime('now', '-72 hours')
-      AND a.surprise_seen_at IS NULL
-      AND a.surprise_brief IS NOT NULL
-      AND LENGTH(a.surprise_brief) >= ?
-      ${excludeClause}
-    ORDER BY RANDOM()
-    LIMIT 1
-  `).all(BRIEF_MIN_LENGTH, ...params);
+  for (const part of parts) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
 
-  if (primary.length) return primary[0];
+    // Greedy title match so titles containing nested brackets (e.g.
+    // "Foo [Reuters World]") are captured correctly: `.+` grabs up to the
+    // last `](...)` on the line.
+    const firstLine = trimmed.split('\n')[0];
+    const linkMatch = firstLine.match(/^##\s+\[(.+)\]\(([^)]+)\)\s*$/);
+    const title = linkMatch
+      ? linkMatch[1]
+      : firstLine.replace(/^#+\s*/, '').replace(/\*\*/g, '');
+    const url = linkMatch ? linkMatch[2] : '';
 
-  // Fallback: any recent article with enough raw content; we'll clean on the fly.
-  const fallback = db.prepare(`
-    SELECT a.*, c.name as category_name
-    FROM articles a
-    LEFT JOIN categories c ON a.category_id = c.id
-    WHERE a.pub_date > datetime('now', '-72 hours')
-      AND a.surprise_seen_at IS NULL
-      AND LENGTH(COALESCE(a.body_text, a.description, '')) > 400
-      ${excludeClause}
-    ORDER BY RANDOM()
-    LIMIT 10
-  `).all(...params);
+    let content = trimmed
+      .replace(/^##\s+\[.+\]\([^)]+\)\s*\n?/, '')
+      .replace(/^#+\s*/, '')
+      .trim();
 
-  for (const row of fallback) {
-    const cleaned = cleanArticleText(row.body_text || row.description || '');
-    if (cleaned.length >= CLEAN_MIN_LENGTH) {
-      return { ...row, _cleaned: cleaned };
+    content = content
+      .replace(/出自\s*[^。]+。/g, '')
+      .replace(/Source:\s*[^\n]+/gi, '')
+      .replace(/\n+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (title && content) {
+      sections.push({ title, url, content });
     }
   }
 
-  // Last-resort: older window.
-  const old = db.prepare(`
-    SELECT a.*, c.name as category_name
-    FROM articles a
-    LEFT JOIN categories c ON a.category_id = c.id
-    WHERE a.pub_date > datetime('now', '-7 days')
-      AND a.surprise_seen_at IS NULL
-      ${excludeClause}
-    ORDER BY RANDOM()
-    LIMIT 10
-  `).all(...params);
+  return sections;
+}
 
-  for (const row of old) {
-    const cleaned = cleanArticleText(row.body_text || row.description || '');
-    if (cleaned.length >= CLEAN_MIN_LENGTH) {
-      return { ...row, _cleaned: cleaned };
+// Pick a random article from a recent summary_history row.
+// Strategy: pull the latest N summary rows across all categories from the
+// last SUMMARY_LOOKBACK_DAYS, shuffle, walk through them until we find one
+// with at least one parseable section that isn't excluded.
+function pickArticle({ excludeUrl } = {}) {
+  const rows = db.prepare(`
+    SELECT sh.id, sh.category_id, sh.summary, sh.sentiment_data, sh.generated_at,
+           c.name as category_name
+    FROM summary_history sh
+    LEFT JOIN categories c ON c.id = sh.category_id
+    WHERE sh.generated_at > datetime('now', ?)
+      AND sh.category_id > 0
+      AND sh.summary IS NOT NULL
+    ORDER BY sh.generated_at DESC
+    LIMIT ?
+  `).all(`-${SUMMARY_LOOKBACK_DAYS} days`, RANDOM_POOL_SIZE);
+
+  if (rows.length === 0) return null;
+
+  // Fisher-Yates shuffle so we visit summary rows in random order.
+  for (let i = rows.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [rows[i], rows[j]] = [rows[j], rows[i]];
+  }
+
+  const findArticleByLink = db.prepare(
+    'SELECT id, link, feed_name, pub_date, body_text, description, surprise_expanded FROM articles WHERE link = ? LIMIT 1'
+  );
+  const findArticleByTitle = db.prepare(
+    'SELECT id, link, feed_name, pub_date, body_text, description, surprise_expanded FROM articles WHERE category_id = ? AND title = ? LIMIT 1'
+  );
+
+  for (const row of rows) {
+    const sections = parseSummaryMarkdown(row.summary);
+    if (sections.length === 0) continue;
+
+    // Build a lookup of original_content by title from sentiment_data so we
+    // can fall back when the article row is gone.
+    let originalByTitle = new Map();
+    if (row.sentiment_data) {
+      try {
+        const parsed = JSON.parse(row.sentiment_data);
+        if (Array.isArray(parsed)) {
+          for (const entry of parsed) {
+            if (entry && entry.title && entry.original_content) {
+              originalByTitle.set(String(entry.title).toLowerCase(), entry.original_content);
+            }
+          }
+        }
+      } catch {
+        // ignore malformed sentiment_data
+      }
+    }
+
+    // Random order over sections too.
+    const order = sections.map((_, i) => i);
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+
+    for (const idx of order) {
+      const section = sections[idx];
+      if (excludeUrl && section.url && section.url === excludeUrl) continue;
+
+      // Try to find the original article row for source/pub_date/body_text.
+      let articleRow = section.url ? findArticleByLink.get(section.url) : null;
+      if (!articleRow) {
+        articleRow = findArticleByTitle.get(row.category_id, section.title);
+      }
+
+      const originalContent =
+        (articleRow && (articleRow.body_text || articleRow.description)) ||
+        originalByTitle.get(section.title.toLowerCase()) ||
+        '';
+
+      return {
+        // Stable identifier: prefer the articles row id; otherwise derive from
+        // summary_history row + section index so the client can pass it back
+        // as exclude on "Next".
+        article_id: articleRow ? articleRow.id : null,
+        title: section.title,
+        brief: section.content,
+        link: section.url || (articleRow ? articleRow.link : ''),
+        source: articleRow ? articleRow.feed_name : '',
+        pub_date: articleRow ? articleRow.pub_date : row.generated_at,
+        category_name: row.category_name || '',
+        raw_content: originalContent,
+        has_expanded: !!(
+          articleRow &&
+          articleRow.surprise_expanded &&
+          String(articleRow.surprise_expanded).trim().length >= EXPANDED_MIN_LENGTH
+        ),
+      };
     }
   }
 
@@ -92,86 +166,41 @@ function pickArticle({ excludeId } = {}) {
 }
 
 router.get('/', (req, res) => {
-  const rawExclude = Number(req.query.exclude);
-  const excludeId = Number.isFinite(rawExclude) && rawExclude > 0 ? rawExclude : undefined;
+  const excludeUrl =
+    typeof req.query.exclude_url === 'string' && req.query.exclude_url.trim()
+      ? req.query.exclude_url.trim()
+      : undefined;
 
-  const article = pickArticle({ excludeId });
+  const article = pickArticle({ excludeUrl });
   if (!article) {
-    return res.status(404).json({ error: 'No articles found. Generate some summaries first.' });
+    return res
+      .status(404)
+      .json({ error: 'No summarised articles found. Refresh a category to populate the pool.' });
   }
 
-  const cleaned = article._cleaned || cleanArticleText(article.body_text || article.description || '');
-  const brief = (article.surprise_brief && article.surprise_brief.trim().length >= BRIEF_MIN_LENGTH)
-    ? article.surprise_brief.trim()
-    : cleaned;
-
-  // eslint-disable-next-line no-unused-vars
-  const { _cleaned, body_text, surprise_brief, surprise_expanded, ...rest } = article;
-  res.json({
-    ...rest,
-    description: brief,
-    raw_content: cleaned,
-    has_expanded: !!(surprise_expanded && String(surprise_expanded).trim().length >= EXPANDED_MIN_LENGTH),
-  });
-
-  // Mark this article as seen so it won't come back and won't be re-briefed.
-  try {
-    db.prepare(`
-      UPDATE articles
-      SET surprise_seen_at = datetime('now')
-      WHERE id = ? AND surprise_seen_at IS NULL
-    `).run(article.id);
-  } catch (err) {
-    console.warn('[surprise] failed to stamp seen:', err.message);
-  }
-
-  // Nudge the worker in the background so the pool stays warm.
-  setImmediate(() => {
-    generateMissingBriefs({ limit: 8, includeElaborate: true, elaborateLimit: 2 })
-      .catch((err) => console.warn('[surprise] nudge sweep failed:', err.message));
-  });
-});
-
-// Manual purge — deletes EVERY article that is (or was) a surprise-brief
-// candidate: anything with a brief, anything marked seen, and anything older
-// than 3 days. After this runs the surprise pool is empty until the next
-// RSS fetch + sweep repopulates it from fresh articles.
-router.post('/purge', (req, res) => {
-  try {
-    const briefDeleted = db
-      .prepare(`
-        DELETE FROM articles
-        WHERE surprise_brief IS NOT NULL
-           OR surprise_seen_at IS NOT NULL
-      `)
-      .run().changes;
-    const oldDeleted = purgeOldArticles({ olderThanDays: 3 });
-    console.log(`[surprise] manual purge: ${briefDeleted} brief/seen, ${oldDeleted} old`);
-    res.json({ ok: true, briefDeleted, oldDeleted });
-  } catch (err) {
-    console.error('[surprise] manual purge failed:', err);
-    res.status(500).json({ error: err.message || 'Purge failed' });
-  }
-});
-
-// Explicit prewarm endpoint — the client hits this on Break route mount.
-router.post('/prewarm', (req, res) => {
-  setImmediate(() => {
-    generateMissingBriefs({ limit: 10, includeElaborate: true, elaborateLimit: 3 })
-      .catch((err) => console.warn('[surprise] prewarm failed:', err.message));
-  });
-  res.json({ ok: true });
+  res.json(article);
 });
 
 router.post('/elaborate', async (req, res) => {
-  const { article_id, title, content, source, provider: selectedProvider } = req.body || {};
-  if (!title || !content) return res.status(400).json({ error: 'title and content are required' });
+  const { article_id, title, content, source } = req.body || {};
+  if (!title || !content) {
+    return res.status(400).json({ error: 'title and content are required' });
+  }
 
   // Return cached elaboration if present.
   if (article_id) {
-    const row = db.prepare('SELECT surprise_expanded FROM articles WHERE id = ?').get(Number(article_id));
-    if (row?.surprise_expanded && String(row.surprise_expanded).trim().length >= EXPANDED_MIN_LENGTH) {
-      return res.json({ content: row.surprise_expanded, article_id, cached: true });
+    const row = db
+      .prepare('SELECT surprise_expanded FROM articles WHERE id = ?')
+      .get(Number(article_id));
+    if (
+      row?.surprise_expanded &&
+      String(row.surprise_expanded).trim().length >= EXPANDED_MIN_LENGTH
+    ) {
+      return res.json({
+        content: row.surprise_expanded,
+        article_id,
+        cached: true,
+      });
     }
   }
 
@@ -190,9 +219,17 @@ router.post('/elaborate', async (req, res) => {
     });
     const expanded = String(result?.content || '').trim();
     if (article_id && expanded.length > 100) {
-      db.prepare('UPDATE articles SET surprise_expanded = ? WHERE id = ?').run(expanded, Number(article_id));
+      db.prepare('UPDATE articles SET surprise_expanded = ? WHERE id = ?').run(
+        expanded,
+        Number(article_id),
+      );
     }
-    res.json({ content: expanded, provider: result.provider, model: result.model, article_id: article_id ?? null });
+    res.json({
+      content: expanded,
+      provider: result.provider,
+      model: result.model,
+      article_id: article_id ?? null,
+    });
   } catch (err) {
     console.error('Surprise elaborate error:', err);
     res.status(500).json({ error: err.message || 'Failed to elaborate' });
@@ -212,7 +249,7 @@ router.get('/chat/:articleId', (req, res) => {
 });
 
 router.post('/chat', async (req, res) => {
-  const { article_id, title, content, message, provider: selectedProvider } = req.body || {};
+  const { article_id, title, content, message } = req.body || {};
   if (!article_id || !title || !message) {
     return res.status(400).json({ error: 'article_id, title, and message required' });
   }
@@ -226,8 +263,9 @@ router.post('/chat', async (req, res) => {
     `).all(key).reverse();
 
     const now = new Date().toISOString();
-    db.prepare('INSERT INTO chat_messages (summary_id, role, content, created_at, article_title) VALUES (?,?,?,?,?)')
-      .run(0, 'user', message, now, key);
+    db.prepare(
+      'INSERT INTO chat_messages (summary_id, role, content, created_at, article_title) VALUES (?,?,?,?,?)',
+    ).run(0, 'user', message, now, key);
 
     const context = `Article: ${title}\n\n${content || ''}`;
     const promptMessages = buildMessages('surprise-chat', { article: context });
@@ -246,8 +284,9 @@ router.post('/chat', async (req, res) => {
     });
 
     const replyTime = new Date().toISOString();
-    db.prepare('INSERT INTO chat_messages (summary_id, role, content, created_at, article_title) VALUES (?,?,?,?,?)')
-      .run(0, 'assistant', result.content, replyTime, key);
+    db.prepare(
+      'INSERT INTO chat_messages (summary_id, role, content, created_at, article_title) VALUES (?,?,?,?,?)',
+    ).run(0, 'assistant', result.content, replyTime, key);
 
     res.json({ role: 'assistant', content: result.content, created_at: replyTime });
   } catch (err) {

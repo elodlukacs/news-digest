@@ -3,7 +3,7 @@ const db = require('../db');
 
 const router = express.Router();
 
-const ALLOWED_KEYS = new Set(['theme', 'language', 'llm_model', 'telegram_enabled', 'briefing_time', 'custom_css']);
+const ALLOWED_KEYS = new Set(['theme', 'language', 'llm_model', 'briefing_time', 'custom_css']);
 
 router.get('/', (req, res) => {
   const settings = {};
