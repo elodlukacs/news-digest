@@ -235,6 +235,16 @@ export function SummaryView({
   const [actionsOpen, setActionsOpen] = useState(false);
   const [keyword, setKeyword] = useState('');
   const [activeKeyword, setActiveKeyword] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  const handleDeleteClick = () => {
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    setDeleteDialogOpen(false);
+    onDelete();
+  };
 
   const handleFilterRefresh = () => {
     const kw = keyword.trim();
@@ -381,7 +391,7 @@ export function SummaryView({
                 variant="outline"
                 size="sm"
                 className="w-8 px-0 text-ink-muted hover:text-accent hover:border-accent/30 hover:bg-accent/5"
-                onClick={onDelete}
+                onClick={handleDeleteClick}
                 aria-label="Delete this category"
               >
                 <Trash2 size={14} />
@@ -531,7 +541,7 @@ export function SummaryView({
             </button>
             <div className="h-px bg-rule/50 mx-6 my-1" />
             <button
-              onClick={() => { onDelete(); setActionsOpen(false); }}
+              onClick={() => { setDeleteDialogOpen(true); setActionsOpen(false); }}
               className="flex items-center gap-4 px-6 py-3.5 active:bg-paper-dark transition-colors"
             >
               <Trash2 size={18} className="text-accent" />
@@ -540,6 +550,31 @@ export function SummaryView({
           </nav>
         </DrawerContent>
       </Drawer>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2.5">
+              <Trash2 size={16} className="text-accent" />
+              Delete Category
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm leading-relaxed">
+              Are you sure you want to delete <strong className="text-ink">{categoryName}</strong>? This action cannot be undone. All summaries, feeds, and history will be permanently removed.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" size="sm" onClick={() => setDeleteDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" size="sm" onClick={handleDeleteConfirm}>
+                Delete
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {(loading || refreshing) && !summary && (
         <div className="py-16 space-y-6">
