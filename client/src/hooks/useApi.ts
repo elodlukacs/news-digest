@@ -61,7 +61,16 @@ export function useCategories() {
     await refresh();
   }, [refresh]);
 
-  return { categories, loading, refresh, addCategory, deleteCategory, renameCategory };
+  const reorderCategory = useCallback(async (id: number, afterId: number | null) => {
+    await fetch(`${BASE}/categories/${id}/order`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ afterId }),
+    });
+    await refresh();
+  }, [refresh]);
+
+  return { categories, loading, refresh, addCategory, deleteCategory, renameCategory, reorderCategory };
 }
 
 export function useFeeds(categoryId: number | null) {
@@ -169,7 +178,7 @@ export function useSummary(categoryId: number | null, snapshotId?: number | null
     load();
   }, [categoryId, snapshotId, providerId]);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (keyword?: string) => {
     if (!categoryId) return;
     if (abortRef.current) abortRef.current.abort();
     const controller = new AbortController();
@@ -181,7 +190,7 @@ export function useSummary(categoryId: number | null, snapshotId?: number | null
       const res = await fetch(`${BASE}/categories/${categoryId}/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider: providerId }),
+        body: JSON.stringify({ provider: providerId, keyword: keyword || undefined }),
         signal: controller.signal,
       });
       const data = await res.json();

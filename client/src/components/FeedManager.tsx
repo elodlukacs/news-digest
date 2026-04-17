@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, Rss, FileText, Globe, Search, Pencil } from 'lucide-react';
+import { Plus, Trash2, Rss, FileText, Globe, Search, Pencil, ArrowUpDown } from 'lucide-react';
 import { API_BASE } from '../config';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
@@ -10,7 +10,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Skeleton } from './ui/skeleton';
-import type { Feed } from '../types';
+import type { Feed, Category } from '../types';
 
 const LANGUAGES = [
   'English', 'Hungarian', 'Romanian', 'German', 'French',
@@ -24,13 +24,15 @@ interface Props {
   categoryId: number;
   categoryName: string;
   feeds: Feed[];
+  categories: Category[];
   onAdd: (name: string, url: string) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
   onClose: () => void;
   onRename: (id: number, name: string) => Promise<void>;
+  onReorder: (id: number, afterId: number | null) => Promise<void>;
 }
 
-export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, onClose, onRename }: Props) {
+export function FeedManager({ categoryId, categoryName, feeds, categories, onAdd, onDelete, onClose, onRename, onReorder }: Props) {
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
@@ -177,7 +179,7 @@ export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, 
   const tabContent = (
     <>
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="w-full justify-start rounded-none bg-transparent p-0 border-b border-rule h-auto">
+        <TabsList className="w-full justify-start rounded-none bg-transparent p-0 border-b border-rule h-auto overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {(
             [
               { key: 'name', label: 'Name', icon: Pencil },
@@ -185,12 +187,13 @@ export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, 
               { key: 'discover', label: 'Discover', icon: Search },
               { key: 'prompt', label: 'Prompt', icon: FileText },
               { key: 'language', label: 'Language', icon: Globe },
+              { key: 'order', label: 'Order', icon: ArrowUpDown },
             ] as const
           ).map(({ key, label, icon: Icon }) => (
             <TabsTrigger
               key={key}
               value={key}
-              className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-masthead data-[state=active]:bg-transparent data-[state=active]:shadow-none font-serif font-semibold text-[13px] py-2.5 px-2 gap-2"
+              className="shrink-0 rounded-none border-b-2 border-transparent data-[state=active]:border-masthead data-[state=active]:bg-transparent data-[state=active]:shadow-none font-serif font-semibold text-[13px] py-2.5 px-3 gap-1.5"
             >
               <Icon size={13} /> {label}
             </TabsTrigger>
@@ -384,6 +387,44 @@ export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, 
               )}
             </div>
           </TabsContent>
+
+          <TabsContent value="order" className="mt-0">
+            <div className="p-4 space-y-3">
+              <p className="text-xs text-ink-muted leading-relaxed">
+                Choose where this category appears in the menu.
+              </p>
+              <div className="space-y-1">
+                {(() => {
+                  const sorted = [...categories].sort((a, b) => a.sort_order - b.sort_order);
+                  const currentIdx = sorted.findIndex(c => c.id === categoryId);
+                  const currentAfter = currentIdx > 0 ? sorted[currentIdx - 1].id : null;
+                  const others = sorted.filter(c => c.id !== categoryId);
+
+                  const positions: { label: string; afterId: number | null }[] = [
+                    { label: 'First', afterId: null },
+                    ...others.map(c => ({ label: `After "${c.name}"`, afterId: c.id })),
+                  ];
+
+                  return positions.map(({ label, afterId }) => {
+                    const isActive = afterId === currentAfter;
+                    return (
+                      <button
+                        key={afterId ?? '__first__'}
+                        onClick={() => !isActive && onReorder(categoryId, afterId)}
+                        className={`w-full text-left px-3 py-2 text-[13px] font-serif border transition-all duration-150 ${
+                          isActive
+                            ? 'border-masthead bg-masthead/10 text-masthead font-semibold'
+                            : 'border-rule text-ink-muted hover:text-ink hover:border-ink/30 cursor-pointer'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+          </TabsContent>
         </div>
       </Tabs>
     </>
@@ -392,7 +433,7 @@ export function FeedManager({ categoryId, categoryName, feeds, onAdd, onDelete, 
   if (isDesktop) {
     return (
       <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
-        <DialogContent className="max-w-lg p-0 gap-0 max-h-[85vh] flex flex-col">
+        <DialogContent className="max-w-2xl p-0 gap-0 max-h-[85vh] flex flex-col">
           <DialogHeader className="px-6 py-4 border-b border-rule shrink-0">
             <div className="flex items-center justify-between">
               <div>

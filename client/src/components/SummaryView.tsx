@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { RefreshCw, AlertCircle, Clock, Zap, Settings, Trash2, ExternalLink, MoreVertical, MessageCircle, X, Brain, FlaskConical } from 'lucide-react';
+import { RefreshCw, AlertCircle, Clock, Zap, Settings, Trash2, ExternalLink, MoreVertical, MessageCircle, X, Brain, FlaskConical, Filter } from 'lucide-react';
 // Sentiment ribbon — positioned absolute top-right, no layout impact
 const RIBBON_COLORS: Record<string, string> = {
   positive: 'bg-[var(--color-positive-bg)] text-[var(--color-positive-text)]',
@@ -185,7 +185,7 @@ interface Props {
   loading: boolean;
   refreshing: boolean;
   error: string | null;
-  onRefresh: () => void;
+  onRefresh: (keyword?: string) => void;
   onManageFeeds: () => void;
   onDelete: () => void;
   selectedLlm: string;
@@ -220,6 +220,20 @@ export function SummaryView({
 }: Props) {
   const [rateLimitDismissed, setRateLimitDismissed] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
+  const [keyword, setKeyword] = useState('');
+  const [activeKeyword, setActiveKeyword] = useState('');
+
+  const handleFilterRefresh = () => {
+    const kw = keyword.trim();
+    setActiveKeyword(kw);
+    onRefresh(kw || undefined);
+  };
+
+  const handleClearFilter = () => {
+    setKeyword('');
+    setActiveKeyword('');
+    onRefresh(undefined);
+  };
   const [radarSection, setRadarSection] = useState<{ title: string; content: string; url: string; originalContent?: string } | null>(null);
   const [chatSection, setChatSection] = useState<{ title: string; content: string; originalContent?: string } | null>(null);
   const [challengeIdx, setChallengeIdx] = useState<number | null>(null);
@@ -282,7 +296,7 @@ export function SummaryView({
 
         <div className="md:hidden mt-4 space-y-2">
           <button
-            onClick={onRefresh}
+            onClick={() => onRefresh(undefined)}
             disabled={busy}
             className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-masthead/8 border border-masthead/20 text-masthead disabled:opacity-50 active:scale-[0.98] transition-transform cursor-pointer"
           >
@@ -296,15 +310,60 @@ export function SummaryView({
             </div>
             <RefreshCw size={18} className={`shrink-0 ml-3 ${busy ? 'animate-spin' : ''}`} />
           </button>
+          <div className="flex gap-2">
+            <input
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && !busy && handleFilterRefresh()}
+              placeholder="Filter by keyword…"
+              disabled={busy}
+              className="flex-1 h-9 px-3 text-sm border border-rule bg-paper text-ink placeholder:text-ink-muted rounded-md outline-none focus:border-masthead/50 disabled:opacity-50"
+            />
+            <button
+              onClick={handleFilterRefresh}
+              disabled={busy || !keyword.trim()}
+              className="flex items-center gap-1.5 px-3 h-9 text-sm font-medium border border-rule rounded-md text-ink-muted hover:text-masthead hover:border-masthead/40 disabled:opacity-40 transition-colors cursor-pointer"
+            >
+              <Filter size={13} /> Filter
+            </button>
+          </div>
+          {activeKeyword && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] text-ink-muted">Filtered:</span>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-masthead/10 border border-masthead/20 text-[11px] font-medium text-masthead">
+                {activeKeyword}
+                <button onClick={handleClearFilter} className="ml-0.5 hover:text-accent cursor-pointer"><X size={10} /></button>
+              </span>
+            </div>
+          )}
           <PromptLensSelector selectedSlug={selectedLens?.slug ?? null} onSelect={onLensChange} onRun={onRunLens} running={lensLoading} disabled={busy} fullWidth />
         </div>
 
         {/* Desktop: labeled action buttons */}
-        <div className="hidden md:flex items-center gap-2 mt-3">
-          <Button variant="outline" size="sm" className="gap-2" onClick={onRefresh} disabled={busy}>
+        <div className="hidden md:flex items-center gap-2 mt-3 flex-wrap">
+          <Button variant="outline" size="sm" className="gap-2" onClick={() => onRefresh(undefined)} disabled={busy}>
             <RefreshCw size={14} className={busy ? 'animate-spin' : ''} />
             {refreshing ? 'Refreshing...' : 'Refresh the Articles'}
           </Button>
+          <div className="flex items-center gap-1">
+            <input
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && !busy && handleFilterRefresh()}
+              placeholder="Filter by keyword…"
+              disabled={busy}
+              className="h-8 w-40 px-2.5 text-[13px] border border-rule bg-paper text-ink placeholder:text-ink-muted rounded-md outline-none focus:border-masthead/50 disabled:opacity-50"
+            />
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={handleFilterRefresh} disabled={busy || !keyword.trim()}>
+              <Filter size={13} /> Filter
+            </Button>
+            {activeKeyword && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-masthead/10 border border-masthead/20 text-[11px] font-medium text-masthead ml-1">
+                {activeKeyword}
+                <button onClick={handleClearFilter} className="ml-0.5 hover:text-accent cursor-pointer"><X size={10} /></button>
+              </span>
+            )}
+          </div>
           <PromptLensSelector selectedSlug={selectedLens?.slug ?? null} onSelect={onLensChange} onRun={onRunLens} running={lensLoading} disabled={busy} />
           <Button variant="outline" size="sm" className="gap-2" onClick={onManageFeeds}>
             <Settings size={14} />

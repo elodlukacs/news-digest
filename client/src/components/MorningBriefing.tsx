@@ -364,7 +364,7 @@ function Masthead({
           <p className="text-[10px] md:text-[11px] uppercase tracking-[0.42em] font-bold text-accent mb-2 font-[family-name:var(--font-widget)]">
             The Sunday Edition
           </p>
-          <h1 className="font-serif text-[44px] sm:text-[56px] md:text-[68px] lg:text-[76px] leading-[0.92] font-black tracking-[-0.025em] text-masthead whitespace-nowrap">
+          <h1 className="font-serif text-[8vw] sm:text-[56px] md:text-[68px] lg:text-[76px] leading-[0.92] font-black tracking-[-0.025em] text-masthead">
             Morning Briefing<span className="text-accent">.</span>
           </h1>
           {briefing && (

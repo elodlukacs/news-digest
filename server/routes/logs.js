@@ -56,7 +56,7 @@ router.get('/', (req, res) => {
 
   const dailySummary = {};
   for (const r of formatted) {
-    const day = getDateOnly(r.created_at);
+    const day = r.created_at.slice(0, 10);
     const key = `${day}|${r.model}|${r.provider}`;
     if (!dailySummary[key]) {
       dailySummary[key] = { day, model: r.model, provider: r.provider, prompt: 0, completion: 0, total: 0, calls: 0 };
@@ -72,7 +72,7 @@ router.get('/', (req, res) => {
   const result = [];
   let currentDay = null;
   for (const log of formatted) {
-    const day = getDateOnly(log.created_at);
+    const day = log.created_at.slice(0, 10);
     if (day !== currentDay) {
       const daySummaries = summaryLines.filter(s => s.day === day);
       for (const s of daySummaries) {

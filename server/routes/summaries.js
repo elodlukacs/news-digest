@@ -117,11 +117,24 @@ router.post('/:id/refresh', validateId, async (req, res) => {
       })
     );
 
-    const allArticles = feedResults
+    const { provider: selectedProvider, keyword } = req.body || {};
+    const keywordTrim = keyword?.trim() || '';
+
+    let allArticles = feedResults
       .filter((r) => r.status === 'fulfilled')
       .flatMap((r) => r.value)
       .sort((a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime())
       .slice(0, 30);
+
+    if (keywordTrim) {
+      const kw = keywordTrim.toLowerCase();
+      allArticles = allArticles.filter(
+        (a) => a.title.toLowerCase().includes(kw) || a.description.toLowerCase().includes(kw)
+      );
+      if (allArticles.length === 0) {
+        return res.status(400).json({ error: `No articles found matching "${keywordTrim}"` });
+      }
+    }
 
     if (allArticles.length === 0) {
       return res.status(400).json({ error: 'Could not fetch any articles from the feeds' });
@@ -147,7 +160,8 @@ router.post('/:id/refresh', validateId, async (req, res) => {
 
     const customPrompt = category.custom_prompt?.trim();
     const lang = category.language || 'English';
-    const customPromptSection = customPrompt ? `\nAdditional instructions:\n${customPrompt}\n` : '';
+    const keywordSection = keywordTrim ? `\nFocus only on news related to: "${keywordTrim}"\n` : '';
+    const customPromptSection = (customPrompt ? `\nAdditional instructions:\n${customPrompt}\n` : '') + keywordSection;
 
     const messages = buildMessages('category-summary', {
       category: category.name,
@@ -155,8 +169,6 @@ router.post('/:id/refresh', validateId, async (req, res) => {
       customPrompt: customPromptSection,
       articles: articleText,
     });
-
-    const { provider: selectedProvider } = req.body || {};
     const result = await callLLM(messages, { purpose: 'summary', categoryId: Number(req.params.id), providerId: selectedProvider || null, db });
     const generated_at = new Date().toISOString();
     const dateKey = generated_at.split('T')[0];

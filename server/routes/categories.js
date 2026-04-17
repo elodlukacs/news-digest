@@ -60,6 +60,28 @@ router.put('/:id/language', validateId, (req, res) => {
   res.json({ ok: true });
 });
 
+router.put('/:id/order', validateId, (req, res) => {
+  const id = parseInt(req.params.id);
+  const { afterId } = req.body;
+
+  const all = db.prepare('SELECT id FROM categories ORDER BY sort_order').all();
+  const ids = all.map(r => r.id).filter(cid => cid !== id);
+
+  let insertIdx = 0;
+  if (afterId != null) {
+    const afterIdx = ids.indexOf(parseInt(afterId));
+    insertIdx = afterIdx >= 0 ? afterIdx + 1 : ids.length;
+  }
+  ids.splice(insertIdx, 0, id);
+
+  const update = db.prepare('UPDATE categories SET sort_order = ? WHERE id = ?');
+  db.transaction(() => {
+    ids.forEach((cid, i) => update.run(i + 1, cid));
+  })();
+
+  res.json({ ok: true });
+});
+
 router.delete('/:id', validateId, (req, res) => {
   const catId = req.params.id;
   db.transaction(() => {

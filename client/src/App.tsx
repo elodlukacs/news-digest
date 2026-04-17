@@ -33,7 +33,7 @@ import type { AppOutletContext } from './types/routing';
 
 function AppLayout() {
   const { theme, setTheme } = useTheme();
-  const { categories, addCategory, deleteCategory, renameCategory } = useCategories();
+  const { categories, addCategory, deleteCategory, renameCategory, reorderCategory } = useCategories();
   const [managingId, setManagingId] = useState<number | null>(null);
   const [showStats, setShowStats] = useState(false);
   const [selectedLlm, setSelectedLlm] = useState('openai/gpt-oss-120b');
@@ -94,10 +94,12 @@ function AppLayout() {
             categoryId={managingId}
             categoryName={managingCategory.name}
             feeds={feeds}
+            categories={categories}
             onAdd={addFeed}
             onDelete={deleteFeed}
             onClose={() => setManagingId(null)}
             onRename={renameCategory}
+            onReorder={reorderCategory}
           />
         )}
 

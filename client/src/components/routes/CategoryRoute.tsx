@@ -21,8 +21,8 @@ export function CategoryRoute() {
   const { dates, refresh: refreshHistory } = useSummaryHistory(categoryId);
   const lens = useLens(categoryId, ctx.selectedLlm);
 
-  const handleRefresh = useCallback(async () => {
-    await refresh();
+  const handleRefresh = useCallback(async (keyword?: string) => {
+    await refresh(keyword);
     refreshHistory();
   }, [refresh, refreshHistory]);
 
