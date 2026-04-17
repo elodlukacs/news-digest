@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { RefreshCw, AlertCircle, Clock, Zap, Settings, Trash2, ExternalLink, MoreVertical, MessageCircle, X, Brain, FlaskConical, Filter } from 'lucide-react';
+import { RefreshCw, AlertCircle, Clock, Zap, Settings, Trash2, ExternalLink, MoreVertical, MessageCircle, X, Brain, FlaskConical, Filter, Search, ArrowRight } from 'lucide-react';
 // Sentiment ribbon — positioned absolute top-right, no layout impact
 const RIBBON_COLORS: Record<string, string> = {
   positive: 'bg-[var(--color-positive-bg)] text-[var(--color-positive-text)]',
@@ -27,6 +27,7 @@ import { ChallengeQuiz } from './ChallengeQuiz';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Drawer, DrawerContent } from './ui/drawer';
 import { Button } from './ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { Badge } from './ui/badge';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Skeleton } from './ui/skeleton';
@@ -351,40 +352,80 @@ export function SummaryView({
           <PromptLensSelector selectedSlug={selectedLens?.slug ?? null} onSelect={onLensChange} onRun={onRunLens} running={lensLoading} disabled={busy} fullWidth />
         </div>
 
-        {/* Desktop: labeled action buttons */}
+        {/* Desktop: three-zone toolbar — filter · primary action · utilities */}
         <div className="hidden md:flex items-center gap-2 mt-3 flex-wrap">
-          <Button variant="outline" size="sm" className="gap-2" onClick={() => onRefresh(undefined)} disabled={busy}>
-            <RefreshCw size={14} className={busy ? 'animate-spin' : ''} />
-            {refreshing ? 'Refreshing...' : 'Refresh the Articles'}
-          </Button>
-          <div className="flex items-center gap-1">
+          {/* Zone 1: filter pill with inline submit */}
+          <div className={`inline-flex items-center h-8 pl-2.5 pr-1 gap-2 bg-paper border border-rule rounded-md transition-colors focus-within:border-masthead/50 focus-within:ring-2 focus-within:ring-masthead/10 ${busy ? 'opacity-50' : ''}`}>
+            <Search size={13} className="text-ink-muted shrink-0" />
             <input
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && !busy && handleFilterRefresh()}
               placeholder="Filter by keyword…"
               disabled={busy}
-              className="h-8 w-40 px-2.5 text-[13px] border border-rule bg-paper text-ink placeholder:text-ink-muted rounded-md outline-none focus:border-masthead/50 disabled:opacity-50"
+              className="w-40 bg-transparent text-[13px] text-ink placeholder:text-ink-muted outline-none min-w-0"
             />
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={handleFilterRefresh} disabled={busy || !keyword.trim()}>
-              <Filter size={13} /> Filter
-            </Button>
             {activeKeyword && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-masthead/10 border border-masthead/20 text-[11px] font-medium text-masthead ml-1">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-masthead/10 border border-masthead/20 text-[11px] font-medium text-masthead shrink-0">
                 {activeKeyword}
-                <button onClick={handleClearFilter} className="ml-0.5 hover:text-accent cursor-pointer"><X size={10} /></button>
+                <button onClick={handleClearFilter} className="hover:text-accent cursor-pointer" aria-label="Clear filter"><X size={10} /></button>
               </span>
             )}
+            <button
+              onClick={handleFilterRefresh}
+              disabled={busy || !keyword.trim()}
+              aria-label="Apply filter"
+              className="inline-flex items-center justify-center w-6 h-6 rounded text-ink-muted hover:text-masthead hover:bg-paper-dark disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-ink-muted transition-colors cursor-pointer disabled:cursor-not-allowed"
+            >
+              <ArrowRight size={12} />
+            </button>
           </div>
+
+          <div className="h-6 w-px bg-rule mx-1" aria-hidden="true" />
+
+          {/* Zone 2: primary action — lens + go */}
           <PromptLensSelector selectedSlug={selectedLens?.slug ?? null} onSelect={onLensChange} onRun={onRunLens} running={lensLoading} disabled={busy} />
-          <Button variant="outline" size="sm" className="gap-2" onClick={onManageFeeds}>
-            <Settings size={14} />
-            Feeds & Settings
+
+          {/* Spacer pushes utilities to the right */}
+          <div className="flex-1 min-w-4" />
+
+          <div className="h-6 w-px bg-rule mx-1" aria-hidden="true" />
+
+          {/* Zone 3: utility icons */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 h-9 px-4 border-masthead/30 text-masthead hover:bg-masthead/10 hover:border-masthead/50 hover:text-masthead font-semibold"
+            onClick={() => onRefresh(undefined)}
+            disabled={busy}
+          >
+            <RefreshCw size={16} className={busy ? 'animate-spin' : ''} />
+            {refreshing ? 'Refreshing…' : 'Refresh'}
           </Button>
-          <Button variant="ghost" size="sm" className="gap-2 text-ink-muted hover:text-accent" onClick={onDelete}>
-            <Trash2 size={14} />
-            Delete this Category
-          </Button>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="sm" className="w-8 px-0" onClick={onManageFeeds} aria-label="Feeds and settings">
+                <Settings size={14} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Feeds &amp; settings</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-8 px-0 text-ink-muted hover:text-accent hover:border-accent/30 hover:bg-accent/5"
+                onClick={onDelete}
+                aria-label="Delete this category"
+              >
+                <Trash2 size={14} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Delete this category</TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
