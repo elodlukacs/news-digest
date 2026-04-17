@@ -234,6 +234,8 @@ router.post('/:id/refresh', validateId, async (req, res) => {
         sentiment: ['positive', 'negative', 'neutral', 'mixed'].includes(a.sentiment) ? a.sentiment : 'neutral',
         tags: Array.isArray(a.tags) ? a.tags : [],
         original_content: original ? original.description : '',
+        source: original ? original.source : '',
+        pub_date: original ? original.pubDate : '',
       };
     });
 

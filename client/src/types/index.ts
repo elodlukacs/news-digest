@@ -30,6 +30,8 @@ export interface SentimentSection {
   sentiment: 'positive' | 'negative' | 'neutral' | 'mixed';
   tags: string[];
   original_content?: string;
+  source?: string;
+  pub_date?: string;
 }
 
 export interface HistoryEntry {

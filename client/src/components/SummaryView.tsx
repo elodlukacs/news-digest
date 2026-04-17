@@ -41,6 +41,8 @@ export interface ParsedSection {
   content: string;
   sentiment: 'positive' | 'negative' | 'neutral' | 'mixed' | null;
   originalContent?: string;
+  source?: string;
+  pubDate?: string;
 }
 
 export function parseSummaryMarkdown(markdown: string, sentimentData: Summary['sentiment_data']): ParsedSection[] {
@@ -50,6 +52,8 @@ export function parseSummaryMarkdown(markdown: string, sentimentData: Summary['s
   // Build title→sentiment and title→originalContent lookups
   const sentimentByTitle = new Map<string, 'positive' | 'negative' | 'neutral' | 'mixed'>();
   const originalContentByTitle = new Map<string, string>();
+  const sourceByTitle = new Map<string, string>();
+  const pubDateByTitle = new Map<string, string>();
   if (sentimentData) {
     for (const entry of sentimentData) {
       if (entry.title && entry.sentiment) {
@@ -57,6 +61,12 @@ export function parseSummaryMarkdown(markdown: string, sentimentData: Summary['s
       }
       if (entry.title && entry.original_content) {
         originalContentByTitle.set(entry.title.toLowerCase(), entry.original_content);
+      }
+      if (entry.title && entry.source) {
+        sourceByTitle.set(entry.title.toLowerCase(), entry.source);
+      }
+      if (entry.title && entry.pub_date) {
+        pubDateByTitle.set(entry.title.toLowerCase(), entry.pub_date);
       }
     }
   }
@@ -90,6 +100,8 @@ export function parseSummaryMarkdown(markdown: string, sentimentData: Summary['s
       content,
       sentiment: sentimentByTitle.get(title.toLowerCase()) || null,
       originalContent: originalContentByTitle.get(title.toLowerCase()) || '',
+      source: sourceByTitle.get(title.toLowerCase()),
+      pubDate: pubDateByTitle.get(title.toLowerCase()),
     });
   }
 
@@ -537,7 +549,7 @@ export function SummaryView({
                     {section.content}
                   </p>
                 </CardContent>
-                <CardFooter className="px-0 md:px-5 flex-wrap gap-1.5 md:gap-2">
+                <CardFooter className="px-0 md:px-5 flex-wrap gap-1.5 md:gap-2 items-end">
                   {section.url && (
                     <Button variant="outline" size="sm" className="gap-1.5 text-xs" asChild>
                       <a href={section.url} target="_blank" rel="noopener noreferrer">
@@ -579,6 +591,22 @@ export function SummaryView({
                       <MessageCircle size={14} strokeWidth={1.5} />
                       Chat
                     </Button>
+                  )}
+                  {(section.source || section.pubDate) && (
+                    <div className="ml-auto flex items-center gap-2 text-[11px] text-ink-muted/70 font-[family-name:var(--font-body)] italic">
+                      {section.source && <span>{section.source}</span>}
+                      {section.source && section.pubDate && <span className="text-ink-muted/30">·</span>}
+                      {section.pubDate && (
+                        <span>
+                          {(() => {
+                            try {
+                              const d = new Date(section.pubDate);
+                              return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+                            } catch { return section.pubDate; }
+                          })()}
+                        </span>
+                      )}
+                    </div>
                   )}
                 </CardFooter>
                 {challengeIdx === idx && (
