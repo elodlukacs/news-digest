@@ -352,46 +352,9 @@ export function SummaryView({
           <PromptLensSelector selectedSlug={selectedLens?.slug ?? null} onSelect={onLensChange} onRun={onRunLens} running={lensLoading} disabled={busy} fullWidth />
         </div>
 
-        {/* Desktop: three-zone toolbar — filter · primary action · utilities */}
+        {/* Desktop: three-zone toolbar — utilities · filter · lens */}
         <div className="hidden md:flex items-center gap-2 mt-3 flex-wrap">
-          {/* Zone 1: filter pill with inline submit */}
-          <div className={`inline-flex items-center h-8 pl-2.5 pr-1 gap-2 bg-paper border border-rule rounded-md transition-colors focus-within:border-masthead/50 focus-within:ring-2 focus-within:ring-masthead/10 ${busy ? 'opacity-50' : ''}`}>
-            <Search size={13} className="text-ink-muted shrink-0" />
-            <input
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && !busy && handleFilterRefresh()}
-              placeholder="Filter by keyword…"
-              disabled={busy}
-              className="w-40 bg-transparent text-[13px] text-ink placeholder:text-ink-muted outline-none min-w-0"
-            />
-            {activeKeyword && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-masthead/10 border border-masthead/20 text-[11px] font-medium text-masthead shrink-0">
-                {activeKeyword}
-                <button onClick={handleClearFilter} className="hover:text-accent cursor-pointer" aria-label="Clear filter"><X size={10} /></button>
-              </span>
-            )}
-            <button
-              onClick={handleFilterRefresh}
-              disabled={busy || !keyword.trim()}
-              aria-label="Apply filter"
-              className="inline-flex items-center justify-center w-6 h-6 rounded text-ink-muted hover:text-masthead hover:bg-paper-dark disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-ink-muted transition-colors cursor-pointer disabled:cursor-not-allowed"
-            >
-              <ArrowRight size={12} />
-            </button>
-          </div>
-
-          <div className="h-6 w-px bg-rule mx-1" aria-hidden="true" />
-
-          {/* Zone 2: primary action — lens + go */}
-          <PromptLensSelector selectedSlug={selectedLens?.slug ?? null} onSelect={onLensChange} onRun={onRunLens} running={lensLoading} disabled={busy} />
-
-          {/* Spacer pushes utilities to the right */}
-          <div className="flex-1 min-w-4" />
-
-          <div className="h-6 w-px bg-rule mx-1" aria-hidden="true" />
-
-          {/* Zone 3: utility icons */}
+          {/* Zone 1: utilities — refresh (primary) + settings + delete */}
           <Button
             variant="outline"
             size="sm"
@@ -426,6 +389,40 @@ export function SummaryView({
             </TooltipTrigger>
             <TooltipContent>Delete this category</TooltipContent>
           </Tooltip>
+
+          <div className="h-6 w-px bg-rule mx-1" aria-hidden="true" />
+
+          {/* Zone 2: filter pill with inline submit */}
+          <div className={`inline-flex items-center h-8 pl-2.5 pr-1 gap-2 bg-paper border border-rule rounded-md transition-colors focus-within:border-masthead/50 focus-within:ring-2 focus-within:ring-masthead/10 ${busy ? 'opacity-50' : ''}`}>
+            <Search size={13} className="text-ink-muted shrink-0" />
+            <input
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && !busy && handleFilterRefresh()}
+              placeholder="Filter by keyword…"
+              disabled={busy}
+              className="w-40 bg-transparent text-[13px] text-ink placeholder:text-ink-muted outline-none min-w-0"
+            />
+            {activeKeyword && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-masthead/10 border border-masthead/20 text-[11px] font-medium text-masthead shrink-0">
+                {activeKeyword}
+                <button onClick={handleClearFilter} className="hover:text-accent cursor-pointer" aria-label="Clear filter"><X size={10} /></button>
+              </span>
+            )}
+            <button
+              onClick={handleFilterRefresh}
+              disabled={busy || !keyword.trim()}
+              aria-label="Apply filter"
+              className="inline-flex items-center justify-center w-6 h-6 rounded text-ink-muted hover:text-masthead hover:bg-paper-dark disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-ink-muted transition-colors cursor-pointer disabled:cursor-not-allowed"
+            >
+              <ArrowRight size={12} />
+            </button>
+          </div>
+
+          <div className="h-6 w-px bg-rule mx-1" aria-hidden="true" />
+
+          {/* Zone 3: lens + go */}
+          <PromptLensSelector selectedSlug={selectedLens?.slug ?? null} onSelect={onLensChange} onRun={onRunLens} running={lensLoading} disabled={busy} />
         </div>
       </div>
 
