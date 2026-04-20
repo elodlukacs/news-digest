@@ -10,6 +10,8 @@ const router = express.Router();
 
 const callLLM = (messages, opts) => rawCallLLM(messages, { ...opts, db });
 
+const ONE_DAY_MS = 86400000;
+
 function deriveTopicId(title) {
   return extractKeywords(title).sort().slice(0, 5).join('-');
 }
@@ -141,10 +143,8 @@ router.post('/:id/refresh', validateId, async (req, res) => {
     }
 
     const now = new Date().toISOString();
-    const existingCount = db.prepare('SELECT COUNT(*) as c FROM articles WHERE category_id = ?').get(req.params.id).c;
-    if (existingCount > 200) {
-      db.prepare('DELETE FROM articles WHERE category_id = ? AND id NOT IN (SELECT id FROM articles WHERE category_id = ? ORDER BY fetched_at DESC LIMIT 200)').run(req.params.id, req.params.id);
-    }
+    const oneDayAgo = new Date(Date.now() - ONE_DAY_MS).toISOString();
+    db.prepare('DELETE FROM articles WHERE fetched_at < ?').run(oneDayAgo);
     const insertArticle = db.prepare('INSERT INTO articles (category_id, feed_name, title, description, link, pub_date, fetched_at, topic_id, body_text) VALUES (?,?,?,?,?,?,?,?,?)');
     const insertArticles = db.transaction((arts) => {
       for (const a of arts) {

@@ -210,6 +210,7 @@ interface Props {
   lensName: string | null;
   lensError: string | null;
   onDismissLens: () => void;
+  articleFontSize: number;
 }
 
 export function SummaryView({
@@ -231,6 +232,7 @@ export function SummaryView({
   lensName,
   lensError,
   onDismissLens,
+  articleFontSize,
 }: Props) {
   const [rateLimitDismissed, setRateLimitDismissed] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
@@ -583,7 +585,7 @@ export function SummaryView({
                   <CardTitle className="text-lg md:text-xl pr-16 break-words">{section.title}</CardTitle>
                 </CardHeader>
                 <CardContent className="px-0 md:px-5">
-                  <p className="text-[16px] leading-[1.8] text-ink font-[family-name:var(--font-body)] break-words [overflow-wrap:anywhere]">
+                  <p className="break-words [overflow-wrap:anywhere]" style={{ fontSize: `${articleFontSize}px`, lineHeight: `${articleFontSize * 1.8}px`, color: 'var(--color-ink)', fontFamily: 'var(--font-body)' }}>
                     {section.content}
                   </p>
                 </CardContent>

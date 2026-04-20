@@ -76,6 +76,7 @@ export function CategoryRoute() {
             lensName={lens.lensName}
             lensError={lens.error}
             onDismissLens={lens.clear}
+            articleFontSize={ctx.articleFontSize}
           />
         ) : (
           <div className="py-24 text-center">

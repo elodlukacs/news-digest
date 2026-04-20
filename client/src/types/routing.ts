@@ -7,4 +7,6 @@ export interface AppOutletContext {
   onManageFeeds: (categoryId: number) => void;
   deleteCategory: (id: number) => Promise<void>;
   onSelectCategory: (name: string) => void;
+  articleFontSize: number;
+  onFontSizeChange: (size: number) => void;
 }

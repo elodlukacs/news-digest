@@ -37,6 +37,15 @@ function AppLayout() {
   const [managingId, setManagingId] = useState<number | null>(null);
   const [showStats, setShowStats] = useState(false);
   const [selectedLlm, setSelectedLlm] = useState('openai/gpt-oss-120b');
+  const [articleFontSize, setArticleFontSize] = useState(() => {
+    const saved = localStorage.getItem('articleFontSize');
+    return saved ? Number(saved) : 16;
+  });
+
+  const handleFontSizeChange = useCallback((size: number) => {
+    setArticleFontSize(size);
+    localStorage.setItem('articleFontSize', String(size));
+  }, []);
   const navigate = useNavigate();
 
   const { feeds, addFeed, deleteFeed } = useFeeds(managingId);
@@ -63,6 +72,8 @@ function AppLayout() {
     onManageFeeds: handleManageFeeds,
     deleteCategory: handleDeleteCategory,
     onSelectCategory: handleSelectCategory,
+    articleFontSize,
+    onFontSizeChange: handleFontSizeChange,
   };
 
   const { pulling, pullProgress, containerRef } = usePullToRefresh({
@@ -85,6 +96,8 @@ function AppLayout() {
           onLlmChange={setSelectedLlm}
           models={models}
           modelsLoading={modelsLoading}
+          articleFontSize={articleFontSize}
+          onFontSizeChange={setArticleFontSize}
         />
 
         <Outlet context={outletContext} />
