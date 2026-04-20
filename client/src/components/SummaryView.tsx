@@ -406,14 +406,14 @@ export function SummaryView({
           {/* Lens */}
           <PromptLensSelector selectedSlug={selectedLens?.slug ?? null} onSelect={onLensChange} onRun={onRunLens} running={lensLoading} disabled={busy} />
 
-          {/* Right-aligned secondary actions */}
-          <div className="ml-auto inline-flex items-center gap-1">
+          {/* Secondary actions */}
+          <div className="inline-flex items-center gap-1">
             <button
               onClick={onManageFeeds}
               className="h-9 inline-flex items-center gap-2 px-3 rounded-md border border-rule bg-paper text-[13px] font-medium text-ink hover:bg-paper-dark transition-colors cursor-pointer shadow-sm"
             >
               <Settings size={14} />
-              Feeds
+              Settings
             </button>
             <button
               onClick={onDelete}
