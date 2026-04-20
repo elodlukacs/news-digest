@@ -216,7 +216,27 @@ export function useSummary(categoryId: number | null, snapshotId?: number | null
     }
   }, [categoryId, providerId]);
 
-  return { summary, loading, refreshing, error, refresh };
+  const loadLatest = useCallback(async () => {
+    if (!categoryId) return;
+    if (abortRef.current) abortRef.current.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${BASE}/categories/${categoryId}/summary`, { signal: controller.signal });
+      const data: Summary & { error?: string } = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to load summary');
+      if (data.summary) setSummary(data);
+    } catch (e: unknown) {
+      if (e instanceof DOMException && e.name === 'AbortError') return;
+      setError(e instanceof Error ? e.message : 'Unknown error');
+    } finally {
+      if (!controller.signal.aborted) setLoading(false);
+    }
+  }, [categoryId]);
+
+  return { summary, loading, refreshing, error, refresh, loadLatest };
 }
 
 export function useLens(categoryId: number | null, providerId: string) {

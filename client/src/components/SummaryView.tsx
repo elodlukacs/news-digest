@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { RefreshCw, AlertCircle, Clock, Zap, Settings, Trash2, ExternalLink, MoreVertical, MessageCircle, X, Brain, FlaskConical, Filter } from 'lucide-react';
+import { RefreshCw, AlertCircle, Clock, Zap, Settings, Trash2, ExternalLink, MoreVertical, MessageCircle, X, Brain, FlaskConical, Filter, Search } from 'lucide-react';
 // Sentiment ribbon — positioned absolute top-right, no layout impact
 const RIBBON_COLORS: Record<string, string> = {
   positive: 'bg-[var(--color-positive-bg)] text-[var(--color-positive-text)]',
@@ -198,6 +198,7 @@ interface Props {
   refreshing: boolean;
   error: string | null;
   onRefresh: (keyword?: string) => void;
+  onClearFilter?: () => void;
   onManageFeeds: () => void;
   onDelete: () => void;
   selectedLlm: string;
@@ -218,6 +219,7 @@ export function SummaryView({
   refreshing,
   error,
   onRefresh,
+  onClearFilter,
   onManageFeeds,
   onDelete,
   selectedLlm,
@@ -244,7 +246,8 @@ export function SummaryView({
   const handleClearFilter = () => {
     setKeyword('');
     setActiveKeyword('');
-    onRefresh(undefined);
+    if (onClearFilter) onClearFilter();
+    else onRefresh(undefined);
   };
   const [radarSection, setRadarSection] = useState<{ title: string; content: string; url: string; originalContent?: string } | null>(null);
   const [chatSection, setChatSection] = useState<{ title: string; content: string; originalContent?: string } | null>(null);
@@ -310,81 +313,116 @@ export function SummaryView({
           <button
             onClick={() => onRefresh(undefined)}
             disabled={busy}
-            className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-masthead/8 border border-masthead/20 text-masthead disabled:opacity-50 active:scale-[0.98] transition-transform cursor-pointer"
+            className="w-full h-14 flex items-center justify-between px-4 rounded-xl bg-masthead/8 border border-masthead/20 text-masthead disabled:opacity-50 active:scale-[0.98] transition-transform cursor-pointer"
           >
-            <div className="flex flex-col items-start">
-              <span className="text-sm font-semibold leading-tight">
+            <div className="flex flex-col items-start min-w-0">
+              <span className="text-base font-semibold leading-tight truncate">
                 {refreshing ? 'Updating…' : 'Pull latest stories'}
               </span>
               {!refreshing && (
-                <span className="text-[11px] text-masthead/60 mt-0.5">Fetch new articles from your feeds</span>
+                <span className="text-xs text-masthead/60 mt-0.5 truncate">Fetch new articles from your feeds</span>
               )}
             </div>
             <RefreshCw size={18} className={`shrink-0 ml-3 ${busy ? 'animate-spin' : ''}`} />
           </button>
-          <div className="flex gap-2">
-            <input
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && !busy && handleFilterRefresh()}
-              placeholder="Filter by keyword…"
-              disabled={busy}
-              className="flex-1 h-9 px-3 text-sm border border-rule bg-paper text-ink placeholder:text-ink-muted rounded-md outline-none focus:border-masthead/50 disabled:opacity-50"
-            />
+
+          {/* Filter — input on left, action button attached on right */}
+          <div className={`flex h-14 rounded-xl border bg-paper overflow-hidden transition-colors ${busy ? 'opacity-60' : ''} ${activeKeyword ? 'border-masthead/30' : 'border-rule'}`}>
+            <div className="flex-1 min-w-0 flex items-center gap-3 pl-4">
+              <Search size={18} className="text-ink-muted shrink-0" />
+              <input
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && !busy && handleFilterRefresh()}
+                placeholder="Filter by keyword…"
+                disabled={busy}
+                className="flex-1 min-w-0 pr-4 text-sm font-semibold bg-transparent text-ink placeholder:text-ink-muted placeholder:font-normal outline-none"
+              />
+            </div>
+            {activeKeyword && (
+              <button
+                onClick={handleClearFilter}
+                className="px-3 text-ink-muted hover:text-accent transition-colors cursor-pointer"
+                aria-label="Clear filter"
+              >
+                <X size={14} />
+              </button>
+            )}
             <button
               onClick={handleFilterRefresh}
               disabled={busy || !keyword.trim()}
-              className="flex items-center gap-1.5 px-3 h-9 text-sm font-medium border border-rule rounded-md text-ink-muted hover:text-masthead hover:border-masthead/40 disabled:opacity-40 transition-colors cursor-pointer"
+              className="flex items-center justify-center gap-1.5 px-4 min-w-[112px] border-l border-rule bg-masthead text-paper text-sm font-semibold disabled:opacity-40 active:scale-[0.98] transition-transform cursor-pointer"
             >
-              <Filter size={13} /> Filter
+              <Filter size={14} /> Filter
             </button>
           </div>
-          {activeKeyword && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] text-ink-muted">Filtered:</span>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-masthead/10 border border-masthead/20 text-[11px] font-medium text-masthead">
-                {activeKeyword}
-                <button onClick={handleClearFilter} className="ml-0.5 hover:text-accent cursor-pointer"><X size={10} /></button>
-              </span>
-            </div>
-          )}
+
           <PromptLensSelector selectedSlug={selectedLens?.slug ?? null} onSelect={onLensChange} onRun={onRunLens} running={lensLoading} disabled={busy} fullWidth />
         </div>
 
-        {/* Desktop: labeled action buttons */}
+        {/* Desktop: unified toolbar */}
         <div className="hidden md:flex items-center gap-2 mt-3 flex-wrap">
-          <Button variant="outline" size="sm" className="gap-2" onClick={() => onRefresh(undefined)} disabled={busy}>
+          {/* Primary: Refresh */}
+          <button
+            onClick={() => onRefresh(undefined)}
+            disabled={busy}
+            className="h-9 inline-flex items-center gap-2 px-3.5 rounded-md bg-masthead text-paper text-[13px] font-semibold hover:bg-masthead/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer shadow-sm"
+          >
             <RefreshCw size={14} className={busy ? 'animate-spin' : ''} />
-            {refreshing ? 'Refreshing...' : 'Refresh the Articles'}
-          </Button>
-          <div className="flex items-center gap-1">
-            <input
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && !busy && handleFilterRefresh()}
-              placeholder="Filter by keyword…"
-              disabled={busy}
-              className="h-8 w-40 px-2.5 text-[13px] border border-rule bg-paper text-ink placeholder:text-ink-muted rounded-md outline-none focus:border-masthead/50 disabled:opacity-50"
-            />
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={handleFilterRefresh} disabled={busy || !keyword.trim()}>
-              <Filter size={13} /> Filter
-            </Button>
+            {refreshing ? 'Refreshing…' : 'Refresh Articles'}
+          </button>
+
+          {/* Filter: segmented */}
+          <div className={`h-9 inline-flex items-stretch rounded-md border overflow-hidden transition-colors bg-paper shadow-sm ${activeKeyword ? 'border-masthead/40' : 'border-rule'} ${busy ? 'opacity-60' : ''}`}>
+            <div className="flex items-center gap-1.5 pl-2.5">
+              <Search size={13} className="text-ink-muted shrink-0" />
+              <input
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && !busy && handleFilterRefresh()}
+                placeholder="Filter by keyword…"
+                disabled={busy}
+                className="w-40 pr-2 text-[13px] font-medium bg-transparent text-ink placeholder:text-ink-muted placeholder:font-normal outline-none"
+              />
+            </div>
             {activeKeyword && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-masthead/10 border border-masthead/20 text-[11px] font-medium text-masthead ml-1">
-                {activeKeyword}
-                <button onClick={handleClearFilter} className="ml-0.5 hover:text-accent cursor-pointer"><X size={10} /></button>
-              </span>
+              <button
+                onClick={handleClearFilter}
+                className="inline-flex items-center justify-center px-2 text-ink-muted hover:text-accent transition-colors cursor-pointer"
+                aria-label="Clear filter"
+              >
+                <X size={12} />
+              </button>
             )}
+            <button
+              onClick={handleFilterRefresh}
+              disabled={busy || !keyword.trim()}
+              className="inline-flex items-center gap-1.5 px-3 border-l border-rule bg-paper-dark text-[13px] font-semibold text-ink hover:bg-masthead hover:text-paper disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-paper-dark disabled:hover:text-ink transition-colors cursor-pointer"
+            >
+              <Filter size={12} /> Filter
+            </button>
           </div>
+
+          {/* Lens */}
           <PromptLensSelector selectedSlug={selectedLens?.slug ?? null} onSelect={onLensChange} onRun={onRunLens} running={lensLoading} disabled={busy} />
-          <Button variant="outline" size="sm" className="gap-2" onClick={onManageFeeds}>
-            <Settings size={14} />
-            Feeds & Settings
-          </Button>
-          <Button variant="ghost" size="sm" className="gap-2 text-ink-muted hover:text-accent" onClick={onDelete}>
-            <Trash2 size={14} />
-            Delete this Category
-          </Button>
+
+          {/* Right-aligned secondary actions */}
+          <div className="ml-auto inline-flex items-center gap-1">
+            <button
+              onClick={onManageFeeds}
+              className="h-9 inline-flex items-center gap-2 px-3 rounded-md border border-rule bg-paper text-[13px] font-medium text-ink hover:bg-paper-dark transition-colors cursor-pointer shadow-sm"
+            >
+              <Settings size={14} />
+              Feeds
+            </button>
+            <button
+              onClick={onDelete}
+              aria-label="Delete this category"
+              className="h-9 inline-flex items-center justify-center px-2.5 rounded-md text-ink-muted hover:text-accent hover:bg-accent/10 transition-colors cursor-pointer"
+            >
+              <Trash2 size={15} />
+            </button>
+          </div>
         </div>
       </div>
 

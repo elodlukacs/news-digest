@@ -17,7 +17,7 @@ export function CategoryRoute() {
   const category = ctx.categories.find((c) => slugify(c.name) === categoryName);
 
   const categoryId = category?.id ?? 0;
-  const { summary, loading, refreshing, error, refresh } = useSummary(categoryId, selectedSnapshotId, ctx.selectedLlm);
+  const { summary, loading, refreshing, error, refresh, loadLatest } = useSummary(categoryId, selectedSnapshotId, ctx.selectedLlm);
   const { dates, refresh: refreshHistory } = useSummaryHistory(categoryId);
   const lens = useLens(categoryId, ctx.selectedLlm);
 
@@ -64,6 +64,7 @@ export function CategoryRoute() {
             refreshing={refreshing}
             error={error}
             onRefresh={handleRefresh}
+            onClearFilter={loadLatest}
             onManageFeeds={() => ctx.onManageFeeds(category.id)}
             onDelete={handleDelete}
             selectedLlm={ctx.selectedLlm}

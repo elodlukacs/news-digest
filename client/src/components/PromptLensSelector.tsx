@@ -96,84 +96,71 @@ export function PromptLensSelector({ selectedSlug, onSelect, onRun, running, dis
 
   if (fullWidth) {
     return (
-      <div className="flex flex-col gap-2">
-        {/* Trigger row: dropdown trigger + clear button as siblings */}
-        <div className="flex">
-          <DropdownMenu open={open} onOpenChange={setOpen}>
-            <DropdownMenuTrigger asChild>
-              <button
-                disabled={disabled}
-                className={`flex-1 flex items-center gap-3 px-4 py-3 border border-rule bg-paper text-ink disabled:opacity-50 active:scale-[0.98] transition-transform cursor-pointer ${selected ? 'rounded-l-xl border-r-0' : 'rounded-xl'}`}
-              >
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  {selected ? (
-                    <span className="text-xl shrink-0">{selected.icon}</span>
-                  ) : (
-                    <Eye size={18} className="text-ink-muted shrink-0" />
-                  )}
-                  <div className="flex flex-col items-start min-w-0">
-                    <span className="text-sm font-semibold leading-tight text-ink truncate">
-                      {selected ? selected.name : 'Reading Lens'}
-                    </span>
-                    <span className="text-[11px] text-ink-muted mt-0.5 truncate">
-                      {selected ? selected.description : 'Choose a perspective'}
-                    </span>
-                  </div>
-                </div>
-                <ChevronDown size={16} className="text-ink-muted shrink-0" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" sideOffset={6} className="w-[calc(100vw-2rem)] max-h-[60vh] overflow-y-auto">
-              <LensMenuContent selected={selected} onSelect={onSelect} setOpen={setOpen} />
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {selected && (
+      <div className={`flex h-14 rounded-xl border bg-paper overflow-hidden transition-colors ${disabled ? 'opacity-60' : ''} ${selected ? 'border-masthead/30' : 'border-rule'}`}>
+        <DropdownMenu open={open} onOpenChange={setOpen}>
+          <DropdownMenuTrigger asChild>
             <button
-              onClick={() => onSelect(null)}
-              className="flex items-center justify-center px-3 rounded-r-xl border border-l-0 border-rule bg-paper hover:bg-paper-dark transition-colors cursor-pointer"
-              aria-label="Clear lens"
+              disabled={disabled}
+              className="flex-1 min-w-0 flex items-center gap-3 px-4 text-left active:scale-[0.98] transition-transform cursor-pointer"
             >
-              <X size={14} className="text-ink-muted" />
+              {selected ? (
+                <span className="text-xl shrink-0">{selected.icon}</span>
+              ) : (
+                <Eye size={18} className="text-ink-muted shrink-0" />
+              )}
+              <div className="flex flex-col items-start min-w-0 flex-1">
+                <span className="text-sm font-semibold leading-tight text-ink truncate w-full">
+                  {selected ? selected.name : 'Reading Lens'}
+                </span>
+                <span className="text-[11px] text-ink-muted mt-0.5 truncate w-full">
+                  {selected ? selected.description : 'Choose a perspective'}
+                </span>
+              </div>
+              <ChevronDown size={16} className="text-ink-muted shrink-0" />
             </button>
-          )}
-        </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" sideOffset={6} className="w-[calc(100vw-2rem)] max-h-[60vh] overflow-y-auto">
+            <LensMenuContent selected={selected} onSelect={onSelect} setOpen={setOpen} />
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         {selected && (
           <button
-            onClick={onRun}
-            disabled={disabled || running}
-            aria-label={running ? 'Generating lens result' : `Run ${selected.name}`}
-            aria-busy={running}
-            className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-masthead text-paper disabled:opacity-50 active:scale-[0.98] transition-transform cursor-pointer"
+            onClick={() => onSelect(null)}
+            className="px-3 text-ink-muted hover:text-accent transition-colors cursor-pointer"
+            aria-label="Clear lens"
           >
-            <div className="flex flex-col items-start">
-              <span className="text-sm font-semibold leading-tight">
-                {running ? 'Generating…' : `Run ${selected.name}`}
-              </span>
-              {!running && (
-                <span className="text-[11px] text-paper/60 mt-0.5">{selected.description}</span>
-              )}
-            </div>
-            {running ? (
-              <span className="animate-pulse text-paper/70 text-lg tracking-widest">···</span>
-            ) : (
-              <Play size={18} className="shrink-0 ml-3" fill="currentColor" />
-            )}
+            <X size={14} />
           </button>
         )}
+
+        <button
+          onClick={onRun}
+          disabled={disabled || !selected || running}
+          aria-label={running ? 'Generating lens result' : `Run ${selected?.name ?? 'lens'}`}
+          aria-busy={running}
+          className="flex items-center justify-center gap-1.5 px-4 min-w-[112px] border-l border-rule bg-masthead text-paper text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] transition-transform cursor-pointer"
+        >
+          {running ? (
+            <span className="animate-pulse tracking-widest">···</span>
+          ) : (
+            <>
+              <Play size={14} fill="currentColor" /> Run
+            </>
+          )}
+        </button>
       </div>
     );
   }
 
   // Desktop: segmented pill — clear button is a sibling outside the trigger
   return (
-    <div className="inline-flex rounded-md overflow-hidden border border-rule shadow-sm">
+    <div className={`h-9 inline-flex items-stretch rounded-md overflow-hidden border shadow-sm transition-colors bg-paper ${selected ? 'border-masthead/40' : 'border-rule'} ${disabled ? 'opacity-60' : ''}`}>
       <DropdownMenu open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger asChild>
           <button
             disabled={disabled}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-serif bg-paper hover:bg-paper-dark border-r border-rule transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3 text-[13px] bg-paper hover:bg-paper-dark transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
           >
             {selected ? (
               <>
@@ -198,7 +185,7 @@ export function PromptLensSelector({ selectedSlug, onSelect, onRun, running, dis
       {selected && (
         <button
           onClick={() => onSelect(null)}
-          className="inline-flex items-center justify-center px-2 py-1.5 bg-paper hover:bg-paper-dark border-r border-rule transition-colors cursor-pointer"
+          className="inline-flex items-center justify-center px-2 bg-paper hover:bg-paper-dark transition-colors cursor-pointer"
           aria-label="Clear lens"
         >
           <X size={12} className="text-ink-muted" />
@@ -210,7 +197,7 @@ export function PromptLensSelector({ selectedSlug, onSelect, onRun, running, dis
         disabled={disabled || !selected || running}
         aria-label={running ? 'Generating lens result' : 'Run selected lens'}
         aria-busy={running}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-serif font-semibold bg-masthead text-paper hover:bg-masthead/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+        className="inline-flex items-center gap-1.5 px-3 border-l border-rule bg-paper-dark text-[13px] font-semibold text-ink hover:bg-masthead hover:text-paper disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-paper-dark disabled:hover:text-ink transition-colors cursor-pointer"
       >
         {running ? (
           <span className="animate-pulse tracking-widest">···</span>
