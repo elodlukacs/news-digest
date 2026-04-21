@@ -144,7 +144,7 @@ router.post('/:id/refresh', validateId, async (req, res) => {
 
     const now = new Date().toISOString();
     const oneDayAgo = new Date(Date.now() - ONE_DAY_MS).toISOString();
-    db.prepare('DELETE FROM articles WHERE fetched_at < ?').run(oneDayAgo);
+    db.prepare('DELETE FROM articles WHERE category_id = ? AND fetched_at < ?').run(req.params.id, oneDayAgo);
     const insertArticle = db.prepare('INSERT INTO articles (category_id, feed_name, title, description, link, pub_date, fetched_at, topic_id, body_text) VALUES (?,?,?,?,?,?,?,?,?)');
     const insertArticles = db.transaction((arts) => {
       for (const a of arts) {
@@ -260,7 +260,7 @@ router.post('/:id/refresh', validateId, async (req, res) => {
     );
     const historyId = histResult.lastInsertRowid;
 
-    const cutoff = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
+    const cutoff = new Date(Date.now() - 3 * ONE_DAY_MS).toISOString().split('T')[0];
     const oldIds = db.prepare('SELECT id FROM summary_history WHERE category_id = ? AND date_key < ?').all(req.params.id, cutoff).map(r => r.id);
     if (oldIds.length > 0) {
       db.prepare(`DELETE FROM chat_messages WHERE summary_id IN (${oldIds.map(() => '?').join(',')})`).run(...oldIds);

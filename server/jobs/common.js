@@ -1,6 +1,6 @@
 const { createHash } = require('crypto');
 
-async function fetchWithTimeout(url, signal, timeoutMs = 30000) {
+async function fetchWithTimeout(url, signal, timeoutMs = 30000, opts = {}) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   const onAbort = () => controller.abort();
@@ -18,6 +18,7 @@ async function fetchWithTimeout(url, signal, timeoutMs = 30000) {
       signal: controller.signal,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+        ...(opts.headers || {}),
       },
     });
     return resp;

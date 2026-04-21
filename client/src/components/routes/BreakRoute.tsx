@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { RefreshCw, ExternalLink, Sparkles, MessageCircle } from 'lucide-react';
+import { RefreshCw, ExternalLink, Sparkles, MessageCircle, RotateCw } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { API_BASE } from '../../config';
 import { Skeleton } from '../ui/skeleton';
@@ -20,11 +20,45 @@ interface SurpriseArticle {
 }
 
 const SURPRISE_BASE = `${API_BASE}/homepage/surprise`;
+const SESSION_SEEN_KEY = 'break_seen_urls';
+const MAX_SEEN = 50;
+
+function getSeenUrls(): Set<string> {
+  try {
+    const raw = sessionStorage.getItem(SESSION_SEEN_KEY);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw) as string[];
+    return new Set(arr);
+  } catch {
+    return new Set();
+  }
+}
+
+function addSeenUrls(urls: string[]) {
+  try {
+    const existing = getSeenUrls();
+    for (const u of urls) existing.add(u);
+    while (existing.size > MAX_SEEN) {
+      const first = existing.values().next().value;
+      if (first) existing.delete(first);
+    }
+    sessionStorage.setItem(SESSION_SEEN_KEY, JSON.stringify([...existing]));
+  } catch {
+    // quota exceeded — clear and start fresh
+    sessionStorage.removeItem(SESSION_SEEN_KEY);
+  }
+}
+
+function clearSeenUrls() {
+  sessionStorage.removeItem(SESSION_SEEN_KEY);
+}
 
 export function BreakRoute() {
   const [article, setArticle] = useState<SurpriseArticle | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [lastUpdatedLoading, setLastUpdatedLoading] = useState(true);
 
   // Elaborated (longer) summary state — article-scoped
   const [elaborated, setElaborated] = useState<string | null>(null);
@@ -37,7 +71,19 @@ export function BreakRoute() {
   const [chatSending, setChatSending] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
-  const lastUrlRef = useRef<string | null>(null);
+
+  const fetchLastUpdated = useCallback(async () => {
+    try {
+      const res = await fetch(`${SURPRISE_BASE}/last-updated`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setLastUpdated(data.lastUpdated || null);
+    } catch {
+      // ignore
+    } finally {
+      setLastUpdatedLoading(false);
+    }
+  }, []);
 
   const fetchArticle = useCallback(async () => {
     if (abortRef.current) abortRef.current.abort();
@@ -52,8 +98,9 @@ export function BreakRoute() {
     setChatOpen(false);
 
     try {
-      const excludeParam = lastUrlRef.current
-        ? `?exclude_url=${encodeURIComponent(lastUrlRef.current)}`
+      const seen = getSeenUrls();
+      const excludeParam = seen.size > 0
+        ? `?exclude=${encodeURIComponent([...seen].join(','))}`
         : '';
       const res = await fetch(`${SURPRISE_BASE}${excludeParam}`, { signal: controller.signal });
       if (!res.ok) {
@@ -61,9 +108,9 @@ export function BreakRoute() {
         throw new Error(data.error || 'No articles found');
       }
       const data = (await res.json()) as SurpriseArticle;
-      lastUrlRef.current = data.link || null;
+      if (data.link) addSeenUrls([data.link]);
       setArticle(data);
-      if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (e: unknown) {
       if (e instanceof DOMException && e.name === 'AbortError') return;
       setError(e instanceof Error ? e.message : 'Failed to load');
@@ -74,7 +121,13 @@ export function BreakRoute() {
 
   useEffect(() => {
     fetchArticle();
+    fetchLastUpdated();
     return () => { abortRef.current?.abort(); };
+  }, [fetchArticle, fetchLastUpdated]);
+
+  const handleClearSeen = useCallback(() => {
+    clearSeenUrls();
+    fetchArticle();
   }, [fetchArticle]);
 
   const handleElaborate = useCallback(async () => {
@@ -143,6 +196,8 @@ export function BreakRoute() {
 
   const bodyText = elaborated ?? article?.brief ?? '';
 
+  const seenCount = getSeenUrls().size;
+
   return (
     <div className="relative min-h-[calc(100vh-8rem)]">
       <div className="max-w-[720px] mx-auto px-5 md:px-8 pt-6 md:pt-12 pb-[10.5rem] md:pb-44">
@@ -150,6 +205,28 @@ export function BreakRoute() {
           <p className="text-[10px] md:text-[11px] font-[family-name:var(--font-widget)] uppercase tracking-[0.35em] text-ink-muted/70 font-semibold">
             Take a Break
           </p>
+          <div className="flex items-center gap-3">
+            {lastUpdatedLoading ? (
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-ink-muted/40 animate-[pulse_1s_ease-in-out_infinite]" />
+                <span className="text-[10px] font-[family-name:var(--font-widget)] text-ink-muted/50">checking…</span>
+              </div>
+            ) : lastUpdated ? (
+              <span className="text-[10px] font-[family-name:var(--font-widget)] text-ink-muted/60" title={`Last updated: ${new Date(lastUpdated).toLocaleString()}`}>
+                Updated {timeAgo(lastUpdated)}
+              </span>
+            ) : null}
+            {seenCount > 0 && (
+              <button
+                onClick={handleClearSeen}
+                className="inline-flex items-center gap-1 text-[10px] font-[family-name:var(--font-widget)] text-ink-muted/50 hover:text-masthead transition-colors cursor-pointer"
+                title="Reset — show articles you've already seen"
+              >
+                <RotateCw size={10} />
+                Reset ({seenCount})
+              </button>
+            )}
+          </div>
         </div>
 
         {loading && (

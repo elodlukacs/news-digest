@@ -97,7 +97,7 @@ function AppLayout() {
           models={models}
           modelsLoading={modelsLoading}
           articleFontSize={articleFontSize}
-          onFontSizeChange={setArticleFontSize}
+          onFontSizeChange={handleFontSizeChange}
         />
 
         <Outlet context={outletContext} />

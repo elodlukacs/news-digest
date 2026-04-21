@@ -289,78 +289,6 @@ async function fetchLinkedIn(signal) {
   return jobs;
 }
 
-// ─── Indeed ─────────────────────────────────────────────────
-
-async function fetchIndeed(signal) {
-  const jobs = [];
-  const params = new URLSearchParams({
-    q: 'senior frontend developer',
-    l: 'Remote',
-    fromage: '7',
-    remotejob: 'remotedt',
-  });
-
-  try {
-    const resp = await fetchWithTimeout(`https://www.indeed.com/jobs?${params}`, signal, 15000);
-    if (!resp.ok) throw new Error(`Indeed returned ${resp.status}`);
-
-    const html = await resp.text();
-    const scriptMatches = html.match(/<script[^>]*id="mosaic-data"[^>]*type="application\/json"[^>]*>([\s\S]*?)<\/script>/);
-
-    if (scriptMatches) {
-      try {
-        const jsonData = JSON.parse(scriptMatches[1]);
-        const jobCards = jsonData?.metaAttributes?.mosaicServerJobResults?.components?.jobCardsModuleInterests?.jobCards || jsonData?.jobCards || [];
-        for (const card of jobCards.slice(0, 25)) {
-          const title = card.jobTitle || card.title || '';
-          const company = card.company || card.companyName || 'Unknown';
-          const jobKey = card.jobkey || card.jobKey || '';
-          if (!title || !jobKey) continue;
-          const location = card.formattedLocation || card.location || '';
-          jobs.push(normalizeJob({
-            id: generateJobId('indeed', title, company),
-            title, company,
-            url: `https://www.indeed.com/viewjob?jk=${jobKey}`,
-            source: 'indeed',
-            datePosted: card.date || new Date().toISOString().split('T')[0],
-            country: extractCountry(location),
-            workType: determineWorkType(location, true),
-          }));
-        }
-      } catch {}
-    }
-
-    if (jobs.length === 0) {
-      const jobMatches = html.match(/<li[^>]*class="[^"]*jobsearch-ResultsList-li[^"]*"[^>]*data-jk="([^"]*)"[^>]*>([\s\S]*?)<\/li>/g);
-      if (jobMatches) {
-        for (const m of jobMatches.slice(0, 25)) {
-          const jkMatch = m.match(/data-jk="([^"]+)"/);
-          const titleMatch = m.match(/<h2[^>]*class="[^"]*jobTitle[^"]*"[^>]*>(.*?)<\/h2>/);
-          const companyMatch = m.match(/<span[^>]*class="[^"]*companyName[^"]*"[^>]*>(.*?)<\/span>/);
-          const jk = jkMatch?.[1] || '';
-          const title = titleMatch?.[1]?.replace(/<[^>]*>/g, '').trim() || '';
-          const company = companyMatch?.[1]?.replace(/<[^>]*>/g, '').trim() || 'Unknown';
-          if (!title || !jk) continue;
-          jobs.push(normalizeJob({
-            id: generateJobId('indeed', title, company),
-            title, company,
-            url: `https://www.indeed.com/viewjob?jk=${jk}`,
-            source: 'indeed',
-            datePosted: new Date().toISOString().split('T')[0],
-            country: '',
-            workType: determineWorkType('', true),
-          }));
-        }
-      }
-    }
-    return jobs;
-  } catch (error) {
-    if (error?.name === 'AbortError') throw error;
-    console.error('Indeed fetch error:', error.message);
-    return [];
-  }
-}
-
 // ─── Hacker News ────────────────────────────────────────────
 
 const HN_API = 'https://hacker-news.firebaseio.com/v0';
@@ -484,6 +412,48 @@ async function fetchHackerNews(signal) {
   }
 }
 
+// ─── MeetFrank ──────────────────────────────────────────────
+
+const MEETFRANK_MAX_AGE_DAYS = 14;
+
+async function fetchMeetFrank(signal) {
+  const resp = await fetchWithTimeout(
+    'https://api.meetfrank.com/ai/jobs?pageSize=100&q=frontend+developer&skills=react,typescript&seniority=senior',
+    signal,
+    30000,
+    { headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' } },
+  );
+  if (!resp.ok) throw new Error(`MeetFrank returned ${resp.status}`);
+
+  const data = await resp.json();
+  const cutoff = Date.now() - MEETFRANK_MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
+
+  return (data.jobs || [])
+    .filter(raw => {
+      if (!raw.publishedAt) return false;
+      return new Date(raw.publishedAt).getTime() >= cutoff;
+    })
+    .map(raw => {
+      const remoteType = raw.remote?.type || '';
+      const isRemote = remoteType === 'FULL_REMOTE';
+      return normalizeJob({
+        id: generateJobId('meetfrank', raw.title, raw.company),
+        title: raw.title,
+        company: raw.company || 'Unknown',
+        url: raw.applyUrl || '',
+        source: 'meetfrank',
+        datePosted: parseDate(raw.publishedAt),
+        country: extractCountry(raw.location || ''),
+        workType: determineWorkType(
+          [raw.location, remoteType, raw.speciality].join(' '),
+          isRemote,
+          raw.skills,
+        ),
+        description: raw.description,
+      });
+    });
+}
+
 // ─── Fetch All ──────────────────────────────────────────────
 
 const ALL_SOURCES = [
@@ -493,8 +463,8 @@ const ALL_SOURCES = [
   { name: 'remotive', fn: fetchRemotive },
   { name: 'arbeitnow', fn: fetchArbeitnow },
   { name: 'linkedin', fn: fetchLinkedIn },
-  { name: 'indeed', fn: fetchIndeed },
   { name: 'hackernews', fn: fetchHackerNews },
+  { name: 'meetfrank', fn: fetchMeetFrank },
 ];
 
 async function fetchAllSources(signal) {

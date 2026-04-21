@@ -253,7 +253,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_articles_topic ON articles(topic_id);
   CREATE INDEX IF NOT EXISTS idx_articles_source_topic ON articles(feed_name, topic_id, pub_date);
   CREATE INDEX IF NOT EXISTS idx_articles_fetched_at ON articles(fetched_at);
-  CREATE INDEX IF NOT EXISTS idx_articles_fetched_at ON articles(fetched_at);
+  CREATE INDEX IF NOT EXISTS idx_sh_generated_at ON summary_history(generated_at);
   CREATE INDEX IF NOT EXISTS idx_forensic_user ON forensic_history(user_id);
   CREATE INDEX IF NOT EXISTS idx_forensic_date ON forensic_history(created_at);
   CREATE INDEX IF NOT EXISTS idx_rethinking_user ON rethinking_journal(user_id);

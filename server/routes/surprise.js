@@ -3,6 +3,7 @@
 // GET /              → pure DB read. Picks a random article from a recent
 //                      summary_history row (already LLM-summarised). No LLM
 //                      call on the request path.
+// GET  /last-updated → timestamp of the most recent summary_history row.
 // POST /elaborate    → on-demand LLM call. Generates a longer, more informative
 //                      briefing from the original article body. Cached in
 //                      articles.surprise_expanded when article_id is known.
@@ -17,15 +18,16 @@ const { buildMessages } = require('../lib/promptManager');
 const router = express.Router();
 
 const EXPANDED_MIN_LENGTH = 200;
-const SUMMARY_LOOKBACK_DAYS = 7;
-const RANDOM_POOL_SIZE = 40; // sample N recent summary rows, pick one
+const SUMMARY_LOOKBACK_DAYS = 1;
+const RANDOM_POOL_SIZE = 40;
+const PURGE_OLDER_THAN_DAYS = 3;
+
+let lastPurgeAt = 0;
 
 function articleKey(id) {
   return `surprise:${id}`;
 }
 
-// Parse the LLM-generated category summary markdown into individual article
-// sections. Mirrors the client-side parseSummaryMarkdown in SummaryView.tsx.
 function parseSummaryMarkdown(markdown) {
   if (!markdown || typeof markdown !== 'string') return [];
   const sections = [];
@@ -35,9 +37,6 @@ function parseSummaryMarkdown(markdown) {
     const trimmed = part.trim();
     if (!trimmed) continue;
 
-    // Greedy title match so titles containing nested brackets (e.g.
-    // "Foo [Reuters World]") are captured correctly: `.+` grabs up to the
-    // last `](...)` on the line.
     const firstLine = trimmed.split('\n')[0];
     const linkMatch = firstLine.match(/^##\s+\[(.+)\]\(([^)]+)\)\s*$/);
     const title = linkMatch
@@ -65,11 +64,7 @@ function parseSummaryMarkdown(markdown) {
   return sections;
 }
 
-// Pick a random article from a recent summary_history row.
-// Strategy: pull the latest N summary rows across all categories from the
-// last SUMMARY_LOOKBACK_DAYS, shuffle, walk through them until we find one
-// with at least one parseable section that isn't excluded.
-function pickArticle({ excludeUrl } = {}) {
+function pickArticle({ excludeUrls } = {}) {
   const rows = db.prepare(`
     SELECT sh.id, sh.category_id, sh.summary, sh.sentiment_data, sh.generated_at,
            c.name as category_name
@@ -84,7 +79,6 @@ function pickArticle({ excludeUrl } = {}) {
 
   if (rows.length === 0) return null;
 
-  // Fisher-Yates shuffle so we visit summary rows in random order.
   for (let i = rows.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [rows[i], rows[j]] = [rows[j], rows[i]];
@@ -93,24 +87,23 @@ function pickArticle({ excludeUrl } = {}) {
   const findArticleByLink = db.prepare(
     'SELECT id, link, feed_name, pub_date, body_text, description, surprise_expanded FROM articles WHERE link = ? LIMIT 1'
   );
-  const findArticleByTitle = db.prepare(
-    'SELECT id, link, feed_name, pub_date, body_text, description, surprise_expanded FROM articles WHERE category_id = ? AND title = ? LIMIT 1'
-  );
 
   for (const row of rows) {
     const sections = parseSummaryMarkdown(row.summary);
     if (sections.length === 0) continue;
 
-    // Build a lookup of original_content by title from sentiment_data so we
-    // can fall back when the article row is gone.
-    let originalByTitle = new Map();
+      const fallbackByUrl = new Map();
     if (row.sentiment_data) {
       try {
         const parsed = JSON.parse(row.sentiment_data);
         if (Array.isArray(parsed)) {
           for (const entry of parsed) {
-            if (entry && entry.title && entry.original_content) {
-              originalByTitle.set(String(entry.title).toLowerCase(), entry.original_content);
+            if (entry && entry.url) {
+              fallbackByUrl.set(String(entry.url).toLowerCase(), {
+                originalContent: entry.original_content || '',
+                source: entry.source || '',
+                pubDate: entry.pub_date || '',
+              });
             }
           }
         }
@@ -119,7 +112,6 @@ function pickArticle({ excludeUrl } = {}) {
       }
     }
 
-    // Random order over sections too.
     const order = sections.map((_, i) => i);
     for (let i = order.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -128,29 +120,23 @@ function pickArticle({ excludeUrl } = {}) {
 
     for (const idx of order) {
       const section = sections[idx];
-      if (excludeUrl && section.url && section.url === excludeUrl) continue;
+      if (excludeUrls && section.url && excludeUrls.has(section.url)) continue;
 
-      // Try to find the original article row for source/pub_date/body_text.
       let articleRow = section.url ? findArticleByLink.get(section.url) : null;
-      if (!articleRow) {
-        articleRow = findArticleByTitle.get(row.category_id, section.title);
-      }
 
+      const fallback = section.url ? fallbackByUrl.get(section.url.toLowerCase()) : null;
       const originalContent =
         (articleRow && (articleRow.body_text || articleRow.description)) ||
-        originalByTitle.get(section.title.toLowerCase()) ||
+        (fallback && fallback.originalContent) ||
         '';
 
       return {
-        // Stable identifier: prefer the articles row id; otherwise derive from
-        // summary_history row + section index so the client can pass it back
-        // as exclude on "Next".
         article_id: articleRow ? articleRow.id : null,
         title: section.title,
         brief: section.content,
         link: section.url || (articleRow ? articleRow.link : ''),
-        source: articleRow ? articleRow.feed_name : '',
-        pub_date: articleRow ? articleRow.pub_date : row.generated_at,
+        source: (articleRow && articleRow.feed_name) || (fallback && fallback.source) || '',
+        pub_date: (articleRow && articleRow.pub_date) || (fallback && fallback.pubDate) || row.generated_at,
         category_name: row.category_name || '',
         raw_content: originalContent,
         has_expanded: !!(
@@ -166,12 +152,23 @@ function pickArticle({ excludeUrl } = {}) {
 }
 
 router.get('/', (req, res) => {
-  const excludeUrl =
-    typeof req.query.exclude_url === 'string' && req.query.exclude_url.trim()
-      ? req.query.exclude_url.trim()
-      : undefined;
+  const now = Date.now();
+  if (now - lastPurgeAt > 60 * 60 * 1000) {
+    const cutoff = new Date(now - PURGE_OLDER_THAN_DAYS * 86400000).toISOString();
+    const oldIds = db.prepare('SELECT id FROM summary_history WHERE category_id > 0 AND generated_at < ?').all(cutoff).map(r => r.id);
+    if (oldIds.length > 0) {
+      db.prepare(`DELETE FROM chat_messages WHERE summary_id IN (${oldIds.map(() => '?').join(',')})`).run(...oldIds);
+      db.prepare('DELETE FROM summary_history WHERE category_id > 0 AND generated_at < ?').run(cutoff);
+    }
+    lastPurgeAt = now;
+  }
 
-  const article = pickArticle({ excludeUrl });
+  const excludeParam = typeof req.query.exclude === 'string' ? req.query.exclude.trim() : '';
+  const excludeUrls = new Set(
+    excludeParam.split(',').map(u => u.trim()).filter(Boolean)
+  );
+
+  const article = pickArticle({ excludeUrls });
   if (!article) {
     return res
       .status(404)
@@ -181,13 +178,22 @@ router.get('/', (req, res) => {
   res.json(article);
 });
 
+router.get('/last-updated', (req, res) => {
+  const row = db.prepare(`
+    SELECT MAX(generated_at) as latest
+    FROM summary_history
+    WHERE generated_at > datetime('now', '-1 days')
+      AND category_id > 0
+  `).get();
+  res.json({ lastUpdated: row?.latest || null });
+});
+
 router.post('/elaborate', async (req, res) => {
   const { article_id, title, content, source } = req.body || {};
   if (!title || !content) {
     return res.status(400).json({ error: 'title and content are required' });
   }
 
-  // Return cached elaboration if present.
   if (article_id) {
     const row = db
       .prepare('SELECT surprise_expanded FROM articles WHERE id = ?')
@@ -217,7 +223,9 @@ router.post('/elaborate', async (req, res) => {
       max_tokens: 2000,
       temperature: 0.5,
     });
-    const expanded = String(result?.content || '').trim();
+    const expanded = (result?.content && typeof result.content === 'string')
+      ? result.content.trim()
+      : '';
     if (article_id && expanded.length > 100) {
       db.prepare('UPDATE articles SET surprise_expanded = ? WHERE id = ?').run(
         expanded,
@@ -283,12 +291,15 @@ router.post('/chat', async (req, res) => {
       temperature: 0.5,
     });
 
+    const replyContent = (result?.content && typeof result.content === 'string')
+      ? result.content
+      : 'I couldn\'t generate a response. Please try again.';
     const replyTime = new Date().toISOString();
     db.prepare(
       'INSERT INTO chat_messages (summary_id, role, content, created_at, article_title) VALUES (?,?,?,?,?)',
-    ).run(0, 'assistant', result.content, replyTime, key);
+    ).run(0, 'assistant', replyContent, replyTime, key);
 
-    res.json({ role: 'assistant', content: result.content, created_at: replyTime });
+    res.json({ role: 'assistant', content: replyContent, created_at: replyTime });
   } catch (err) {
     console.error('Surprise chat error:', err);
     res.status(500).json({ error: err.message || 'Failed to generate response' });

@@ -97,7 +97,7 @@ export interface ReleasesResponse {
 }
 
 export type JobStatus = 'new';
-export type JobSource = 'remoteok' | 'weworkremotely' | 'himalayas' | 'remotive' | 'arbeitnow' | 'linkedin' | 'indeed' | 'hackernews';
+export type JobSource = 'remoteok' | 'weworkremotely' | 'himalayas' | 'remotive' | 'arbeitnow' | 'linkedin' | 'hackernews' | 'meetfrank';
 export type RemoteAssessment = 'yes' | 'no' | 'possible';
 
 export interface Job {
