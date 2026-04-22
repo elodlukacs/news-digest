@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useContext } from 'react';
 import { LlmContext } from '../contexts/LlmContext';
-import type { Category, Feed, Summary, HistoryEntry, ChatMessage, Job, JobFilters, JobCounts, SourceCounts, Briefing, HomepageBrief, StudyAnalysis, StudyAnalysisEntry, InformationDietResult } from '../types';
+import type { Category, Feed, Summary, HistoryEntry, ChatMessage, Job, JobFilters, JobCounts, SourceCounts, Briefing, StudyAnalysis, StudyAnalysisEntry, InformationDietResult } from '../types';
 
 import { API_BASE as BASE } from '../config';
 
@@ -381,11 +381,12 @@ export function useArticleChat(
       } else if (!reply.content && !controller.signal.aborted) {
         setError('No response received');
       }
-    } catch (e) {
+    } catch (e: unknown) {
+      if (e instanceof DOMException && e.name === 'AbortError') return;
       console.error('Chat error', e);
       setError('Failed to send message');
     } finally {
-      setSending(false);
+      if (!controller.signal.aborted) setSending(false);
     }
   }, [summaryId, articleTitle, articleContent, providerId]);
 
@@ -449,45 +450,6 @@ export function useBriefing(providerId: string = 'openai/gpt-oss-20b') {
   }, [loadLatest]);
 
   return { briefing, loading, error, generate };
-}
-
-export function useHomepage() {
-  const [briefs, setBriefs] = useState<HomepageBrief[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const abortRef = useRef<AbortController | null>(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    abortRef.current = controller;
-    fetch(`${BASE}/homepage`, { signal: controller.signal })
-      .then(r => { if (!r.ok) throw new Error(); return r.json(); })
-      .then(data => { setBriefs(data); setLoading(false); })
-      .catch(() => { setLoading(false); });
-    return () => { controller.abort(); abortRef.current = null; };
-  }, []);
-
-  const refresh = useCallback(async () => {
-    if (abortRef.current) abortRef.current.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-    setRefreshing(true);
-    try {
-      const res = await fetch(`${BASE}/homepage/refresh`, { method: 'POST', signal: controller.signal });
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data)) {
-          setBriefs(data);
-        }
-      }
-    } catch (e: unknown) {
-      if (e instanceof DOMException && e.name === 'AbortError') return;
-    } finally {
-      setRefreshing(false);
-    }
-  }, []);
-
-  return { briefs, loading, refreshing, refresh };
 }
 
 export function useStudyAnalysis() {

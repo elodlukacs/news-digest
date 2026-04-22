@@ -1,0 +1,30 @@
+/**
+ * BACKUP: Previous "ambient fade" article card layout for SummaryView.
+ * Image stretched to card height on the left, mask-faded into card background,
+ * text content overlaps the faded right edge.
+ *
+ * Drop-in replacement for the <div className="flex flex-row items-stretch"> block
+ * inside the Card component in SummaryView.tsx.
+ */
+
+<div className="flex flex-row items-stretch">
+  {/* Left: image stretched to card height, self-fades into background via mask */}
+  {section.imageUrl && (
+    <div className="relative shrink-0 w-56 md:w-72 self-stretch">
+      <img
+        src={section.imageUrl}
+        alt={section.title}
+        loading="lazy"
+        className="absolute inset-0 w-full h-full object-cover"
+        style={{
+          maskImage: 'linear-gradient(to right, black 0%, black 10%, transparent 90%)',
+          WebkitMaskImage: 'linear-gradient(to right, black 0%, black 10%, transparent 90%)',
+        }}
+      />
+    </div>
+  )}
+  {/* Right: content — overlaps image's faded right edge */}
+  <div className={`flex-1 min-w-0 flex flex-col relative ${section.imageUrl ? '-ml-10 md:-ml-14' : ''}`}>
+    {/* CardHeader / CardContent / CardFooter here */}
+  </div>
+</div>

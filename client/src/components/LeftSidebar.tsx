@@ -3,7 +3,6 @@ import { WidgetHeader } from './SharedWidgets';
 import type { HistoryEntry } from '../types';
 
 interface Props {
-  hackerNews?: unknown[];
   dates: HistoryEntry[];
   selectedSnapshotId: number | null;
   onSelectSnapshot: (id: number | null) => void;

@@ -12,7 +12,6 @@ import { useTheme } from './hooks/useTheme';
 import type { Theme } from './hooks/useTheme';
 import { usePullToRefresh } from './hooks/usePullToRefresh';
 import { TooltipProvider } from './components/ui/tooltip';
-import { HomeRoute } from './components/routes/HomeRoute';
 import { CategoryRoute } from './components/routes/CategoryRoute';
 import { BriefingRoute } from './components/routes/BriefingRoute';
 import { JobsRoute } from './components/routes/JobsRoute';
@@ -128,7 +127,6 @@ function App() {
     <Routes>
       <Route element={<AppLayout />}>
         <Route index element={<BreakRoute />} />
-        <Route path="newspaper" element={<HomeRoute />} />
         <Route path="category/:categoryName" element={<CategoryRoute />} />
         <Route path="briefing" element={<BriefingRoute />} />
         <Route path="break" element={<BreakRoute />} />

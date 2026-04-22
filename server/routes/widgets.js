@@ -125,27 +125,6 @@ router.get('/crypto', async (req, res) => {
   }
 });
 
-router.get('/hackernews', async (req, res) => {
-  try {
-    const idsResp = await fetchWithTimeout('https://hacker-news.firebaseio.com/v0/topstories.json');
-    const ids = await idsResp.json();
-    const top8 = ids.slice(0, 8);
-
-    const stories = await Promise.all(
-      top8.map(async (id) => {
-        const r = await fetchWithTimeout(`https://hacker-news.firebaseio.com/v0/item/${id}.json`);
-        const item = await r.json();
-        return { id: item.id, title: item.title, url: item.url || `https://news.ycombinator.com/item?id=${item.id}`, score: item.score };
-      })
-    );
-
-    res.json(stories);
-  } catch (err) {
-    console.error('HN error:', err);
-    res.status(500).json({ error: 'Failed to fetch HN stories' });
-  }
-});
-
 router.get('/releases', async (req, res) => {
   const apiKey = process.env.TMDB_API_KEY;
   if (!apiKey) return res.json({ items: [], total: 0, page: 1, pageSize: 20, totalPages: 0 });

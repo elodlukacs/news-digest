@@ -1,6 +1,6 @@
 const express = require('express');
 const db = require('../db');
-const { parser } = require('../lib/rss');
+const { parser, extractImage } = require('../lib/rss');
 const { callLLM: rawCallLLM } = require('../lib/llm');
 const validateId = require('../middleware/validateId');
 const { extractKeywords } = require('../lib/bias-radar/topicCluster');
@@ -111,6 +111,7 @@ router.post('/:id/refresh', validateId, async (req, res) => {
             link: item.link || '',
             pubDate: item.pubDate || '',
             source: feed.name,
+            image: extractImage(item),
           }));
         } catch (err) {
           console.warn(`Failed to fetch feed "${feed.name}" (${feed.url}):`, err.message);
@@ -145,11 +146,11 @@ router.post('/:id/refresh', validateId, async (req, res) => {
     const now = new Date().toISOString();
     const oneDayAgo = new Date(Date.now() - ONE_DAY_MS).toISOString();
     db.prepare('DELETE FROM articles WHERE category_id = ? AND fetched_at < ?').run(req.params.id, oneDayAgo);
-    const insertArticle = db.prepare('INSERT INTO articles (category_id, feed_name, title, description, link, pub_date, fetched_at, topic_id, body_text) VALUES (?,?,?,?,?,?,?,?,?)');
+    const insertArticle = db.prepare('INSERT INTO articles (category_id, feed_name, title, description, link, pub_date, fetched_at, topic_id, body_text, image_url) VALUES (?,?,?,?,?,?,?,?,?,?)');
     const insertArticles = db.transaction((arts) => {
       for (const a of arts) {
         const fullContent = a.contentEncoded || a.content || a.description || '';
-        insertArticle.run(req.params.id, a.source, a.title, a.description || '', a.link, a.pubDate, now, deriveTopicId(a.title), fullContent);
+        insertArticle.run(req.params.id, a.source, a.title, a.description || '', a.link, a.pubDate, now, deriveTopicId(a.title), fullContent, a.image || '');
       }
     });
     insertArticles(allArticles);
@@ -236,6 +237,7 @@ router.post('/:id/refresh', validateId, async (req, res) => {
         original_content: original ? original.description : '',
         source: original ? original.source : '',
         pub_date: original ? original.pubDate : '',
+        image: original ? (original.image || '') : '',
       };
     });
 
@@ -316,6 +318,7 @@ router.post('/:id/lens', validateId, async (req, res) => {
             link: item.link || '',
             pubDate: item.pubDate || '',
             source: feed.name,
+            image: extractImage(item),
           }));
         } catch (err) {
           console.warn(`Lens: failed to fetch feed "${feed.name}":`, err.message);

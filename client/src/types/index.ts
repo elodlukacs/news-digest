@@ -32,6 +32,7 @@ export interface SentimentSection {
   original_content?: string;
   source?: string;
   pub_date?: string;
+  image?: string;
 }
 
 export interface HistoryEntry {
@@ -69,13 +70,6 @@ export interface LlmStats {
   by_purpose: Record<string, { calls: number; tokens: number; avg_latency: number }>;
   daily: { date: string; tokens: number; calls: number }[];
   quotas: ProviderQuota[];
-}
-
-export interface HackerNewsItem {
-  id: number;
-  title: string;
-  url: string;
-  score: number;
 }
 
 export interface UpcomingRelease {

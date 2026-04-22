@@ -30,7 +30,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Skeleton } from './ui/skeleton';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from './ui/card';
+import { Card, CardTitle } from './ui/card';
 import type { Summary } from '../types';
 import { useArticleChat } from '../hooks/useApi';
 import { BiasRadarPanel } from '../features/mindgames/bias-radar';
@@ -43,6 +43,7 @@ export interface ParsedSection {
   originalContent?: string;
   source?: string;
   pubDate?: string;
+  imageUrl?: string;
 }
 
 export function parseSummaryMarkdown(markdown: string, sentimentData: Summary['sentiment_data']): ParsedSection[] {
@@ -54,6 +55,7 @@ export function parseSummaryMarkdown(markdown: string, sentimentData: Summary['s
   const originalContentByTitle = new Map<string, string>();
   const sourceByTitle = new Map<string, string>();
   const pubDateByTitle = new Map<string, string>();
+  const imageByTitle = new Map<string, string>();
   if (sentimentData) {
     for (const entry of sentimentData) {
       if (entry.title && entry.sentiment) {
@@ -67,6 +69,9 @@ export function parseSummaryMarkdown(markdown: string, sentimentData: Summary['s
       }
       if (entry.title && entry.pub_date) {
         pubDateByTitle.set(entry.title.toLowerCase(), entry.pub_date);
+      }
+      if (entry.title && entry.image) {
+        imageByTitle.set(entry.title.toLowerCase(), entry.image);
       }
     }
   }
@@ -102,6 +107,7 @@ export function parseSummaryMarkdown(markdown: string, sentimentData: Summary['s
       originalContent: originalContentByTitle.get(title.toLowerCase()) || '',
       source: sourceByTitle.get(title.toLowerCase()),
       pubDate: pubDateByTitle.get(title.toLowerCase()),
+      imageUrl: imageByTitle.get(title.toLowerCase()),
     });
   }
 
@@ -581,83 +587,154 @@ export function SummaryView({
                 {section.sentiment && (
                   <SentimentRibbon sentiment={section.sentiment} />
                 )}
-                <CardHeader className="pb-0 px-0 md:px-5">
-                  <CardTitle className="text-lg md:text-xl pr-16 break-words">{section.title}</CardTitle>
-                </CardHeader>
-                <CardContent className="px-0 md:px-5">
-                  <p className="break-words [overflow-wrap:anywhere]" style={{ fontSize: `${articleFontSize}px`, lineHeight: `${articleFontSize * 1.8}px`, color: 'var(--color-ink)', fontFamily: 'var(--font-body)' }}>
-                    {section.content}
-                  </p>
-                </CardContent>
-                <CardFooter className="px-0 md:px-5 flex-wrap gap-1.5 md:gap-2 items-end">
-                  {section.url && (
-                    <Button variant="outline" size="sm" className="gap-1.5 text-xs" asChild>
-                      <a href={section.url} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink size={12} />
-                        Read
-                      </a>
-                    </Button>
+                <div className="px-0 md:px-5 pt-3 md:pt-5">
+                  {/* Mobile: small thumbnail + title/meta row, then content below */}
+                  {section.imageUrl && (
+                    <div className="flex gap-3 items-start md:hidden">
+                      <img
+                        src={section.imageUrl}
+                        alt={section.title}
+                        loading="lazy"
+                        className="shrink-0 w-16 self-stretch object-cover rounded-md"
+                        style={{ boxShadow: '2px 3px 8px 0 color-mix(in srgb, var(--color-masthead) 25%, transparent)' }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-base pr-10 break-words leading-snug">{section.title}</CardTitle>
+                        {(section.source || section.pubDate) && (
+                          <div className="mt-1 flex flex-col gap-0.5 text-[11px] text-ink-muted/70 font-[family-name:var(--font-body)] italic">
+                            {section.source && <span>{section.source}</span>}
+                            {section.pubDate && (
+                              <span>
+                                {(() => {
+                                  try {
+                                    const d = new Date(section.pubDate);
+                                    return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+                                  } catch { return section.pubDate; }
+                                })()}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={`gap-1.5 text-xs transition-colors ${
-                      challengeIdx === idx
-                        ? 'border-masthead/60 bg-masthead/10 text-masthead hover:bg-masthead/15'
-                        : 'hover:border-masthead/50 hover:text-masthead'
-                    }`}
-                    onClick={() => setChallengeIdx(challengeIdx === idx ? null : idx)}
-                    aria-expanded={challengeIdx === idx}
-                  >
-                    <Brain size={14} strokeWidth={1.75} />
-                    {challengeIdx === idx ? 'Close challenge' : 'Challenge'}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5 text-xs"
-                    onClick={() => setRadarSection({ title: section.title, content: section.content, url: section.url, originalContent: section.originalContent })}
-                  >
-                    <FlaskConical size={14} strokeWidth={1.5} />
-                    Dissect
-                  </Button>
-                  {summary.id && (
+                  {!section.imageUrl && (
+                    <div className="md:hidden">
+                      <CardTitle className="text-base pr-10 break-words leading-snug">{section.title}</CardTitle>
+                      {(section.source || section.pubDate) && (
+                        <div className="mt-1 flex flex-col gap-0.5 text-[11px] text-ink-muted/70 font-[family-name:var(--font-body)] italic">
+                          {section.source && <span>{section.source}</span>}
+                          {section.pubDate && (
+                            <span>
+                              {(() => {
+                                try {
+                                  const d = new Date(section.pubDate);
+                                  return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+                                } catch { return section.pubDate; }
+                              })()}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <div className="mt-2 md:hidden">
+                    <p className="break-words [overflow-wrap:anywhere]" style={{ fontSize: `${articleFontSize}px`, lineHeight: `${articleFontSize * 1.8}px`, color: 'var(--color-ink)', fontFamily: 'var(--font-body)' }}>
+                      {section.content}
+                    </p>
+                  </div>
+
+                  {/* Desktop: portrait image on left, all content on right */}
+                  <div className="hidden md:flex gap-4 items-stretch">
+                    {section.imageUrl && (
+                      <img
+                        src={section.imageUrl}
+                        alt={section.title}
+                        loading="lazy"
+                        className="shrink-0 w-32 self-stretch object-cover rounded-md"
+                        style={{ minHeight: '140px', maxHeight: '260px', boxShadow: '2px 3px 8px 0 color-mix(in srgb, var(--color-masthead) 25%, transparent)' }}
+                      />
+                    )}
+                    <div className="flex-1 min-w-0 flex flex-col">
+                      <CardTitle className="text-xl pr-16 break-words leading-snug">{section.title}</CardTitle>
+                      {(section.source || section.pubDate) && (
+                        <div className="mt-1.5 flex flex-col gap-0.5 text-[11px] text-ink-muted/70 font-[family-name:var(--font-body)] italic">
+                          {section.source && <span>{section.source}</span>}
+                          {section.pubDate && (
+                            <span>
+                              {(() => {
+                                try {
+                                  const d = new Date(section.pubDate);
+                                  return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+                                } catch { return section.pubDate; }
+                              })()}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      <div className="mt-3 flex-1">
+                        <p className="break-words [overflow-wrap:anywhere]" style={{ fontSize: `${articleFontSize}px`, lineHeight: `${articleFontSize * 1.8}px`, color: 'var(--color-ink)', fontFamily: 'var(--font-body)' }}>
+                          {section.content}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Footer buttons */}
+                  <div className="mt-3 md:mt-4 pb-4 md:pb-5 flex flex-wrap gap-1.5 md:gap-2 items-end">
+                    {section.url && (
+                      <Button variant="outline" size="sm" className="gap-1.5 text-xs" asChild>
+                        <a href={section.url} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink size={12} />
+                          Read
+                        </a>
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={`gap-1.5 text-xs transition-colors ${
+                        challengeIdx === idx
+                          ? 'border-masthead/60 bg-masthead/10 text-masthead hover:bg-masthead/15'
+                          : 'hover:border-masthead/50 hover:text-masthead'
+                      }`}
+                      onClick={() => setChallengeIdx(challengeIdx === idx ? null : idx)}
+                      aria-expanded={challengeIdx === idx}
+                    >
+                      <Brain size={14} strokeWidth={1.75} />
+                      {challengeIdx === idx ? 'Close challenge' : 'Challenge'}
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       className="gap-1.5 text-xs"
-                      onClick={() => setChatSection({ title: section.title, content: section.content, originalContent: section.originalContent })}
+                      onClick={() => setRadarSection({ title: section.title, content: section.content, url: section.url, originalContent: section.originalContent })}
                     >
-                      <MessageCircle size={14} strokeWidth={1.5} />
-                      Chat
+                      <FlaskConical size={14} strokeWidth={1.5} />
+                      Dissect
                     </Button>
-                  )}
-                  {(section.source || section.pubDate) && (
-                    <div className="ml-auto flex items-center gap-2 text-[11px] text-ink-muted/70 font-[family-name:var(--font-body)] italic">
-                      {section.source && <span>{section.source}</span>}
-                      {section.source && section.pubDate && <span className="text-ink-muted/30">·</span>}
-                      {section.pubDate && (
-                        <span>
-                          {(() => {
-                            try {
-                              const d = new Date(section.pubDate);
-                              return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
-                            } catch { return section.pubDate; }
-                          })()}
-                        </span>
-                      )}
+                    {summary.id && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-xs"
+                        onClick={() => setChatSection({ title: section.title, content: section.content, originalContent: section.originalContent })}
+                      >
+                        <MessageCircle size={14} strokeWidth={1.5} />
+                        Chat
+                      </Button>
+                    )}
+                  </div>
+                  {challengeIdx === idx && (
+                    <div className="pb-4 md:pb-5">
+                      <ChallengeQuiz
+                        headline={section.title}
+                        content={section.originalContent || section.content}
+                        onClose={() => setChallengeIdx(null)}
+                      />
                     </div>
                   )}
-                </CardFooter>
-                {challengeIdx === idx && (
-                  <div className="px-0 md:px-5 pb-4 md:pb-5">
-                    <ChallengeQuiz
-                      headline={section.title}
-                      content={section.originalContent || section.content}
-                      onClose={() => setChallengeIdx(null)}
-                    />
-                  </div>
-                )}
+                </div>
               </Card>
             </article>
           ))}
