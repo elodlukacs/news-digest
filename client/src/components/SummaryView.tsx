@@ -318,7 +318,7 @@ export function SummaryView({
               onRefresh(undefined);
             }}
             disabled={busy}
-            className="group w-full h-14 flex items-center justify-between px-4 rounded-xl bg-gradient-to-b from-masthead/12 to-masthead/5 border border-masthead/20 text-masthead shadow-[0_1px_0_rgba(255,255,255,0.55)_inset,0_2px_8px_-2px_rgba(139,69,19,0.18)] disabled:opacity-50 transition-[transform,box-shadow,background-color] duration-150 ease-[cubic-bezier(0.34,1.56,0.64,1)] active:scale-[0.97] active:translate-y-[1px] active:from-masthead/18 active:to-masthead/10 active:shadow-[0_1px_2px_rgba(139,69,19,0.12)_inset] cursor-pointer"
+            className="group w-full h-14 flex items-center justify-between px-4 rounded-xl bg-gradient-to-b from-masthead/12 to-masthead/5 border border-masthead/20 text-masthead shadow-[0_1px_0_rgba(255,255,255,0.55)_inset,0_2px_8px_-2px_rgba(139,69,19,0.18)] disabled:opacity-75 transition-[transform,box-shadow,background-color] duration-150 ease-[cubic-bezier(0.34,1.56,0.64,1)] active:scale-[0.97] active:translate-y-[1px] active:from-masthead/18 active:to-masthead/10 active:shadow-[0_1px_2px_rgba(139,69,19,0.12)_inset] cursor-pointer"
           >
             <div className="flex flex-col items-start min-w-0">
               <span className="text-base font-semibold leading-tight truncate">
@@ -330,7 +330,12 @@ export function SummaryView({
             </div>
             <RefreshCw
               size={18}
-              className={`shrink-0 ml-3 transition-transform duration-200 ease-out group-active:rotate-[-35deg] ${busy ? 'animate-spin' : ''}`}
+              strokeWidth={busy ? 2.5 : 2}
+              className={
+                busy
+                  ? 'shrink-0 ml-3 animate-spin'
+                  : 'shrink-0 ml-3 transition-transform duration-200 ease-out group-active:rotate-[-35deg]'
+              }
             />
           </button>
 
