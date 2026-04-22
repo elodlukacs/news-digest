@@ -27,9 +27,10 @@ const LENSES: PromptLens[] = [
   { slug: 'most-counterintuitive-fact', name: 'Counterintuitive Fact', description: 'The fact that changes everything', group: 'Perspective', icon: '🧠' },
   { slug: 'five-minute-rabbit-hole', name: '5-Min Rabbit Hole', description: 'Adjacent topic worth exploring', group: 'Perspective', icon: '🕳️' },
   { slug: 'standup-comedy', name: 'Standup Comedy', description: "Today's news as a comedy set", group: 'Comedy', icon: '🎤' },
+  { slug: 'psychological-lesson', name: 'Psychological Lesson', description: 'Deep lesson from psychology & human behavior', group: 'Learn', icon: '🧪' },
 ];
 
-const GROUPS = ['Fun & Weird', 'Critical', 'Perspective', 'Comedy'] as const;
+const GROUPS = ['Fun & Weird', 'Critical', 'Perspective', 'Comedy', 'Learn'] as const;
 
 interface Props {
   selectedSlug: string | null;

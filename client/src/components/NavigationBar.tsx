@@ -1,12 +1,19 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Plus, X, Coffee, AlignJustify, Home, Film, Brain, Briefcase, BarChart2, Shield, MessageSquareCode, ChevronDown, Check, Zap, Type } from 'lucide-react';
+import { Plus, X, Coffee, AlignJustify, Home, Film, Brain, Briefcase, BarChart2, Shield, MessageSquareCode, ChevronDown, Check, Zap } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from './ui/dropdown-menu';
 import { THEMES } from '../hooks/useTheme';
+
+const FONT_PRESETS = [
+  { size: 14, textClass: 'text-[10px]' },
+  { size: 16, textClass: 'text-[12px]' },
+  { size: 18, textClass: 'text-[15px]' },
+  { size: 22, textClass: 'text-[18px]' },
+] as const;
 import { slugify } from '../utils/slugify';
 import type { Category } from '../types';
 import type { GroqModel } from '../hooks/useModels';
@@ -170,26 +177,22 @@ export function NavigationBar({
 
               <div className="flex flex-col items-center gap-1">
                 <span className="text-[8px] font-sans uppercase tracking-[0.2em] text-ink-muted/60 font-medium">Font</span>
-                <div className="flex items-center gap-0.5">
-                  <button
-                    type="button"
-                    onClick={() => onFontSizeChange(Math.max(12, articleFontSize - 2))}
-                    disabled={articleFontSize <= 12}
-                    className="w-5 h-5 flex items-center justify-center rounded bg-paper border border-rule/60 text-ink-muted hover:text-ink hover:border-rule disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
-                    aria-label="Decrease font size"
-                  >
-                    <Type size={10} />
-                  </button>
-                  <span className="text-[9px] font-sans w-5 text-center tabular-nums text-ink-light font-medium">{articleFontSize}</span>
-                  <button
-                    type="button"
-                    onClick={() => onFontSizeChange(Math.min(28, articleFontSize + 2))}
-                    disabled={articleFontSize >= 28}
-                    className="w-5 h-5 flex items-center justify-center rounded bg-paper border border-rule/60 text-ink-muted hover:text-ink hover:border-rule disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
-                    aria-label="Increase font size"
-                  >
-                    <Type size={13} />
-                  </button>
+                <div className="flex rounded border border-rule/60 overflow-hidden">
+                  {FONT_PRESETS.map(({ size, textClass }) => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => onFontSizeChange(size)}
+                      className={`w-6 h-[22px] flex items-center justify-center font-serif transition-colors border-r border-rule/60 last:border-r-0 ${
+                        articleFontSize === size
+                          ? 'bg-masthead/10 text-masthead'
+                          : 'bg-paper text-ink-muted hover:bg-paper-dark hover:text-ink'
+                      }`}
+                      aria-label={`Font size ${size}`}
+                    >
+                      <span className={textClass}>A</span>
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -479,26 +482,22 @@ export function NavigationBar({
 
             <div className="flex items-center justify-between">
               <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-ink-muted">Font</p>
-              <div className="flex items-center gap-0.5">
-                <button
-                  type="button"
-                  onClick={() => onFontSizeChange(Math.max(12, articleFontSize - 2))}
-                  disabled={articleFontSize <= 12}
-                  className="w-5 h-5 flex items-center justify-center rounded bg-paper border border-rule/60 text-ink-muted hover:text-ink hover:border-rule disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
-                  aria-label="Decrease font size"
-                >
-                  <Type size={10} />
-                </button>
-                <span className="text-[9px] font-sans w-5 text-center tabular-nums text-ink-light font-medium">{articleFontSize}</span>
-                <button
-                  type="button"
-                  onClick={() => onFontSizeChange(Math.min(28, articleFontSize + 2))}
-                  disabled={articleFontSize >= 28}
-                  className="w-5 h-5 flex items-center justify-center rounded bg-paper border border-rule/60 text-ink-muted hover:text-ink hover:border-rule disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
-                  aria-label="Increase font size"
-                >
-                  <Type size={13} />
-                </button>
+              <div className="flex rounded border border-rule/60 overflow-hidden">
+                {FONT_PRESETS.map(({ size, textClass }) => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => onFontSizeChange(size)}
+                    className={`w-9 h-8 flex items-center justify-center font-serif transition-colors border-r border-rule/60 last:border-r-0 ${
+                      articleFontSize === size
+                        ? 'bg-masthead/10 text-masthead'
+                        : 'bg-paper text-ink-muted hover:bg-paper-dark hover:text-ink'
+                    }`}
+                    aria-label={`Font size ${size}`}
+                  >
+                    <span className={textClass}>A</span>
+                  </button>
+                ))}
               </div>
             </div>
 

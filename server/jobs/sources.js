@@ -454,6 +454,140 @@ async function fetchMeetFrank(signal) {
     });
 }
 
+// ─── Real Work From Anywhere ─────────────────────────────────
+
+async function fetchRealWorkFromAnywhere(signal) {
+  const resp = await fetchWithTimeout(
+    'https://www.realworkfromanywhere.com/remote-frontend-jobs/rss.xml',
+    signal,
+  );
+  if (!resp.ok) throw new Error(`RealWorkFromAnywhere returned ${resp.status}`);
+
+  const xml = await resp.text();
+  const items = [];
+  const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+  let match;
+  while ((match = itemRegex.exec(xml)) !== null) {
+    const itemXml = match[1];
+    const getTag = (tag) => {
+      const m = itemXml.match(new RegExp(`<${tag}[^>]*>(?:<!\\[CDATA\\[)?(.*?)(?:\\]\\]>)?<\\/${tag}>`, 's'));
+      return m ? m[1].trim() : '';
+    };
+    items.push({ title: getTag('title'), link: getTag('link'), pubDate: getTag('pubDate'), description: getTag('description'), company: getTag('author') });
+  }
+
+  return items
+    .filter(item => item.title && item.link)
+    .map(item => {
+      const titleParts = item.title.split(' at ');
+      const title = titleParts[0]?.trim() || item.title;
+      const company = item.company || titleParts[1]?.trim() || 'Unknown';
+      return normalizeJob({
+        id: generateJobId('realworkfromanywhere', title, company),
+        title, company,
+        url: item.link,
+        source: 'realworkfromanywhere',
+        datePosted: parseDate(item.pubDate),
+        country: 'Worldwide',
+        workType: 'remote',
+        description: item.description,
+      });
+    });
+}
+
+// ─── Working Nomads ──────────────────────────────────────────
+
+async function fetchWorkingNomads(signal) {
+  const resp = await fetchWithTimeout(
+    'https://www.workingnomads.com/api/exposed_jobs/',
+    signal,
+  );
+  if (!resp.ok) throw new Error(`WorkingNomads returned ${resp.status}`);
+
+  const data = await resp.json();
+  const jobs = Array.isArray(data) ? data : [];
+
+  return jobs
+    .filter(raw => {
+      const cat = (raw.category_name || '').toLowerCase();
+      return cat.includes('develop') || cat.includes('engineer') || cat.includes('software') || cat.includes('frontend');
+    })
+    .map(raw => normalizeJob({
+      id: generateJobId('workingnomads', raw.title, raw.company_name),
+      title: raw.title,
+      company: raw.company_name || 'Unknown',
+      url: raw.url || '',
+      source: 'workingnomads',
+      datePosted: parseDate(raw.pub_date),
+      country: extractCountry(raw.location || ''),
+      workType: determineWorkType(raw.location || '', true),
+      description: '',
+    }));
+}
+
+// ─── Adzuna ──────────────────────────────────────────────────
+
+const ADZUNA_COUNTRIES = ['gb', 'de', 'fr', 'nl', 'se', 'at', 'pl'];
+
+async function fetchAdzuna(signal) {
+  const appId = process.env.ADZUNA_APP_ID;
+  const appKey = process.env.ADZUNA_APP_KEY;
+  if (!appId || !appKey) {
+    console.warn('Adzuna: ADZUNA_APP_ID / ADZUNA_APP_KEY not set, skipping');
+    return [];
+  }
+
+  const allJobs = [];
+
+  for (const country of ADZUNA_COUNTRIES) {
+    if (signal?.aborted) break;
+    try {
+      const params = new URLSearchParams({
+        app_id: appId,
+        app_key: appKey,
+        results_per_page: '50',
+        what: 'senior frontend react',
+        what_exclude: 'backend devops data',
+        sort_by: 'date',
+      });
+
+      const resp = await fetchWithTimeout(
+        `https://api.adzuna.com/v1/api/jobs/${country}/search/1?${params}`,
+        signal,
+      );
+      if (!resp.ok) {
+        if (resp.status === 401 || resp.status === 403) throw new Error(`Adzuna auth failed (${resp.status})`);
+        console.warn(`Adzuna ${country}: ${resp.status}`);
+        continue;
+      }
+
+      const data = await resp.json();
+      for (const raw of (data.results || [])) {
+        const location = [raw.location?.area?.slice(-1)[0], raw.location?.area?.[0]].filter(Boolean).join(', ');
+        const isRemote = (raw.title + ' ' + (raw.description || '')).toLowerCase().includes('remote');
+        allJobs.push(normalizeJob({
+          id: generateJobId('adzuna', raw.title, raw.company?.display_name),
+          title: raw.title,
+          company: raw.company?.display_name || 'Unknown',
+          url: raw.redirect_url || '',
+          source: 'adzuna',
+          datePosted: parseDate(raw.created),
+          country: location,
+          workType: determineWorkType(location, isRemote),
+          description: raw.description || '',
+        }));
+      }
+
+      await abortableDelay(500, signal);
+    } catch (error) {
+      if (error?.name === 'AbortError') throw error;
+      console.warn(`Adzuna ${country} error:`, error.message);
+    }
+  }
+
+  return allJobs;
+}
+
 // ─── Fetch All ──────────────────────────────────────────────
 
 const ALL_SOURCES = [
@@ -465,6 +599,9 @@ const ALL_SOURCES = [
   { name: 'linkedin', fn: fetchLinkedIn },
   { name: 'hackernews', fn: fetchHackerNews },
   { name: 'meetfrank', fn: fetchMeetFrank },
+  { name: 'realworkfromanywhere', fn: fetchRealWorkFromAnywhere },
+  { name: 'workingnomads', fn: fetchWorkingNomads },
+  { name: 'adzuna', fn: fetchAdzuna },
 ];
 
 async function fetchAllSources(signal) {

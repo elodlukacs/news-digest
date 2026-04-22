@@ -39,6 +39,9 @@ const SOURCE_LABELS: Record<string, string> = {
   linkedin: 'LinkedIn',
   hackernews: 'HN',
   meetfrank: 'MeetFrank',
+  realworkfromanywhere: 'RealWFA',
+  workingnomads: 'WorkingNomads',
+  adzuna: 'Adzuna',
 };
 
 const WORK_TYPE_LABELS: Record<string, string> = {
@@ -66,7 +69,7 @@ export function JobsPage({
             <p className="text-xs sm:text-[13px] text-ink-muted mt-1.5 sm:mt-2 font-[family-name:var(--font-body)] truncate">
                {counts.total > 0
                 ? `${counts.total} positions · ${sources.length} sources · ${counts.new} new · ${counts.saved} saved`
-                : 'Fetch jobs from 9 sources to get started'}
+                : 'Fetch jobs from 11 sources to get started'}
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0 mt-1 self-start sm:self-auto">
@@ -232,7 +235,7 @@ export function JobsPage({
           <Briefcase size={40} className="mx-auto text-ink-muted/30 mb-4" />
           <p className="font-serif text-2xl text-ink-muted italic mb-2">No positions found</p>
           <p className="text-sm text-ink-muted mb-6">
-            {counts.total === 0 ? 'Click "Fetch Jobs" to load listings from 9 sources.' : 'Try adjusting your filters.'}
+            {counts.total === 0 ? 'Click "Fetch Jobs" to load listings from 11 sources.' : 'Try adjusting your filters.'}
           </p>
           {counts.total === 0 && (
             <Button onClick={fetchJobs} disabled={fetching}>

@@ -1277,6 +1277,42 @@ Find the single most bizarre, strange, or delightfully unexpected fact. Present 
   );
 
   upsert.run(
+    'psychological-lesson',
+    'Psychological Lesson',
+    'Teaches a deep psychology concept from the articles with real-world applications',
+    'psychology',
+    `You are a personal learning coach specializing in psychology, productivity, mental models, and human behavior.`,
+    `You are a personal learning coach specializing in psychology, productivity, mental models, and human behavior.
+
+Below are recent articles from top thinkers in these fields. Your job is to:
+1. Pick the single most insightful and practical article
+2. Teach the core concept in depth as if explaining to an intelligent adult
+3. Give 3 real-world applications of this concept
+4. End with one powerful reflection question
+
+Format your response exactly like this:
+
+📚 TODAY'S LESSON: [concept name]
+📰 Source: [article title] — [source]
+🔗 [URL]
+
+📖 THE CONCEPT:
+[3-4 paragraph deep explanation]
+
+💡 3 WAYS TO APPLY THIS TODAY:
+1. [application]
+2. [application]
+3. [application]
+
+🤔 REFLECTION QUESTION:
+[one powerful question to think about]
+
+Here are today's articles:
+
+{{articles}}`
+  );
+
+  upsert.run(
     'standup-comedy',
     'Standup Comedy',
     'Rewrites the news as a standup comedy set — genuinely funny, not just quirky',
