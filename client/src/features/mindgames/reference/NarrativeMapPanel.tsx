@@ -7,15 +7,7 @@ import { Map, Loader2, AlertTriangle, Play, ChevronLeft, ChevronRight, TrendingU
 import { FeaturePanelHeader } from '../common';
 import { API_BASE } from '../../../config';
 import { useLlm } from '../../../contexts/LlmContext';
-
-function escapeHtml(str: string): string {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
+import { escapeHtml } from '../../../utils/escapeHtml';
 
 interface PlatformNode {
   id: string;

@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Brain, Search, Shield, Microscope, RotateCcw, Trash2, Activity, Target, Zap, FlaskConical, Eye, MessageSquare, History } from 'lucide-react';
-import { StressDiagnostic } from '../reflection/StressDiagnostic';
-import { StreakTracker } from '../quiz/StreakTracker';
+import { StressDiagnostic } from '../reflection';
+import { StreakTracker } from '../quiz';
 import { TabHeader } from '../common';
 import { API_BASE } from '../../../config';
 import { useGamification } from '../../../hooks/useGamification';

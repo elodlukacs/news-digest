@@ -1,0 +1,1 @@
+export { SentimentRibbon } from './SentimentRibbon';

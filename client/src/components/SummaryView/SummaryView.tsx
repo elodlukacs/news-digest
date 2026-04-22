@@ -1,201 +1,40 @@
 import { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { RefreshCw, AlertCircle, Clock, Zap, Settings, Trash2, ExternalLink, MoreVertical, MessageCircle, X, Brain, FlaskConical, Filter, Search } from 'lucide-react';
-// Sentiment ribbon — positioned absolute top-right, no layout impact
-const RIBBON_COLORS: Record<string, string> = {
-  positive: 'bg-[var(--color-positive-bg)] text-[var(--color-positive-text)]',
-  negative: 'bg-[var(--color-negative-bg)] text-[var(--color-negative-text)]',
-  neutral: 'bg-[var(--color-neutral-bg)] text-[var(--color-neutral-text)]',
-  mixed: 'bg-[var(--color-mixed-bg)] text-[var(--color-mixed-text)]',
-};
-const RIBBON_DOT: Record<string, string> = {
-  positive: 'bg-[var(--color-positive-dot)]',
-  negative: 'bg-[var(--color-negative-dot)]',
-  neutral: 'bg-[var(--color-neutral-dot)]',
-  mixed: 'bg-[var(--color-mixed-dot)]',
-};
-function SentimentRibbon({ sentiment }: { sentiment: 'positive' | 'negative' | 'neutral' | 'mixed' }) {
-  return (
-    <span className={`absolute -top-1.5 right-0 md:top-0 md:right-0 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-bl-lg text-[9px] uppercase tracking-wider font-semibold pointer-events-none ${RIBBON_COLORS[sentiment]}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${RIBBON_DOT[sentiment]}`} />
-      {sentiment}
-    </span>
-  );
-}
-import { ArticleChatPopup } from './ArticleChatPopup';
-import { ChallengeQuiz } from './ChallengeQuiz';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
-import { Drawer, DrawerContent } from './ui/drawer';
-import { Button } from './ui/button';
-import { Badge } from './ui/badge';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { Skeleton } from './ui/skeleton';
-import { Card, CardTitle } from './ui/card';
-import type { Summary } from '../types';
-import { useArticleChat } from '../hooks/useApi';
-import { BiasRadarPanel } from '../features/mindgames/bias-radar';
+import {
+  RefreshCw,
+  AlertCircle,
+  Clock,
+  Zap,
+  Settings,
+  Trash2,
+  ExternalLink,
+  MoreVertical,
+  MessageCircle,
+  X,
+  Brain,
+  FlaskConical,
+  Filter,
+  Search,
+} from 'lucide-react';
+import { ArticleChatPopup } from '../ArticleChatPopup';
+import { ChallengeQuiz } from '../ChallengeQuiz';
 
-export interface ParsedSection {
-  title: string;
-  url: string;
-  content: string;
-  sentiment: 'positive' | 'negative' | 'neutral' | 'mixed' | null;
-  originalContent?: string;
-  source?: string;
-  pubDate?: string;
-  imageUrl?: string;
-}
-
-export function parseSummaryMarkdown(markdown: string, sentimentData: Summary['sentiment_data']): ParsedSection[] {
-  const sections: ParsedSection[] = [];
-  const parts = markdown.split(/\n---\n/);
-
-  // Build title→sentiment and title→originalContent lookups
-  const sentimentByTitle = new Map<string, 'positive' | 'negative' | 'neutral' | 'mixed'>();
-  const originalContentByTitle = new Map<string, string>();
-  const sourceByTitle = new Map<string, string>();
-  const pubDateByTitle = new Map<string, string>();
-  const imageByTitle = new Map<string, string>();
-  if (sentimentData) {
-    for (const entry of sentimentData) {
-      if (entry.title && entry.sentiment) {
-        sentimentByTitle.set(entry.title.toLowerCase(), entry.sentiment);
-      }
-      if (entry.title && entry.original_content) {
-        originalContentByTitle.set(entry.title.toLowerCase(), entry.original_content);
-      }
-      if (entry.title && entry.source) {
-        sourceByTitle.set(entry.title.toLowerCase(), entry.source);
-      }
-      if (entry.title && entry.pub_date) {
-        pubDateByTitle.set(entry.title.toLowerCase(), entry.pub_date);
-      }
-      if (entry.title && entry.image) {
-        imageByTitle.set(entry.title.toLowerCase(), entry.image);
-      }
-    }
-  }
-
-  for (const part of parts) {
-    const trimmed = part.trim();
-    if (!trimmed) continue;
-
-    // Extract title and URL from ## [Title](url) pattern
-    const linkMatch = trimmed.match(/^##\s+\[([^\]]+)\]\(([^)]+)\)/);
-    const title = linkMatch ? linkMatch[1] : trimmed.split('\n')[0].replace(/^#+\s*/, '').replace(/\*\*/g, '');
-    const url = linkMatch ? linkMatch[2] : '';
-
-    // Remove the title line and clean up
-    let content = trimmed
-      .replace(/^##\s+\[[^\]]+\]\([^)]+\)/, '')
-      .replace(/^#+\s*/, '')
-      .trim();
-
-    // Clean up content - remove source annotations and normalize
-    content = content
-      .replace(/出自\s*[^。]+。/g, '')
-      .replace(/Source:\s*[^\n]+/gi, '')
-      .replace(/\n+/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-
-    sections.push({
-      title,
-      url,
-      content,
-      sentiment: sentimentByTitle.get(title.toLowerCase()) || null,
-      originalContent: originalContentByTitle.get(title.toLowerCase()) || '',
-      source: sourceByTitle.get(title.toLowerCase()),
-      pubDate: pubDateByTitle.get(title.toLowerCase()),
-      imageUrl: imageByTitle.get(title.toLowerCase()),
-    });
-  }
-
-  return sections;
-}
-
-function parseRateLimitError(error: string): {
-  isRateLimit: boolean;
-  waitTime?: string;
-  model?: string;
-  used?: number;
-  limit?: number;
-} {
-  if (!error.includes('429') && !error.includes('rate_limit')) return { isRateLimit: false };
-  const rawTimeMatch = error.match(/try again in ([\d.]+m)?([\d.]+s)?/i);
-  const modelMatch = error.match(/model `([^`]+)`/);
-  const usedMatch = error.match(/Used (\d+)/);
-  const limitMatch = error.match(/Limit (\d+)/);
-  return {
-    isRateLimit: true,
-    waitTime: rawTimeMatch
-      ? [
-          rawTimeMatch[1]?.replace(/(\d+)m/, '$1 min'),
-          rawTimeMatch[2]?.replace(/[\d.]+s/, (s) => `${Math.round(parseFloat(s))} sec`),
-        ]
-          .filter(Boolean)
-          .join(' ')
-      : 'a few minutes',
-    model: modelMatch?.[1] || 'Unknown',
-    used: usedMatch ? parseInt(usedMatch[1]) : undefined,
-    limit: limitMatch ? parseInt(limitMatch[1]) : undefined,
-  };
-}
-
-function RateLimitDialog({ error, open, onClose }: { error: string; open: boolean; onClose: () => void }) {
-  const info = parseRateLimitError(error);
-  const usagePercent = info.used && info.limit ? Math.round((info.used / info.limit) * 100) : null;
-
-  return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2.5">
-            <Clock size={16} className="text-masthead" />
-            Rate Limit Reached
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <p className="text-sm leading-relaxed">
-            The AI provider has temporarily limited requests. This is normal on the free tier.
-          </p>
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between px-4 py-3 bg-paper-dark border border-rule">
-              <span className="text-xs text-ink-muted uppercase tracking-wider">Wait time</span>
-              <span className="font-serif font-bold text-masthead">{info.waitTime}</span>
-            </div>
-            <div className="flex items-center justify-between px-4 py-3 bg-paper-dark border border-rule">
-              <span className="text-xs text-ink-muted uppercase tracking-wider">Model</span>
-              <span className="text-sm font-medium">{info.model}</span>
-            </div>
-            {usagePercent !== null && (
-              <div className="px-4 py-3 bg-paper-dark border border-rule">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-ink-muted uppercase tracking-wider">Daily usage</span>
-                  <span className="text-sm font-medium">{usagePercent}%</span>
-                </div>
-                <div className="w-full h-1.5 bg-border rounded-full overflow-hidden">
-                  <div className="h-full bg-masthead rounded-full" style={{ width: `${usagePercent}%` }} />
-                </div>
-                <p className="text-[11px] text-ink-muted mt-1.5">
-                  {info.used?.toLocaleString()} / {info.limit?.toLocaleString()} tokens
-                </p>
-              </div>
-            )}
-          </div>
-          <div className="flex items-start gap-2 pt-1">
-            <Zap size={12} className="text-ink-muted mt-0.5 shrink-0" />
-            <p className="text-[11px] text-ink-muted leading-relaxed">
-              Try again after the wait time. Limits reset daily.
-            </p>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-import { PromptLensSelector, type PromptLens } from './PromptLensSelector';
+import { Drawer, DrawerContent } from '../ui/drawer';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { Skeleton } from '../ui/skeleton';
+import { Card, CardTitle } from '../ui/card';
+import type { Summary } from '../../types';
+import { useArticleChat } from '../../hooks/useApi';
+import { BiasRadarPanel } from '../../features/mindgames/bias-radar';
+import { SentimentRibbon } from './SentimentRibbon';
+import { RateLimitDialog } from './RateLimitDialog';
+import { parseSummaryMarkdown } from './utils/parseSummaryMarkdown';
+import { parseRateLimitError } from './utils/parseRateLimitError';
+import type { ParsedSection } from './utils/parseSummaryMarkdown';
+import { PromptLensSelector, type PromptLens } from '../PromptLensSelector';
+import { SourceBadge } from '../SourceBadge';
 
 interface Props {
   categoryName: string;
@@ -218,6 +57,8 @@ interface Props {
   onDismissLens: () => void;
   articleFontSize: number;
 }
+
+export { type ParsedSection };
 
 export function SummaryView({
   categoryName,
@@ -257,8 +98,17 @@ export function SummaryView({
     if (onClearFilter) onClearFilter();
     else onRefresh(undefined);
   };
-  const [radarSection, setRadarSection] = useState<{ title: string; content: string; url: string; originalContent?: string } | null>(null);
-  const [chatSection, setChatSection] = useState<{ title: string; content: string; originalContent?: string } | null>(null);
+  const [radarSection, setRadarSection] = useState<{
+    title: string;
+    content: string;
+    url: string;
+    originalContent?: string;
+  } | null>(null);
+  const [chatSection, setChatSection] = useState<{
+    title: string;
+    content: string;
+    originalContent?: string;
+  } | null>(null);
   const [challengeIdx, setChallengeIdx] = useState<number | null>(null);
 
   const chatArticleContent = useMemo(() => {
@@ -266,7 +116,11 @@ export function SummaryView({
     return chatSection.originalContent || chatSection.content || null;
   }, [chatSection]);
 
-  const { messages: chatMessages, sending: chatSending, sendMessage: chatSend } = useArticleChat(
+  const {
+    messages: chatMessages,
+    sending: chatSending,
+    sendMessage: chatSend,
+  } = useArticleChat(
     summary?.id ?? null,
     chatSection?.title ?? null,
     chatArticleContent,
@@ -288,7 +142,6 @@ export function SummaryView({
     <div>
       <div className="pt-8 pb-4 md:border-b md:border-rule">
         <div className="flex items-center gap-3 mb-3">
-          {/* Mobile: single trigger button */}
           <button
             className="md:hidden shrink-0 flex items-center justify-center w-9 h-9 rounded-full border border-rule bg-paper-dark text-ink shadow-sm active:scale-95 transition-transform cursor-pointer"
             onClick={() => setActionsOpen(true)}
@@ -345,7 +198,6 @@ export function SummaryView({
             />
           </button>
 
-          {/* Filter — input on left, action button attached on right */}
           <div className={`flex h-14 rounded-xl border bg-paper overflow-hidden transition-colors ${busy ? 'opacity-60' : ''} ${activeKeyword ? 'border-masthead/30' : 'border-rule'}`}>
             <div className="flex-1 min-w-0 flex items-center gap-3 pl-4">
               <Search size={18} className="text-ink-muted shrink-0" />
@@ -379,9 +231,7 @@ export function SummaryView({
           <PromptLensSelector selectedSlug={selectedLens?.slug ?? null} onSelect={onLensChange} onRun={onRunLens} running={lensLoading} disabled={busy} fullWidth />
         </div>
 
-        {/* Desktop: unified toolbar */}
         <div className="hidden md:flex items-center gap-2 mt-3 flex-wrap">
-          {/* Primary: Refresh */}
           <button
             onClick={() => onRefresh(undefined)}
             disabled={busy}
@@ -391,7 +241,6 @@ export function SummaryView({
             {refreshing ? 'Refreshing…' : 'Refresh Articles'}
           </button>
 
-          {/* Filter: segmented */}
           <div className={`h-9 inline-flex items-stretch rounded-md border overflow-hidden transition-colors bg-paper shadow-sm ${activeKeyword ? 'border-masthead/40' : 'border-rule'} ${busy ? 'opacity-60' : ''}`}>
             <div className="flex items-center gap-1.5 pl-2.5">
               <Search size={13} className="text-ink-muted shrink-0" />
@@ -422,10 +271,8 @@ export function SummaryView({
             </button>
           </div>
 
-          {/* Lens */}
           <PromptLensSelector selectedSlug={selectedLens?.slug ?? null} onSelect={onLensChange} onRun={onRunLens} running={lensLoading} disabled={busy} />
 
-          {/* Secondary actions */}
           <div className="inline-flex items-center gap-1">
             <button
               onClick={onManageFeeds}
@@ -445,7 +292,6 @@ export function SummaryView({
         </div>
       </div>
 
-      {/* Lens error */}
       {lensError && !lensLoading && (
         <Alert variant="destructive" className="mt-6 md:mt-8">
           <AlertCircle className="h-4 w-4" />
@@ -454,18 +300,14 @@ export function SummaryView({
         </Alert>
       )}
 
-      {/* Lens loading / result */}
       {(lensLoading || lensContent) && (
         <div className="mt-6 md:mt-8">
           <article className="relative -mx-4 md:mx-0 overflow-hidden">
-            {/* Accent left bar */}
             <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-masthead" />
 
-            {/* Subtle background */}
             <div className="ml-0 md:ml-0 border-y md:border border-masthead/20 bg-gradient-to-br from-masthead/[0.06] to-masthead/[0.02]">
               <div className="px-5 py-5 md:px-6 md:py-6 relative">
 
-                {/* Dismiss */}
                 {!lensLoading && lensContent && (
                   <button
                     onClick={onDismissLens}
@@ -476,7 +318,6 @@ export function SummaryView({
                   </button>
                 )}
 
-                {/* Header */}
                 <div className="flex items-center gap-2.5 mb-4 pr-6">
                   {(selectedLens || lensName) && (
                     <span className="text-2xl leading-none shrink-0">{selectedLens?.icon ?? '🔭'}</span>
@@ -491,7 +332,6 @@ export function SummaryView({
                   </div>
                 </div>
 
-                {/* Content */}
                 {lensLoading ? (
                   <div className="flex items-center gap-3 py-3">
                     <div className="flex gap-[5px]">
@@ -536,7 +376,6 @@ export function SummaryView({
         </div>
       )}
 
-      {/* Mobile: bottom drawer with actions */}
       <Drawer open={actionsOpen} onOpenChange={setActionsOpen} direction="bottom">
         <DrawerContent className="px-0 pb-8 bg-paper rounded-t-2xl">
           <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-ink-muted px-6 mt-2 mb-3">Actions</p>
@@ -594,12 +433,10 @@ export function SummaryView({
           {sections.map((section, idx) => (
             <article key={idx} className="-mx-4 px-4 py-1.5 border-y border-rule/60 bg-paper-dark/70 md:mx-0 md:px-0 md:py-0 md:bg-transparent md:border-y-0">
               <Card className="relative border-0 bg-transparent md:bg-paper-dark md:border md:border-rule overflow-visible md:overflow-hidden min-w-0">
-                {/* Sentiment ribbon — card edge on both mobile and desktop */}
                 {section.sentiment && (
                   <SentimentRibbon sentiment={section.sentiment} />
                 )}
                 <div className="px-0 md:px-5 pt-3 md:pt-5">
-                  {/* Mobile: small thumbnail + title/meta row, then content below */}
                   {section.imageUrl && (
                     <div className="flex gap-3 items-start md:hidden">
                       <img
@@ -610,12 +447,13 @@ export function SummaryView({
                         style={{ boxShadow: '2px 3px 8px 0 color-mix(in srgb, var(--color-masthead) 25%, transparent)' }}
                       />
                       <div className="flex-1 min-w-0">
-                        <CardTitle className="text-base pr-10 break-words leading-snug">{section.title}</CardTitle>
+                        <CardTitle className="text-xl pr-10 break-words leading-snug">{section.title}</CardTitle>
                         {(section.source || section.pubDate) && (
-                          <div className="mt-1 flex flex-col gap-0.5 text-[11px] text-ink-muted/70 font-[family-name:var(--font-body)] italic">
-                            {section.source && <span>{section.source}</span>}
+                          <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-ink-light font-[family-name:var(--font-body)]">
+                            {section.source && <SourceBadge source={section.source} url={section.url} />}
+                            {section.source && section.pubDate && <span className="text-ink-muted text-xl px-0.5 font-bold">·</span>}
                             {section.pubDate && (
-                              <span>
+                              <span className="italic">
                                 {(() => {
                                   try {
                                     const d = new Date(section.pubDate);
@@ -631,17 +469,18 @@ export function SummaryView({
                   )}
                   {!section.imageUrl && (
                     <div className="md:hidden">
-                      <CardTitle className="text-base pr-10 break-words leading-snug">{section.title}</CardTitle>
+                      <CardTitle className="text-xl pr-10 break-words leading-snug">{section.title}</CardTitle>
                       {(section.source || section.pubDate) && (
-                        <div className="mt-1 flex flex-col gap-0.5 text-[11px] text-ink-muted/70 font-[family-name:var(--font-body)] italic">
-                          {section.source && <span>{section.source}</span>}
+                        <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-ink-light font-[family-name:var(--font-body)]">
+                          {section.source && <SourceBadge source={section.source} url={section.url} />}
+                          {section.source && section.pubDate && <span className="text-ink-muted text-xl px-0.5 font-bold">·</span>}
                           {section.pubDate && (
-                            <span>
+                            <span className="italic">
                               {(() => {
                                 try {
                                   const d = new Date(section.pubDate);
                                   return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
-                                } catch { return section.pubDate; }
+                                  } catch { return section.pubDate; }
                               })()}
                             </span>
                           )}
@@ -655,7 +494,6 @@ export function SummaryView({
                     </p>
                   </div>
 
-                  {/* Desktop: portrait image on left, all content on right */}
                   <div className="hidden md:flex gap-4 items-stretch">
                     {section.imageUrl && (
                       <img
@@ -669,10 +507,11 @@ export function SummaryView({
                     <div className="flex-1 min-w-0 flex flex-col">
                       <CardTitle className="text-xl pr-16 break-words leading-snug">{section.title}</CardTitle>
                       {(section.source || section.pubDate) && (
-                        <div className="mt-1.5 flex flex-col gap-0.5 text-[11px] text-ink-muted/70 font-[family-name:var(--font-body)] italic">
-                          {section.source && <span>{section.source}</span>}
+                        <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-ink-light font-[family-name:var(--font-body)]">
+                          {section.source && <SourceBadge source={section.source} url={section.url} />}
+                          {section.source && section.pubDate && <span className="text-ink-muted text-xl px-0.5 font-bold">·</span>}
                           {section.pubDate && (
-                            <span>
+                            <span className="italic">
                               {(() => {
                                 try {
                                   const d = new Date(section.pubDate);
@@ -691,7 +530,6 @@ export function SummaryView({
                     </div>
                   </div>
 
-                  {/* Footer buttons */}
                   <div className="mt-3 md:mt-4 pb-4 md:pb-5 flex flex-wrap gap-1.5 md:gap-2 items-end">
                     {section.url && (
                       <Button variant="outline" size="sm" className="gap-1.5 text-xs" asChild>
@@ -814,4 +652,3 @@ export function SummaryView({
     </div>
   );
 }
-
