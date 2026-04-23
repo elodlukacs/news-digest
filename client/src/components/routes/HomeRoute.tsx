@@ -279,7 +279,7 @@ export function HomeRoute() {
   const bodyText = elaborated ?? article?.brief ?? '';
 
   return (
-    <div className="relative min-h-[calc(100dvh-3.5rem)] md:min-h-[calc(100dvh-4rem)] flex flex-col">
+    <div className="relative min-h-[calc(100dvh-3.5rem)] md:min-h-[calc(100dvh-4rem)] flex flex-col" style={{ overscrollBehaviorX: 'contain' }}>
       {/* ── Card stage ── */}
       <div className="flex-1 relative flex items-start justify-center px-3 md:px-6 pb-3 pt-2 md:pt-4">
         {/* Swipe hint arrows */}
@@ -298,11 +298,11 @@ export function HomeRoute() {
 
         {/* Card */}
         <div
-          className="w-full max-w-[680px] relative"
+          className="w-full max-w-[680px] relative select-none touch-none"
           ref={elRef}
         >
           <div
-            className="w-full bg-paper rounded-2xl md:rounded-3xl shadow-[0_8px_40px_-12px_rgba(0,0,0,0.15)] border border-rule/60 flex flex-col overflow-hidden transition-all will-change-transform select-none touch-pan-y"
+            className="w-full bg-paper rounded-2xl md:rounded-3xl shadow-[0_8px_40px_-12px_rgba(0,0,0,0.15)] border border-rule/60 flex flex-col overflow-hidden transition-all will-change-transform"
             style={{
               transform: getCardTransform(),
               opacity: getCardOpacity(),

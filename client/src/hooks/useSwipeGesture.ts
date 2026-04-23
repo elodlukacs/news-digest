@@ -23,6 +23,8 @@ export function useSwipeGesture({
     currentY: 0,
     isDragging: false,
   });
+  const cbRef = useRef({ onSwipeLeft, onSwipeRight });
+  cbRef.current = { onSwipeLeft, onSwipeRight };
 
   useEffect(() => {
     const el = elRef.current;
@@ -67,10 +69,10 @@ export function useSwipeGesture({
       setIsDragging(false);
 
       if (absDelta >= threshold) {
-        if (deltaX < 0 && onSwipeLeft) {
-          onSwipeLeft();
-        } else if (deltaX > 0 && onSwipeRight) {
-          onSwipeRight();
+        if (deltaX < 0 && cbRef.current.onSwipeLeft) {
+          cbRef.current.onSwipeLeft();
+        } else if (deltaX > 0 && cbRef.current.onSwipeRight) {
+          cbRef.current.onSwipeRight();
         }
       }
 
@@ -109,10 +111,10 @@ export function useSwipeGesture({
       setIsDragging(false);
 
       if (absDelta >= threshold) {
-        if (deltaX < 0 && onSwipeLeft) {
-          onSwipeLeft();
-        } else if (deltaX > 0 && onSwipeRight) {
-          onSwipeRight();
+        if (deltaX < 0 && cbRef.current.onSwipeLeft) {
+          cbRef.current.onSwipeLeft();
+        } else if (deltaX > 0 && cbRef.current.onSwipeRight) {
+          cbRef.current.onSwipeRight();
         }
       }
 
@@ -143,23 +145,23 @@ export function useSwipeGesture({
       el.removeEventListener('mouseup', handleMouseUp);
       el.removeEventListener('mouseleave', handleMouseLeave);
     };
-  }, [enabled, threshold, onSwipeLeft, onSwipeRight]);
+  }, [enabled, threshold]);
 
   // Keyboard support
   useEffect(() => {
     if (!enabled) return;
 
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft' && onSwipeLeft) {
-        onSwipeLeft();
-      } else if (e.key === 'ArrowRight' && onSwipeRight) {
-        onSwipeRight();
+      if (e.key === 'ArrowLeft' && cbRef.current.onSwipeLeft) {
+        cbRef.current.onSwipeLeft();
+      } else if (e.key === 'ArrowRight' && cbRef.current.onSwipeRight) {
+        cbRef.current.onSwipeRight();
       }
     };
 
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [enabled, onSwipeLeft, onSwipeRight]);
+  }, [enabled]);
 
   return { offset, isDragging, elRef };
 }
