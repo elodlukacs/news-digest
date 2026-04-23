@@ -488,7 +488,7 @@ export function SummaryView({
                       )}
                     </div>
                   )}
-                  <div className="mt-2 md:hidden">
+                  <div className="mt-4 md:hidden">
                     <p className="break-words [overflow-wrap:anywhere]" style={{ fontSize: `${articleFontSize}px`, lineHeight: `${articleFontSize * 1.8}px`, color: 'var(--color-ink)', fontFamily: 'var(--font-body)' }}>
                       {section.content}
                     </p>
@@ -530,52 +530,62 @@ export function SummaryView({
                     </div>
                   </div>
 
-                  <div className="mt-3 md:mt-4 pb-4 md:pb-5 flex flex-wrap gap-1.5 md:gap-2 items-end">
+                  <div className="mt-4 md:mt-5 -mx-4 md:-mx-5 px-3 md:px-4 py-3 md:py-3.5 flex flex-wrap gap-2 items-center border-t border-rule/70 bg-ink/[0.025]">
                     {section.url && (
-                      <Button variant="outline" size="sm" className="gap-1.5 text-xs" asChild>
+                      <Button variant="outline" size="sm" className="group h-9 gap-2 rounded-full pl-1.5 pr-4 text-[13px] font-medium bg-paper border-rule/80 hover:border-masthead/50 hover:text-masthead transition-colors [&_svg]:!size-4" asChild>
                         <a href={section.url} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink size={12} />
-                          Read
+                          <span className="flex items-center justify-center w-7 h-7 rounded-full bg-masthead/10 text-masthead transition-colors group-hover:bg-masthead/20">
+                            <ExternalLink size={16} strokeWidth={2} />
+                          </span>
+                          Full story
                         </a>
                       </Button>
                     )}
                     <Button
                       variant="outline"
                       size="sm"
-                      className={`gap-1.5 text-xs transition-colors ${
+                      className={`group h-9 gap-2 rounded-full pl-1.5 pr-4 text-[13px] font-medium transition-colors [&_svg]:!size-4 ${
                         challengeIdx === idx
                           ? 'border-masthead/60 bg-masthead/10 text-masthead hover:bg-masthead/15'
-                          : 'hover:border-masthead/50 hover:text-masthead'
+                          : 'bg-paper border-rule/80 hover:border-masthead/50 hover:text-masthead'
                       }`}
                       onClick={() => setChallengeIdx(challengeIdx === idx ? null : idx)}
                       aria-expanded={challengeIdx === idx}
                     >
-                      <Brain size={14} strokeWidth={1.75} />
-                      {challengeIdx === idx ? 'Close challenge' : 'Challenge'}
+                      <span className={`flex items-center justify-center w-7 h-7 rounded-full transition-colors ${
+                        challengeIdx === idx ? 'bg-masthead/20 text-masthead' : 'bg-masthead/10 text-masthead group-hover:bg-masthead/20'
+                      }`}>
+                        <Brain size={16} strokeWidth={2} />
+                      </span>
+                      {challengeIdx === idx ? 'Close quiz' : 'Quiz me'}
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="gap-1.5 text-xs"
+                      className="group h-9 gap-2 rounded-full pl-1.5 pr-4 text-[13px] font-medium bg-paper border-rule/80 hover:border-masthead/50 hover:text-masthead transition-colors [&_svg]:!size-4"
                       onClick={() => setRadarSection({ title: section.title, content: section.content, url: section.url, originalContent: section.originalContent })}
                     >
-                      <FlaskConical size={14} strokeWidth={1.5} />
-                      Dissect
+                      <span className="flex items-center justify-center w-7 h-7 rounded-full bg-masthead/10 text-masthead transition-colors group-hover:bg-masthead/20">
+                        <FlaskConical size={16} strokeWidth={2} />
+                      </span>
+                      Spot the bias
                     </Button>
                     {summary.id && (
                       <Button
                         variant="outline"
                         size="sm"
-                        className="gap-1.5 text-xs"
+                        className="group h-9 gap-2 rounded-full pl-1.5 pr-4 text-[13px] font-medium bg-paper border-rule/80 hover:border-masthead/50 hover:text-masthead transition-colors [&_svg]:!size-4"
                         onClick={() => setChatSection({ title: section.title, content: section.content, originalContent: section.originalContent })}
                       >
-                        <MessageCircle size={14} strokeWidth={1.5} />
-                        Chat
+                        <span className="flex items-center justify-center w-7 h-7 rounded-full bg-masthead/10 text-masthead transition-colors group-hover:bg-masthead/20">
+                          <MessageCircle size={16} strokeWidth={2} />
+                        </span>
+                        Ask AI
                       </Button>
                     )}
                   </div>
                   {challengeIdx === idx && (
-                    <div className="pb-4 md:pb-5">
+                    <div className="pt-4 md:pt-5 pb-4 md:pb-5">
                       <ChallengeQuiz
                         headline={section.title}
                         content={section.originalContent || section.content}
