@@ -298,7 +298,7 @@ export function HomeRoute() {
 
         {/* Card */}
         <div
-          className="w-full max-w-[680px] relative select-none touch-none"
+          className="w-full max-w-[680px] relative select-none touch-none [&_*]:touch-none"
           ref={elRef}
         >
           <div
