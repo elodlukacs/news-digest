@@ -429,14 +429,14 @@ export function SummaryView({
       )}
 
       {summary && sections.length > 0 && (
-        <div className="pt-2 md:pt-8 pb-12 space-y-1 md:space-y-4">
+        <div className="pt-2 md:pt-8 pb-12 space-y-3 md:space-y-4">
           {sections.map((section, idx) => (
-            <article key={idx} className="-mx-4 px-4 py-1.5 border-y border-rule/60 bg-paper-dark/70 md:mx-0 md:px-0 md:py-0 md:bg-transparent md:border-y-0">
+            <article key={idx} className="rounded-2xl border border-rule/70 bg-paper-dark shadow-[0_2px_10px_-4px_rgba(0,0,0,0.08)] overflow-hidden md:rounded-none md:border-0 md:shadow-none md:bg-transparent md:overflow-visible">
               <Card className="relative border-0 bg-transparent md:bg-paper-dark md:border md:border-rule overflow-visible md:overflow-hidden min-w-0">
                 {section.sentiment && (
                   <SentimentRibbon sentiment={section.sentiment} />
                 )}
-                <div className="px-0 md:px-5 pt-3 md:pt-5">
+                <div className="px-4 md:px-5 pt-4 md:pt-5">
                   {section.imageUrl && (
                     <div className="flex gap-3 items-start md:hidden">
                       <img
@@ -532,9 +532,9 @@ export function SummaryView({
 
                   <div className="mt-4 md:mt-5 -mx-4 md:-mx-5 px-3 md:px-4 py-3 md:py-3.5 flex flex-wrap gap-2 items-center border-t border-rule/70 bg-ink/[0.025]">
                     {section.url && (
-                      <Button variant="outline" size="sm" className="group h-9 gap-2 rounded-full pl-1.5 pr-4 text-[13px] font-medium bg-paper border-rule/80 hover:border-masthead/50 hover:text-masthead transition-colors [&_svg]:!size-4" asChild>
+                      <Button variant="outline" size="sm" className="group h-9 gap-2 rounded-xl pl-1.5 pr-3.5 text-[13px] font-medium bg-paper border-rule/80 hover:border-masthead/50 hover:text-masthead transition-colors [&_svg]:!size-4" asChild>
                         <a href={section.url} target="_blank" rel="noopener noreferrer">
-                          <span className="flex items-center justify-center w-7 h-7 rounded-full bg-masthead/10 text-masthead transition-colors group-hover:bg-masthead/20">
+                          <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-masthead/10 text-masthead transition-colors group-hover:bg-masthead/20">
                             <ExternalLink size={16} strokeWidth={2} />
                           </span>
                           Full story
@@ -544,7 +544,7 @@ export function SummaryView({
                     <Button
                       variant="outline"
                       size="sm"
-                      className={`group h-9 gap-2 rounded-full pl-1.5 pr-4 text-[13px] font-medium transition-colors [&_svg]:!size-4 ${
+                      className={`group h-9 gap-2 rounded-xl pl-1.5 pr-3.5 text-[13px] font-medium transition-colors [&_svg]:!size-4 ${
                         challengeIdx === idx
                           ? 'border-masthead/60 bg-masthead/10 text-masthead hover:bg-masthead/15'
                           : 'bg-paper border-rule/80 hover:border-masthead/50 hover:text-masthead'
@@ -552,7 +552,7 @@ export function SummaryView({
                       onClick={() => setChallengeIdx(challengeIdx === idx ? null : idx)}
                       aria-expanded={challengeIdx === idx}
                     >
-                      <span className={`flex items-center justify-center w-7 h-7 rounded-full transition-colors ${
+                      <span className={`flex items-center justify-center w-7 h-7 rounded-lg transition-colors ${
                         challengeIdx === idx ? 'bg-masthead/20 text-masthead' : 'bg-masthead/10 text-masthead group-hover:bg-masthead/20'
                       }`}>
                         <Brain size={16} strokeWidth={2} />
@@ -562,10 +562,10 @@ export function SummaryView({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="group h-9 gap-2 rounded-full pl-1.5 pr-4 text-[13px] font-medium bg-paper border-rule/80 hover:border-masthead/50 hover:text-masthead transition-colors [&_svg]:!size-4"
+                      className="group h-9 gap-2 rounded-xl pl-1.5 pr-3.5 text-[13px] font-medium bg-paper border-rule/80 hover:border-masthead/50 hover:text-masthead transition-colors [&_svg]:!size-4"
                       onClick={() => setRadarSection({ title: section.title, content: section.content, url: section.url, originalContent: section.originalContent })}
                     >
-                      <span className="flex items-center justify-center w-7 h-7 rounded-full bg-masthead/10 text-masthead transition-colors group-hover:bg-masthead/20">
+                      <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-masthead/10 text-masthead transition-colors group-hover:bg-masthead/20">
                         <FlaskConical size={16} strokeWidth={2} />
                       </span>
                       Spot the bias
@@ -574,10 +574,10 @@ export function SummaryView({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="group h-9 gap-2 rounded-full pl-1.5 pr-4 text-[13px] font-medium bg-paper border-rule/80 hover:border-masthead/50 hover:text-masthead transition-colors [&_svg]:!size-4"
+                        className="group h-9 gap-2 rounded-xl pl-1.5 pr-3.5 text-[13px] font-medium bg-paper border-rule/80 hover:border-masthead/50 hover:text-masthead transition-colors [&_svg]:!size-4"
                         onClick={() => setChatSection({ title: section.title, content: section.content, originalContent: section.originalContent })}
                       >
-                        <span className="flex items-center justify-center w-7 h-7 rounded-full bg-masthead/10 text-masthead transition-colors group-hover:bg-masthead/20">
+                        <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-masthead/10 text-masthead transition-colors group-hover:bg-masthead/20">
                           <MessageCircle size={16} strokeWidth={2} />
                         </span>
                         Ask AI
