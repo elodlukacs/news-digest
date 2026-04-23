@@ -4,16 +4,13 @@ import {
   Sparkles,
   MessageCircle,
   RotateCw,
-  ChevronLeft,
-  ChevronRight,
-  ArrowRightLeft,
+  ArrowRight,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { API_BASE } from '../../config';
 import { Skeleton } from '../ui/skeleton';
 import { timeAgo } from '../../utils/date';
 import { ArticleChatPopup } from '../ArticleChatPopup';
-import { useSwipeGesture } from '../../hooks/useSwipeGesture';
 import type { ChatMessage } from '../../types';
 
 /* ─── Types ─── */
@@ -37,8 +34,6 @@ type CardStatus = 'idle' | 'exiting-left' | 'exiting-right' | 'entering';
 const SURPRISE_BASE = `${API_BASE}/homepage/surprise`;
 const SESSION_SEEN_KEY = 'home_seen_urls';
 const MAX_SEEN = 50;
-const SWIPE_EXIT_DISTANCE = 400;
-
 /* ─── Session helpers ─── */
 
 function getSeenUrls(): Set<string> {
@@ -147,13 +142,6 @@ export function HomeRoute() {
     }, 280);
   }, [fetchArticle, loading, cardStatus]);
 
-  const handlePrevious = useCallback(() => {
-    // Previous not implemented for this feed — just triggers next for now
-    handleNext();
-  }, [handleNext]);
-
-
-
   const handleElaborate = useCallback(async () => {
     if (!article || elaborating) return;
     setElaborating(true);
@@ -234,44 +222,16 @@ export function HomeRoute() {
     [article, chatSending, elaborated],
   );
 
-  /* ─── Swipe gesture ─── */
-
-  const { offset, isDragging, elRef } = useSwipeGesture({
-    onSwipeLeft: handleNext,
-    onSwipeRight: handlePrevious,
-    enabled: !loading && cardStatus === 'idle',
-  });
-
   /* ─── Card transform ─── */
 
-  const getCardTransform = () => {
-    if (cardStatus === 'exiting-left') {
-      return `translateX(-${SWIPE_EXIT_DISTANCE}px) rotate(-8deg)`;
-    }
-    if (cardStatus === 'exiting-right') {
-      return `translateX(${SWIPE_EXIT_DISTANCE}px) rotate(8deg)`;
-    }
-    if (cardStatus === 'entering') {
-      return 'translateX(0) rotate(0deg)';
-    }
-    if (isDragging && offset !== 0) {
-      const rotate = offset * 0.04;
-      return `translateX(${offset}px) rotate(${rotate}deg)`;
-    }
-    return 'translateX(0) rotate(0deg)';
+  const getCardOpacity = () => {
+    if (cardStatus === 'exiting-left') return 0;
+    return 1;
   };
 
-  const getCardOpacity = () => {
-    if (cardStatus === 'exiting-left' || cardStatus === 'exiting-right') {
-      return 0;
-    }
-    if (cardStatus === 'entering') {
-      return 1;
-    }
-    if (isDragging && offset !== 0) {
-      return Math.max(0.5, 1 - Math.abs(offset) / 600);
-    }
-    return 1;
+  const getCardTransform = () => {
+    if (cardStatus === 'exiting-left') return 'translateY(-24px)';
+    return 'translateY(0)';
   };
 
   /* ─── Render ─── */
@@ -282,37 +242,15 @@ export function HomeRoute() {
     <div className="relative min-h-[calc(100dvh-3.5rem)] md:min-h-[calc(100dvh-4rem)] flex flex-col" style={{ overscrollBehaviorX: 'contain' }}>
       {/* ── Card stage ── */}
       <div className="flex-1 relative flex items-start justify-center px-3 md:px-6 pb-3 pt-2 md:pt-4">
-        {/* Swipe hint arrows */}
-        {!loading && !error && article && (
-          <>
-            <div className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 pointer-events-none transition-opacity duration-300"
-              style={{ opacity: isDragging && offset > 0 ? 0.35 : 0.1 }}>
-              <ChevronLeft size={40} strokeWidth={1.5} className="text-ink-muted" />
-            </div>
-            <div className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 pointer-events-none transition-opacity duration-300"
-              style={{ opacity: isDragging && offset < 0 ? 0.35 : 0.1 }}>
-              <ChevronRight size={40} strokeWidth={1.5} className="text-ink-muted" />
-            </div>
-          </>
-        )}
-
         {/* Card */}
-        <div
-          className="w-full max-w-[680px] relative select-none touch-none [&_*]:touch-none"
-          ref={elRef}
-        >
+        <div className="w-full max-w-[680px] relative">
           <div
-            className="w-full bg-paper rounded-2xl md:rounded-3xl shadow-[0_8px_40px_-12px_rgba(0,0,0,0.15)] border border-rule/60 flex flex-col overflow-hidden transition-all will-change-transform"
+            className="w-full bg-paper rounded-2xl md:rounded-3xl shadow-[0_2px_4px_-2px_rgba(0,0,0,0.08),0_12px_28px_-8px_rgba(0,0,0,0.18),0_24px_56px_-12px_rgba(0,0,0,0.22)] ring-1 ring-black/10 border border-ink/15 flex flex-col overflow-hidden will-change-transform"
             style={{
               transform: getCardTransform(),
               opacity: getCardOpacity(),
-              transitionDuration: isDragging ? '0ms' : '280ms',
-              transitionTimingFunction: isDragging ? 'linear' : 'cubic-bezier(0.34, 1.56, 0.64, 1)',
-              cursor: isDragging ? 'grabbing' : 'grab',
-              backfaceVisibility: 'hidden',
-              WebkitBackfaceVisibility: 'hidden',
-              WebkitTouchCallout: 'none',
-            } as React.CSSProperties & Record<string, string>}
+              transition: 'transform 220ms ease, opacity 220ms ease',
+            }}
           >
             {/* Loading state */}
             {loading && (
@@ -409,9 +347,9 @@ export function HomeRoute() {
                     {!elaborated && !elaborating && article.raw_content && (
                       <button
                         onClick={handleElaborate}
-                        className="mt-6 inline-flex items-center gap-2 px-4 py-2.5 text-[13px] font-[family-name:var(--font-widget)] font-semibold border border-masthead/30 text-masthead hover:bg-masthead/5 transition-colors cursor-pointer rounded-lg"
+                        className="mt-4 inline-flex items-center gap-1.5 text-[14px] md:text-[15px] font-[family-name:var(--font-body)] italic text-masthead underline decoration-masthead/40 decoration-dotted underline-offset-4 hover:decoration-masthead hover:decoration-solid transition-all cursor-pointer"
                       >
-                        <Sparkles size={14} />
+                        <Sparkles size={13} className="not-italic" />
                         I want to know more
                       </button>
                     )}
@@ -436,7 +374,7 @@ export function HomeRoute() {
                 </div>
 
                 {/* Action bar inside card */}
-                <div className="shrink-0 border-t border-rule/50 px-4 md:px-6 py-3 md:py-4 bg-paper/80 backdrop-blur-sm">
+                <div className="shrink-0 px-4 md:px-6 py-3 md:py-4 bg-paper/80 backdrop-blur-sm">
                   <div className="flex items-center gap-2 md:gap-3">
                     {/* Chat */}
                     {article.article_id != null && (
@@ -446,7 +384,7 @@ export function HomeRoute() {
                         className="flex-1 flex items-center justify-center gap-2 h-11 md:h-12 text-[13px] md:text-[14px] font-[family-name:var(--font-widget)] font-semibold border border-rule text-ink-muted hover:text-ink hover:border-ink-muted hover:bg-ink/5 transition-all cursor-pointer rounded-xl bg-paper"
                       >
                         <MessageCircle size={16} />
-                        <span>Chat</span>
+                        <span>Ask a question</span>
                       </button>
                     )}
 
@@ -466,13 +404,16 @@ export function HomeRoute() {
                     )}
                   </div>
 
-                  {/* Swipe hint */}
-                  <div className="mt-3 flex items-center justify-center gap-2">
-                    <ArrowRightLeft size={14} className="text-ink-muted/40" />
-                    <span className="text-xs font-[family-name:var(--font-widget)] text-ink-muted/40 tracking-wider">
-                      Swipe to browse
-                    </span>
-                  </div>
+                  {/* Next story — big primary action */}
+                  <button
+                    onClick={handleNext}
+                    disabled={loading || cardStatus !== 'idle'}
+                    aria-label="Next story"
+                    className="mt-3 w-full flex items-center justify-center gap-2.5 h-14 md:h-16 text-[15px] md:text-[16px] font-[family-name:var(--font-widget)] font-bold tracking-wide bg-masthead text-paper hover:bg-masthead/90 active:bg-masthead/80 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer rounded-xl shadow-[0_4px_16px_-4px_rgba(0,0,0,0.2)] hover:shadow-[0_6px_20px_-4px_rgba(0,0,0,0.25)]"
+                  >
+                    <span>Next story</span>
+                    <ArrowRight size={18} strokeWidth={2.5} />
+                  </button>
                 </div>
               </>
             )}

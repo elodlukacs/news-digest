@@ -30,57 +30,32 @@ export function useSwipeGesture({
     const el = elRef.current;
     if (!el || !enabled) return;
 
-    const handleTouchStart = (e: TouchEvent) => {
-      stateRef.current = {
-        startX: e.touches[0].clientX,
-        startY: e.touches[0].clientY,
-        currentX: e.touches[0].clientX,
-        currentY: e.touches[0].clientY,
-        isDragging: true,
-      };
-      setIsDragging(true);
-    };
+    let activePointerId: number | null = null;
 
-    const handleTouchMove = (e: TouchEvent) => {
+    const finish = (commit: boolean) => {
       const state = stateRef.current;
       if (!state.isDragging) return;
-
-      const clientX = e.touches[0].clientX;
-      const clientY = e.touches[0].clientY;
-      const deltaX = clientX - state.startX;
-      const deltaY = clientY - state.startY;
-
-      // Only handle horizontal swipes if dominant
-      if (Math.abs(deltaX) > Math.abs(deltaY)) {
-        state.currentX = clientX;
-        state.currentY = clientY;
-        setOffset(deltaX);
-      }
-    };
-
-    const handleTouchEnd = () => {
-      const state = stateRef.current;
-      if (!state.isDragging) return;
-
       const deltaX = state.currentX - state.startX;
       const absDelta = Math.abs(deltaX);
-
       state.isDragging = false;
       setIsDragging(false);
-
-      if (absDelta >= threshold) {
-        if (deltaX < 0 && cbRef.current.onSwipeLeft) {
-          cbRef.current.onSwipeLeft();
-        } else if (deltaX > 0 && cbRef.current.onSwipeRight) {
-          cbRef.current.onSwipeRight();
-        }
+      activePointerId = null;
+      if (commit && absDelta >= threshold) {
+        if (deltaX < 0 && cbRef.current.onSwipeLeft) cbRef.current.onSwipeLeft();
+        else if (deltaX > 0 && cbRef.current.onSwipeRight) cbRef.current.onSwipeRight();
       }
-
       setOffset(0);
     };
 
-    const handleMouseDown = (e: MouseEvent) => {
-      e.preventDefault();
+    const handlePointerDown = (e: PointerEvent) => {
+      if (activePointerId !== null) return;
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      activePointerId = e.pointerId;
+      try {
+        el.setPointerCapture(e.pointerId);
+      } catch {
+        // ignore
+      }
       stateRef.current = {
         startX: e.clientX,
         startY: e.clientY,
@@ -91,59 +66,39 @@ export function useSwipeGesture({
       setIsDragging(true);
     };
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const handlePointerMove = (e: PointerEvent) => {
+      if (e.pointerId !== activePointerId) return;
       const state = stateRef.current;
       if (!state.isDragging) return;
-      state.currentX = e.clientX;
-      state.currentY = e.clientY;
       const deltaX = e.clientX - state.startX;
-      setOffset(deltaX);
-    };
-
-    const handleMouseUp = () => {
-      const state = stateRef.current;
-      if (!state.isDragging) return;
-
-      const deltaX = state.currentX - state.startX;
-      const absDelta = Math.abs(deltaX);
-
-      state.isDragging = false;
-      setIsDragging(false);
-
-      if (absDelta >= threshold) {
-        if (deltaX < 0 && cbRef.current.onSwipeLeft) {
-          cbRef.current.onSwipeLeft();
-        } else if (deltaX > 0 && cbRef.current.onSwipeRight) {
-          cbRef.current.onSwipeRight();
-        }
-      }
-
-      setOffset(0);
-    };
-
-    const handleMouseLeave = () => {
-      if (stateRef.current.isDragging) {
-        handleMouseUp();
+      const deltaY = e.clientY - state.startY;
+      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        state.currentX = e.clientX;
+        state.currentY = e.clientY;
+        setOffset(deltaX);
       }
     };
 
-    // Attach native listeners — all passive, no preventDefault needed
-    el.addEventListener('touchstart', handleTouchStart, { passive: true });
-    el.addEventListener('touchmove', handleTouchMove, { passive: true });
-    el.addEventListener('touchend', handleTouchEnd, { passive: true });
-    el.addEventListener('mousedown', handleMouseDown);
-    el.addEventListener('mousemove', handleMouseMove);
-    el.addEventListener('mouseup', handleMouseUp);
-    el.addEventListener('mouseleave', handleMouseLeave);
+    const handlePointerUp = (e: PointerEvent) => {
+      if (e.pointerId !== activePointerId) return;
+      finish(true);
+    };
+
+    const handlePointerCancel = (e: PointerEvent) => {
+      if (e.pointerId !== activePointerId) return;
+      finish(false);
+    };
+
+    el.addEventListener('pointerdown', handlePointerDown);
+    el.addEventListener('pointermove', handlePointerMove);
+    el.addEventListener('pointerup', handlePointerUp);
+    el.addEventListener('pointercancel', handlePointerCancel);
 
     return () => {
-      el.removeEventListener('touchstart', handleTouchStart);
-      el.removeEventListener('touchmove', handleTouchMove);
-      el.removeEventListener('touchend', handleTouchEnd);
-      el.removeEventListener('mousedown', handleMouseDown);
-      el.removeEventListener('mousemove', handleMouseMove);
-      el.removeEventListener('mouseup', handleMouseUp);
-      el.removeEventListener('mouseleave', handleMouseLeave);
+      el.removeEventListener('pointerdown', handlePointerDown);
+      el.removeEventListener('pointermove', handlePointerMove);
+      el.removeEventListener('pointerup', handlePointerUp);
+      el.removeEventListener('pointercancel', handlePointerCancel);
     };
   }, [enabled, threshold]);
 
