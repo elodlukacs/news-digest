@@ -261,55 +261,6 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   color-scheme: dark;
 }
 
-/* ─── Panel slide-in / slide-out ─── */
-@keyframes slide-in-right {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
-}
-@keyframes slide-out-right {
-  from { transform: translateX(0); }
-  to { transform: translateX(100%); }
-}
-@keyframes slideUp {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
-}
-@keyframes slideDown {
-  from { transform: translateY(0); }
-  to { transform: translateY(100%); }
-}
-.panel-slide-in {
-  animation: slideUp 0.25s ease-out both;
-}
-@media (min-width: 768px) {
-  .panel-slide-in {
-    animation: slide-in-right 0.3s ease-out both;
-  }
-}
-.panel-slide-out {
-  animation: slideDown 0.25s ease-in both;
-}
-@media (min-width: 768px) {
-  .panel-slide-out {
-    animation: slide-out-right 0.25s ease-in both;
-  }
-}
-
-@keyframes backdrop-fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-@keyframes backdrop-fade-out {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
-.backdrop-fade-in {
-  animation: backdrop-fade-in 0.25s ease-out both;
-}
-.backdrop-fade-out {
-  animation: backdrop-fade-out 0.25s ease-in both;
-}
-
 /* ─── Morning Briefing — Sunday Edition ─── */
 @keyframes briefing-rise {
   from {

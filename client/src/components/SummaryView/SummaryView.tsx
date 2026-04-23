@@ -104,11 +104,13 @@ export function SummaryView({
     url: string;
     originalContent?: string;
   } | null>(null);
+  const [radarOpen, setRadarOpen] = useState(false);
   const [chatSection, setChatSection] = useState<{
     title: string;
     content: string;
     originalContent?: string;
   } | null>(null);
+  const [chatOpen, setChatOpen] = useState(false);
   const [challengeIdx, setChallengeIdx] = useState<number | null>(null);
 
   const chatArticleContent = useMemo(() => {
@@ -563,7 +565,7 @@ export function SummaryView({
                       variant="outline"
                       size="sm"
                       className="group h-9 gap-2 rounded-xl pl-1.5 pr-3.5 text-[13px] font-medium bg-paper border-rule/80 hover:border-masthead/50 hover:text-masthead transition-colors [&_svg]:!size-4"
-                      onClick={() => setRadarSection({ title: section.title, content: section.content, url: section.url, originalContent: section.originalContent })}
+                      onClick={() => { setRadarSection({ title: section.title, content: section.content, url: section.url, originalContent: section.originalContent }); setRadarOpen(true); }}
                     >
                       <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-masthead/10 text-masthead transition-colors group-hover:bg-masthead/20">
                         <FlaskConical size={16} strokeWidth={2} />
@@ -575,7 +577,7 @@ export function SummaryView({
                         variant="outline"
                         size="sm"
                         className="group h-9 gap-2 rounded-xl pl-1.5 pr-3.5 text-[13px] font-medium bg-paper border-rule/80 hover:border-masthead/50 hover:text-masthead transition-colors [&_svg]:!size-4"
-                        onClick={() => setChatSection({ title: section.title, content: section.content, originalContent: section.originalContent })}
+                        onClick={() => { setChatSection({ title: section.title, content: section.content, originalContent: section.originalContent }); setChatOpen(true); }}
                       >
                         <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-masthead/10 text-masthead transition-colors group-hover:bg-masthead/20">
                           <MessageCircle size={16} strokeWidth={2} />
@@ -613,12 +615,13 @@ export function SummaryView({
 
           {chatSection && summary.id && (
             <ArticleChatPopup
+              open={chatOpen}
+              onOpenChange={setChatOpen}
               headline={chatSection.title}
               sourceName={categoryName}
               messages={chatMessages}
               sending={chatSending}
               onSend={chatSend}
-              onClose={() => setChatSection(null)}
             />
           )}
         </div>
@@ -639,6 +642,8 @@ export function SummaryView({
         } catch {}
         return (
           <BiasRadarPanel
+            open={radarOpen}
+            onOpenChange={setRadarOpen}
             headline={radarSection.title}
             content={radarSection.content}
             originalContent={radarSection.originalContent}
@@ -652,7 +657,6 @@ export function SummaryView({
               excerpt: radarSection.content,
             }}
             sourceName={sourceDomain}
-            onClose={() => setRadarSection(null)}
             initialTab="decode"
             sections={sections}
             categoryName={categoryName}

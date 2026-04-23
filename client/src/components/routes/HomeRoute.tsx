@@ -422,14 +422,15 @@ export function HomeRoute() {
       </div>
 
       {/* Chat popup */}
-      {chatOpen && article && article.article_id != null && (
+      {article && article.article_id != null && (
         <ArticleChatPopup
+          open={chatOpen}
+          onOpenChange={setChatOpen}
           headline={article.title}
           sourceName={article.source}
           messages={chatMessages}
           sending={chatSending}
           onSend={handleSendChat}
-          onClose={() => setChatOpen(false)}
         />
       )}
     </div>
