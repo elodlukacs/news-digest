@@ -21,7 +21,6 @@ app.use('/api/tags', require('./routes/tags'));
 app.use('/api/stats', require('./routes/stats'));
 app.use('/api/models', require('./routes/models'));
 app.use('/api/widgets', require('./routes/widgets'));
-app.use('/api/homepage', require('./routes/homepage'));
 app.use('/api/homepage/surprise', require('./routes/surprise'));
 app.use('/api/jobs', require('./routes/jobs'));
 app.use('/api/bias-radar/decode', require('./routes/bias-radar/decode'));

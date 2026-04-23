@@ -65,8 +65,7 @@ export function NavigationBar({
   const activeCategoryId = activeCategorySlug
     ? categories.find(c => slugify(c.name) === activeCategorySlug)?.id ?? null
     : null;
-  const showBreak = path === '/break';
-  const isHome = path === '/' || showBreak;
+  const isHome = path === '/';
   const showBriefing = path === '/briefing';
   const showReleases = path === '/releases';
   const showJobs = path === '/jobs';
@@ -346,7 +345,7 @@ export function NavigationBar({
 
           <div className="flex-1 overflow-y-auto">
             <div className="py-1">
-              <DrawerItem label="Home" icon={<Zap size={14} />} active={isHome || showBreak} onClick={homeAndClose} />
+              <DrawerItem label="Home" icon={<Zap size={14} />} active={isHome} onClick={homeAndClose} />
               <DrawerItem label="Morning Briefing" icon={<Coffee size={14} />} active={showBriefing} onClick={briefingAndClose} />
               <DrawerItem label="Releases" icon={<Film size={14} />} active={showReleases} onClick={releasesAndClose} />
               <DrawerItem label="Jobs" icon={<Briefcase size={14} />} active={showJobs} onClick={jobsAndClose} />

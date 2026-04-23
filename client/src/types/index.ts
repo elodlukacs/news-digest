@@ -151,22 +151,6 @@ export type { CryptoPrice, ForecastDay, Weather, Rates, Headline, Briefing, Weir
 export type { BiasRating, SourceArticle, TechniqueName, TechniqueResult, GutCheckReaction, SteelmanResponse, RabbitHoleResponse } from './lens';
 export type { GamificationStats, ChallengeResult, RecoveryResult } from './gamification';
 
-export interface HomepageArticle {
-  title: string;
-  excerpt: string;
-  link: string;
-  image: string;
-  pubDate: string;
-  source: string;
-  readTime?: number;
-}
-
-export interface HomepageBrief {
-  categoryId: number;
-  categoryName: string;
-  articles: HomepageArticle[];
-}
-
 /* ─── Cognitive Resilience Types ─── */
 
 export interface ForensicFallacy {
