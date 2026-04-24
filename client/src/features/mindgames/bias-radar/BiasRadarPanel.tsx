@@ -77,8 +77,11 @@ export default function BiasRadarPanel({
   }
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="!max-h-[min(92dvh,var(--vvh,100dvh))] bg-paper">
+    <Drawer open={open} onOpenChange={onOpenChange} repositionInputs={false}>
+      <DrawerContent
+        className="!max-h-[92dvh] bg-paper"
+        style={{ paddingBottom: 'var(--kbd, 0px)' }}
+      >
         {body}
       </DrawerContent>
     </Drawer>

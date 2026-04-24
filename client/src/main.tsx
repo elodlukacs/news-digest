@@ -9,8 +9,9 @@ import App from './App'
 if (typeof window !== 'undefined' && window.visualViewport) {
   const setVvh = () => {
     const vv = window.visualViewport!;
+    const kbd = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
     document.documentElement.style.setProperty('--vvh', `${vv.height}px`);
-    document.documentElement.style.setProperty('--vv-offset', `${vv.offsetTop}px`);
+    document.documentElement.style.setProperty('--kbd', `${kbd}px`);
   };
   setVvh();
   window.visualViewport.addEventListener('resize', setVvh);
