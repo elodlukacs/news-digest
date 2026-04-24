@@ -53,7 +53,7 @@ export function ArticleChatPopup({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="!max-h-[92vh] bg-paper">
+      <DrawerContent className="!max-h-[min(92dvh,var(--vvh,100dvh))] bg-paper">
         {body}
       </DrawerContent>
     </Drawer>
