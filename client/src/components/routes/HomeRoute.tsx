@@ -27,8 +27,6 @@ interface SurpriseArticle {
   has_expanded?: boolean;
 }
 
-type CardStatus = 'idle' | 'exiting-left' | 'exiting-right' | 'entering';
-
 /* ─── Constants ─── */
 
 const SURPRISE_BASE = `${API_BASE}/homepage/surprise`;
@@ -80,8 +78,10 @@ export function HomeRoute() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatSending, setChatSending] = useState(false);
 
-  const [cardStatus, setCardStatus] = useState<CardStatus>('idle');
   const abortRef = useRef<AbortController | null>(null);
+  const transitionRef = useRef(false);
+
+  const [phase, setPhase] = useState<'idle' | 'exit' | 'enter'>('idle');
 
   const fetchArticle = useCallback(async (retryAfterClear = false) => {
     if (abortRef.current) abortRef.current.abort();
@@ -121,7 +121,13 @@ export function HomeRoute() {
       if (e instanceof DOMException && e.name === 'AbortError') return;
       setError(e instanceof Error ? e.message : 'Failed to load');
     } finally {
-      if (!controller.signal.aborted) setLoading(false);
+      if (!controller.signal.aborted) {
+        setLoading(false);
+        if (transitionRef.current) {
+          transitionRef.current = false;
+          setPhase('enter');
+        }
+      }
     }
   }, []);
 
@@ -133,14 +139,28 @@ export function HomeRoute() {
   }, [fetchArticle]);
 
   const handleNext = useCallback(() => {
-    if (loading || cardStatus !== 'idle') return;
-    setCardStatus('exiting-left');
-    setTimeout(() => {
+    if (loading || phase !== 'idle') return;
+    transitionRef.current = true;
+    setPhase('exit');
+  }, [loading, phase]);
+
+  useEffect(() => {
+    if (phase !== 'exit') return;
+    const timer = setTimeout(() => {
       fetchArticle();
-      setCardStatus('entering');
-      setTimeout(() => setCardStatus('idle'), 400);
-    }, 280);
-  }, [fetchArticle, loading, cardStatus]);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [phase, fetchArticle]);
+
+  useEffect(() => {
+    if (phase !== 'enter') return;
+    const raf1 = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setPhase('idle');
+      });
+    });
+    return () => cancelAnimationFrame(raf1);
+  }, [phase]);
 
   const handleElaborate = useCallback(async () => {
     if (!article || elaborating) return;
@@ -222,36 +242,14 @@ export function HomeRoute() {
     [article, chatSending, elaborated],
   );
 
-  /* ─── Card transform ─── */
-
-  const getCardOpacity = () => {
-    if (cardStatus === 'exiting-left') return 0;
-    return 1;
-  };
-
-  const getCardTransform = () => {
-    if (cardStatus === 'exiting-left') return 'translateY(-24px)';
-    return 'translateY(0)';
-  };
-
   /* ─── Render ─── */
 
   const bodyText = elaborated ?? article?.brief ?? '';
 
   return (
     <div className="relative min-h-[calc(100dvh-3.5rem)] md:min-h-[calc(100dvh-4rem)] flex flex-col" style={{ overscrollBehaviorX: 'contain' }}>
-      {/* ── Card stage ── */}
-      <div className="flex-1 relative flex items-start justify-center px-3 md:px-6 pb-3 pt-2 md:pt-4">
-        {/* Card */}
-        <div className="w-full max-w-[680px] relative">
-          <div
-            className="w-full bg-paper rounded-2xl md:rounded-3xl shadow-[0_2px_4px_-2px_rgba(0,0,0,0.08),0_12px_28px_-8px_rgba(0,0,0,0.18),0_24px_56px_-12px_rgba(0,0,0,0.22)] ring-1 ring-black/10 border border-ink/15 flex flex-col overflow-hidden will-change-transform"
-            style={{
-              transform: getCardTransform(),
-              opacity: getCardOpacity(),
-              transition: 'transform 220ms ease, opacity 220ms ease',
-            }}
-          >
+      <div className="flex-1 flex justify-center px-3 md:px-6 pb-6 pt-2 md:pt-4">
+        <div className="w-full max-w-[680px]">
             {/* Loading state */}
             {loading && (
               <div className="flex-1 p-6 md:p-8 flex flex-col justify-center space-y-5">
@@ -285,23 +283,28 @@ export function HomeRoute() {
 
             {/* Article content */}
             {article && !loading && (
-              <>
-                {/* Content area */}
+              <div
+                className="transition-all duration-300 ease-out will-change-transform"
+                style={
+                  phase === 'exit'
+                    ? { opacity: 0, transform: 'translateY(-20px)' }
+                    : phase === 'enter'
+                      ? { opacity: 0, transform: 'translateY(20px)' }
+                      : { opacity: 1, transform: 'translateY(0)' }
+                }
+              >
                 <div>
                   <div className="p-5 md:p-8 pb-2">
-                    {/* Category */}
                     {article.category_name && (
                       <p className="text-[10px] md:text-[11px] font-[family-name:var(--font-widget)] uppercase tracking-[0.25em] font-bold text-masthead mb-3">
                         {article.category_name}
                       </p>
                     )}
 
-                    {/* Title */}
-                    <h1 className="font-serif text-[24px] leading-[1.15] sm:text-[28px] md:text-[34px] md:leading-[1.1] font-black text-ink tracking-[-0.02em] mb-4">
+                    <h1 className="font-serif text-[24px] leading-[1.2] sm:text-[28px] md:text-[34px] md:leading-[1.2] font-black text-ink tracking-[-0.02em] mb-4">
                       {article.title}
                     </h1>
 
-                    {/* Meta */}
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] font-[family-name:var(--font-widget)] text-ink-muted mb-5">
                       {article.source && (
                         <span className="font-semibold text-ink-light">
@@ -319,9 +322,8 @@ export function HomeRoute() {
                     </div>
                   </div>
 
-                  {/* Body */}
                   <div className="px-5 md:px-8 pb-4">
-                    <div className="font-[family-name:var(--font-body)] text-[15px] leading-[1.75] md:text-[17px] md:leading-[1.8] text-ink-light space-y-4 [&_strong]:text-ink [&_strong]:font-bold [&_a]:underline [&_a]:decoration-rule hover:[&_a]:decoration-ink">
+                    <div className="font-[family-name:var(--font-body)] text-[16px] leading-[1.75] md:text-[18px] md:leading-[1.8] text-ink-light space-y-4 [&_strong]:text-ink [&_strong]:font-bold [&_a]:underline [&_a]:decoration-rule hover:[&_a]:decoration-ink">
                       <ReactMarkdown
                         components={{
                           p: ({ children }) => (
@@ -343,7 +345,6 @@ export function HomeRoute() {
                       </ReactMarkdown>
                     </div>
 
-                    {/* Elaborate CTA */}
                     {!elaborated && !elaborating && article.raw_content && (
                       <button
                         onClick={handleElaborate}
@@ -373,10 +374,8 @@ export function HomeRoute() {
                   </div>
                 </div>
 
-                {/* Action bar inside card */}
-                <div className="shrink-0 px-4 md:px-6 py-3 md:py-4 bg-paper/80 backdrop-blur-sm">
+                <div className="shrink-0 px-4 md:px-6 py-3 md:py-4">
                   <div className="flex items-center gap-2 md:gap-3">
-                    {/* Chat */}
                     {article.article_id != null && (
                       <button
                         onClick={() => setChatOpen(true)}
@@ -388,7 +387,6 @@ export function HomeRoute() {
                       </button>
                     )}
 
-                    {/* Read full */}
                     {article.link && (
                       <a
                         href={article.link}
@@ -404,20 +402,18 @@ export function HomeRoute() {
                     )}
                   </div>
 
-                  {/* Next story — big primary action */}
                   <button
                     onClick={handleNext}
-                    disabled={loading || cardStatus !== 'idle'}
+                    disabled={loading || phase !== 'idle'}
                     aria-label="Next story"
-                    className="mt-3 w-full flex items-center justify-center gap-2.5 h-14 md:h-16 text-[15px] md:text-[16px] font-[family-name:var(--font-widget)] font-bold tracking-wide bg-masthead text-paper hover:bg-masthead/90 active:bg-masthead/80 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer rounded-xl shadow-[0_4px_16px_-4px_rgba(0,0,0,0.2)] hover:shadow-[0_6px_20px_-4px_rgba(0,0,0,0.25)]"
+                    className="mt-3 w-full flex items-center justify-center gap-2.5 h-14 md:h-16 text-[15px] md:text-[16px] font-[family-name:var(--font-widget)] font-bold tracking-wide bg-masthead text-paper hover:bg-masthead/90 active:bg-masthead/80 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer rounded-xl"
                   >
                     <span>Next story</span>
                     <ArrowRight size={18} strokeWidth={2.5} />
                   </button>
                 </div>
-              </>
+              </div>
             )}
-          </div>
         </div>
       </div>
 
