@@ -405,3 +405,15 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   .drillboard-col-6,
   .drillboard-col-12 { grid-column: span 1; }
 }
+
+/* Prevent iOS Safari from auto-zooming when focusing form fields with <16px text.
+   The zoom triggers layout shifts that break fixed-position popups (Ask AI, Spot the Bias). */
+@supports (-webkit-touch-callout: none) {
+  @media (max-width: 639px) {
+    input:not([type='checkbox']):not([type='radio']):not([type='range']),
+    textarea,
+    select {
+      font-size: 16px !important;
+    }
+  }
+}
