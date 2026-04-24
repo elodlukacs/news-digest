@@ -9,6 +9,7 @@ import {
 import ReactMarkdown from 'react-markdown';
 import { API_BASE } from '../../config';
 import { Skeleton } from '../ui/skeleton';
+import { Button } from '../ui/button';
 import { timeAgo } from '../../utils/date';
 import { ArticleChatPopup } from '../ArticleChatPopup';
 import type { ChatMessage } from '../../types';
@@ -248,7 +249,7 @@ export function HomeRoute() {
 
   return (
     <div className="relative min-h-[calc(100dvh-3.5rem)] md:min-h-[calc(100dvh-4rem)] flex flex-col" style={{ overscrollBehaviorX: 'contain' }}>
-      <div className="flex-1 flex justify-center px-3 md:px-6 pb-6 pt-2 md:pt-4">
+      <div className="flex-1 flex justify-center px-3 md:px-6 pb-[calc(12rem+env(safe-area-inset-bottom))] md:pb-[13rem] pt-2 md:pt-4">
         <div className="w-full max-w-[680px]">
             {/* Loading state */}
             {loading && (
@@ -374,48 +375,63 @@ export function HomeRoute() {
                   </div>
                 </div>
 
-                <div className="shrink-0 px-4 md:px-6 py-3 md:py-4">
-                  <div className="flex items-center gap-2 md:gap-3">
-                    {article.article_id != null && (
-                      <button
-                        onClick={() => setChatOpen(true)}
-                        aria-label="Chat about this article"
-                        className="flex-1 flex items-center justify-center gap-2 h-11 md:h-12 text-[13px] md:text-[14px] font-[family-name:var(--font-widget)] font-semibold border border-rule text-ink-muted hover:text-ink hover:border-ink-muted hover:bg-ink/5 transition-all cursor-pointer rounded-xl bg-paper"
-                      >
-                        <MessageCircle size={16} />
-                        <span>Ask a question</span>
-                      </button>
-                    )}
-
-                    {article.link && (
-                      <a
-                        href={article.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label="Read full article"
-                        className="flex-1 flex items-center justify-center gap-2 h-11 md:h-12 text-[13px] md:text-[14px] font-[family-name:var(--font-widget)] font-semibold border border-rule text-ink-muted hover:text-ink hover:border-ink-muted hover:bg-ink/5 transition-all cursor-pointer rounded-xl bg-paper"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <ExternalLink size={16} />
-                        <span>Read full</span>
-                      </a>
-                    )}
-                  </div>
-
-                  <button
-                    onClick={handleNext}
-                    disabled={loading || phase !== 'idle'}
-                    aria-label="Next story"
-                    className="mt-3 w-full flex items-center justify-center gap-2.5 h-14 md:h-16 text-[15px] md:text-[16px] font-[family-name:var(--font-widget)] font-bold tracking-wide bg-masthead text-paper hover:bg-masthead/90 active:bg-masthead/80 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer rounded-xl"
-                  >
-                    <span>Next story</span>
-                    <ArrowRight size={18} strokeWidth={2.5} />
-                  </button>
-                </div>
               </div>
             )}
         </div>
       </div>
+
+      {/* Sticky action toolbar */}
+      {article && !loading && (
+        <div
+          className="fixed bottom-0 left-0 right-0 z-30 border-t border-rule bg-paper/85 backdrop-blur-md supports-[backdrop-filter]:bg-paper/70"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        >
+          <div className="mx-auto w-full max-w-[680px] px-4 md:px-6 py-3 md:py-4">
+            <div className="flex items-center gap-2 md:gap-3">
+              {article.article_id != null && (
+                <Button
+                  variant="outline"
+                  onClick={() => setChatOpen(true)}
+                  aria-label="Chat about this article"
+                  className="flex-1 h-11 md:h-12 rounded-xl text-[13px] md:text-[14px] font-[family-name:var(--font-widget)] font-semibold text-ink-muted hover:text-ink hover:bg-ink/5"
+                >
+                  <MessageCircle size={16} />
+                  <span>Ask a question</span>
+                </Button>
+              )}
+
+              {article.link && (
+                <Button
+                  asChild
+                  variant="outline"
+                  aria-label="Read full article"
+                  className="flex-1 h-11 md:h-12 rounded-xl text-[13px] md:text-[14px] font-[family-name:var(--font-widget)] font-semibold text-ink-muted hover:text-ink hover:bg-ink/5"
+                >
+                  <a
+                    href={article.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ExternalLink size={16} />
+                    <span>Read full</span>
+                  </a>
+                </Button>
+              )}
+            </div>
+
+            <Button
+              onClick={handleNext}
+              disabled={loading || phase !== 'idle'}
+              aria-label="Next story"
+              className="mt-3 w-full h-14 md:h-16 rounded-xl text-[15px] md:text-[16px] font-[family-name:var(--font-widget)] font-bold tracking-wide bg-masthead text-paper hover:bg-masthead/90 active:bg-masthead/80"
+            >
+              <span>Next story</span>
+              <ArrowRight size={18} strokeWidth={2.5} />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Chat popup */}
       {article && article.article_id != null && (
