@@ -7,12 +7,21 @@ const callLLM = (messages, opts) => rawCallLLM(messages, { ...opts, db });
 
 const router = express.Router();
 
+// Per-source retention. Aggregator feeds churn fast (postings vanish after a
+// week); ATS direct boards keep postings open for 30-60 days, so we use a
+// longer window for `companies-ats` to avoid losing genuinely-open roles.
+// `prefix` lets the same expression be used in joined queries (with `j.`).
+function recentJobFilter(prefix = '') {
+  const p = prefix ? `${prefix}.` : '';
+  return `(${p}date_posted >= date('now', '-7 days') OR (${p}source = 'companies-ats' AND ${p}date_posted >= date('now', '-30 days')))`;
+}
+
 router.get('/', (req, res) => {
   const { saved, source, workType, search, country, aiOnly, page = '1', limit = '50' } = req.query;
   const conditions = [];
   const params = {};
 
-  conditions.push("j.date_posted >= date('now', '-7 days')");
+  conditions.push(recentJobFilter('j'));
   if (saved === 'true') { conditions.push('sj.job_id IS NOT NULL'); }
   if (source) { conditions.push('j.source = @source'); params.source = source; }
   if (workType) { conditions.push('j.work_type = @workType'); params.workType = workType; }
@@ -32,7 +41,7 @@ router.get('/', (req, res) => {
     ORDER BY j.date_posted DESC LIMIT @limit OFFSET @offset
   `).all({ ...params, limit: parseInt(limit), offset });
 
-  const recentFilter = "date_posted >= date('now', '-7 days')";
+  const recentFilter = recentJobFilter();
   const counts = { total: 0, new: 0, saved: 0 };
   const countRows = db.prepare(`SELECT status, COUNT(*) as count FROM jobs WHERE ${recentFilter} GROUP BY status`).all();
   for (const r of countRows) { counts.total += r.count; counts[r.status] = r.count; }
