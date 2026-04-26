@@ -42,6 +42,7 @@ const SOURCE_LABELS: Record<string, string> = {
   realworkfromanywhere: 'RealWFA',
   workingnomads: 'WorkingNomads',
   adzuna: 'Adzuna',
+  'companies-ats': 'Companies',
 };
 
 const WORK_TYPE_LABELS: Record<string, string> = {

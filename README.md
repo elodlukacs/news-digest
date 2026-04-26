@@ -32,7 +32,7 @@ AI-powered news aggregation and summarization platform with a newspaper-inspired
 
 ### Widgets
 
-- Job board — aggregated from 8 sources with AI filtering
+- Job board — aggregated from 12 sources (incl. direct Greenhouse/Lever/Ashby/Workable boards) with AI filtering driven by a configurable `JOB_PROFILE`
 - Upcoming movies & TV shows (TMDB) with detail modals
 - Hacker News top posts
 - Weather forecast (Open-Meteo)
@@ -168,7 +168,7 @@ cd client && npm run build  # outputs to client/dist/
 4. **Browse history** using the Archive panel in the left sidebar
 5. **Chat** about any summary using the chat panel below the article
 6. **Send to Telegram** using the button next to the Refresh button
-7. **Browse jobs** from the Jobs page (aggregated from 8 sources)
+7. **Browse jobs** from the Jobs page (aggregated from 12 sources, configurable via `JOB_PROFILE`)
 8. **Discover new releases** in the Movies & TV page
 9. **Train your mind** with the MindGames cognitive resilience dashboard
 
@@ -208,7 +208,7 @@ news-reader/
 │   │   ├── summaries.js        # Summary generation + history
 │   │   ├── chat.js             # AI chat about summaries
 │   │   ├── briefing.js         # Morning briefing generation
-│   │   ├── jobs.js             # Job board (8 sources + AI filter)
+│   │   ├── jobs.js             # Job board (12 sources + AI filter)
 │   │   ├── stats.js            # LLM usage + trending
 │   │   ├── widgets.js          # Weather, crypto, rates, HN, releases
 │   │   ├── homepage.js         # Newspaper grid homepage
@@ -232,8 +232,10 @@ news-reader/
 │   │   ├── telegram.js         # Telegram bot integration
 │   │   └── fetchWithTimeout.js # HTTP with timeout
 │   ├── jobs/                   # Job aggregator
-│   │   ├── sources.js          # 8 source fetchers
-│   │   ├── ai-filter.js        # AI relevance filtering
+│   │   ├── sources.js          # 11 aggregator fetchers + ALL_SOURCES registry
+│   │   ├── sources-ats.js      # Direct Greenhouse/Lever/Ashby/Workable boards
+│   │   ├── profile.js          # JOB_PROFILE — configurable role/seniority/region
+│   │   ├── ai-filter.js        # AI relevance filtering (reads JOB_PROFILE)
 │   │   └── common.js           # Shared job utilities
 │   └── middleware/             # Express middleware
 ├── AGENTS.md                   # Agent instructions & architecture reference

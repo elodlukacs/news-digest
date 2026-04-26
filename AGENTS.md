@@ -287,7 +287,7 @@ feedDelete.js      — DELETE /api/feeds/:id
 summaries.js       — GET /api/categories/:id/summary, GET /api/categories/:id/history, POST /api/categories/:id/refresh
 chat.js            — GET /api/chat/:summaryId, POST /api/chat
 briefing.js        — GET /api/briefing/latest, POST /api/briefing/generate
-jobs.js            — GET /api/jobs (filters), POST /api/jobs/fetch, PATCH /api/jobs/:id/status, POST /api/jobs/ai-filter
+jobs.js            — GET /api/jobs (filters), POST /api/jobs/fetch, POST /api/jobs/ai-filter, POST/DELETE /api/jobs/:id/save
 stats.js           — GET /api/stats/llm, GET /api/stats/trending
 widgets.js         — GET /api/widgets/{weather,rates,headlines,crypto,hackernews,releases}
 homepage.js        — GET /api/homepage, POST /api/homepage/refresh
@@ -300,7 +300,7 @@ Cognitive routes: `narrative`, `prompts`, `disinfo`, `cognitive`, `forensics`, `
 Bias-radar routes: `bias-radar/` (decode, related, timeline, daily-quiz, steelman, missing-story).
 
 Shared libs: `lib/llm.js`, `lib/rss.js`, `lib/telegram.js`, `lib/fetchWithTimeout.js`.
-Job aggregator: `jobs/sources.js` (8 sources), `jobs/ai-filter.js`, `jobs/common.js`.
+Job aggregator: `jobs/sources.js` (11 aggregators + `companies-ats`), `jobs/sources-ats.js` (Greenhouse/Lever/Ashby/Workable), `jobs/profile.js` (`JOB_PROFILE` — single source of truth for role/seniority/stack/region, env-overridable), `jobs/ai-filter.js`, `jobs/common.js`. The `job-filter` prompt is parameterised over `{{role}}`, `{{stack}}`, `{{seniority}}`, `{{excludes}}`, `{{region}}` and is force-upserted at startup so existing DBs migrate.
 
 ### Database Tables
 

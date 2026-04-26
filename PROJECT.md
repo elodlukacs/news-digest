@@ -23,7 +23,7 @@ This document describes the News Digest application in structured detail, intend
 | AI/LLM | Groq (primary, `openai/gpt-oss-20b`) → Google AI Studio (fallback, `gemini-2.0-flash`). Automatic provider fallback. Usage tracked in `llm_usage` table. |
 | Database | SQLite via better-sqlite3. 24 tables. All schema in `server/db.js`. |
 | External APIs | TMDB (movies/TV), CoinGecko (crypto), Open-Meteo (weather), Frankfurter (exchange rates), Hacker News Firebase, PBS RSS, Telegram Bot |
-| Job Sources | 8 aggregators: RemoteOK, WeWorkRemotely, Himalayas, Remotive, Arbeitnow, LinkedIn, Indeed, HackerNews |
+| Job Sources | 12 aggregators: RemoteOK, WeWorkRemotely, Himalayas, Remotive, Arbeitnow, LinkedIn, HackerNews, MeetFrank, RealWorkFromAnywhere, WorkingNomads, Adzuna, plus `companies-ats` (Greenhouse/Lever/Ashby/Workable direct boards) |
 
 ---
 
@@ -49,7 +49,7 @@ This document describes the News Digest application in structured detail, intend
 | `/models` | `routes/models.js` | GET `/` | Dynamic model list from providers |
 | `/prompts` | `routes/prompts-manager.js` | GET `/`, GET `/:slug`, PUT `/:slug` | Database-backed prompt template management |
 | `/widgets/*` | `routes/widgets.js` | GET `/weather`, `/rates`, `/headlines`, `/crypto`, `/hackernews`, `/releases` | Real-time widget data (server-side cached) |
-| `/jobs` | `routes/jobs.js` | GET `/`, POST `/fetch`, PATCH `/:id/status`, POST `/ai-filter`, POST `/:id/save`, DELETE `/:id/save` | Job board with 8 sources, AI filtering, save/unsave |
+| `/jobs` | `routes/jobs.js` | GET `/`, POST `/fetch`, POST `/ai-filter`, POST `/:id/save`, DELETE `/:id/save` | Job board with 12 sources, AI filtering, save/unsave |
 
 **Cognitive/MindGames routes:**
 
@@ -531,8 +531,10 @@ server/
   routes/scientist.js         # ADEPT debate
   routes/bridge.js            # SOS audit
   routes/bias-radar/          # Bias radar (5 endpoints)
-  jobs/sources.js             # 8 job source fetchers
-  jobs/ai-filter.js           # AI job relevance filter
+  jobs/sources.js             # 11 aggregator fetchers + ALL_SOURCES registry
+  jobs/sources-ats.js         # Direct Greenhouse/Lever/Ashby/Workable boards (companies-ats)
+  jobs/profile.js             # JOB_PROFILE — single source of truth for role/seniority/region
+  jobs/ai-filter.js           # AI job relevance filter (reads JOB_PROFILE)
 
 client/
   src/App.tsx                 # Root component, routes, widget data flow

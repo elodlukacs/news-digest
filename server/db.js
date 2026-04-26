@@ -862,15 +862,15 @@ Rules:
     insertPrompt.run(
       'job-filter',
       'Job Filter',
-      'Classifies job postings by relevance for a frontend developer role',
+      'Classifies job postings by relevance for the configured JOB_PROFILE',
       'jobs',
       '',
-      `You are a job relevance classifier. Given this list of job postings, return ONLY the jobs relevant for a Senior Frontend Developer (JavaScript, TypeScript, React, Vue, Angular, Next.js, CSS, HTML, Web).
+      `You are a job relevance classifier. Given this list of job postings, return ONLY the jobs relevant for a {{role}} working with {{stack}}.
 
-Include: senior/lead/staff/principal frontend, UI, or web developer roles.
-Exclude: backend-only, DevOps, mobile-native-only, data, ML, design-only, or unrelated roles.
+Include: {{seniority}} frontend, UI, or web developer/engineer roles.
+Exclude: roles that are primarily about {{excludes}}, or unrelated roles.
 
-For each matching job, also assess whether it is remote-friendly:
+For each matching job, also assess whether it is remote-friendly within the {{region}} region:
 - "yes" = explicitly remote or the source/description strongly implies remote work
 - "possible" = not clear, could be remote or hybrid
 - "no" = clearly on-site or office-only
@@ -1391,6 +1391,40 @@ Rules:
   );
 });
 updateSurprisePrompts();
+
+// Force-update the job-filter prompt so existing DBs get the parameterised
+// version that reads role/stack/region from JOB_PROFILE at runtime.
+try {
+  db.prepare(`INSERT INTO prompts (slug, name, description, category, system_message, user_prompt, created_at, updated_at)
+    VALUES (?,?,?,?,?,?,datetime('now'),datetime('now'))
+    ON CONFLICT(slug) DO UPDATE SET
+      description=excluded.description,
+      system_message=excluded.system_message,
+      user_prompt=excluded.user_prompt,
+      updated_at=datetime('now')`).run(
+    'job-filter',
+    'Job Filter',
+    'Classifies job postings by relevance for the configured JOB_PROFILE',
+    'jobs',
+    '',
+    `You are a job relevance classifier. Given this list of job postings, return ONLY the jobs relevant for a {{role}} working with {{stack}}.
+
+Include: {{seniority}} frontend, UI, or web developer/engineer roles.
+Exclude: roles that are primarily about {{excludes}}, or unrelated roles.
+
+For each matching job, also assess whether it is remote-friendly within the {{region}} region:
+- "yes" = explicitly remote or the source/description strongly implies remote work
+- "possible" = not clear, could be remote or hybrid
+- "no" = clearly on-site or office-only
+
+Return a JSON array of objects with "id" and "remote" fields, nothing else.
+Example: [{"id":"abc","remote":"yes"},{"id":"def","remote":"possible"}]
+If none match, return: []
+
+Jobs:
+{{jobs}}`
+  );
+} catch (e) { console.warn('[db] job-filter prompt upsert failed:', e.message); }
 
 // Clean up deprecated prompt slugs
 try { db.prepare("DELETE FROM prompts WHERE slug IN ('inoculation-twister', 'inoculation-cdo')").run(); } catch (e) {}
