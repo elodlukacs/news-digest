@@ -15,6 +15,7 @@ import {
   FlaskConical,
   Filter,
   Search,
+  ArrowUp,
 } from 'lucide-react';
 import { ArticleChatPopup } from '../ArticleChatPopup';
 import { ChallengeQuiz } from '../ChallengeQuiz';
@@ -85,6 +86,7 @@ export function SummaryView({
   const [actionsOpen, setActionsOpen] = useState(false);
   const [keyword, setKeyword] = useState('');
   const [activeKeyword, setActiveKeyword] = useState('');
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   const handleFilterRefresh = () => {
     const kw = keyword.trim();
@@ -132,6 +134,19 @@ export function SummaryView({
   useEffect(() => {
     setRateLimitDismissed(false);
   }, [error]);
+
+  useEffect(() => {
+    const onScroll = () => setShowScrollTop(window.scrollY > 400);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    const reduceMotion = typeof window !== 'undefined'
+      && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+  };
 
   const busy = loading || refreshing;
   const rateLimitInfo = error ? parseRateLimitError(error) : null;
@@ -663,6 +678,20 @@ export function SummaryView({
           />
         );
       })()}
+
+      <button
+        type="button"
+        onClick={scrollToTop}
+        aria-label="Scroll to top"
+        aria-hidden={!showScrollTop}
+        tabIndex={showScrollTop ? 0 : -1}
+        className={`fixed right-4 md:right-6 z-40 flex items-center justify-center w-11 h-11 md:w-12 md:h-12 rounded-full bg-masthead text-paper border border-masthead/30 shadow-[0_4px_14px_-2px_rgba(0,0,0,0.25)] hover:bg-masthead/90 active:scale-95 transition-[opacity,transform] duration-200 ease-out cursor-pointer ${
+          showScrollTop ? 'opacity-100 pointer-events-auto translate-y-0' : 'opacity-0 pointer-events-none translate-y-2'
+        }`}
+        style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
+      >
+        <ArrowUp size={20} strokeWidth={2.25} />
+      </button>
     </div>
   );
 }
