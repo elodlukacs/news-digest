@@ -6,7 +6,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Skeleton } from './ui/skeleton';
-import type { Job, JobFilters, JobCounts, SourceCounts } from '../types';
+import type { Job, JobFilters, JobCounts, SourceCounts, FetchReport } from '../types';
 import { timeAgoDays } from '../utils/date';
 
 interface Props {
@@ -23,6 +23,7 @@ interface Props {
   loading: boolean;
   fetching: boolean;
   aiFiltering: boolean;
+  lastFetchReport: FetchReport | null;
   fetchJobs: () => void;
   saveJob: (id: string) => void;
   unsaveJob: (id: string) => void;
@@ -53,7 +54,7 @@ const WORK_TYPE_LABELS: Record<string, string> = {
 
 export function JobsPage({
   jobs, total, counts, sources, sourceCounts, filters, updateFilters,
-  page, setPage, loading, fetching, aiFiltering,
+  page, setPage, loading, fetching, aiFiltering, lastFetchReport,
   fetchJobs, saveJob, unsaveJob, aiFilter, selectedLlm,
 }: Props) {
   const PER_PAGE = 100;
@@ -70,7 +71,7 @@ export function JobsPage({
             <p className="text-xs sm:text-[13px] text-ink-muted mt-1.5 sm:mt-2 font-[family-name:var(--font-body)] truncate">
                {counts.total > 0
                 ? `${counts.total} positions · ${sources.length} sources · ${counts.new} new · ${counts.saved} saved`
-                : 'Fetch jobs from 11 sources to get started'}
+                : 'Fetch jobs from 12 sources to get started'}
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0 mt-1 self-start sm:self-auto">
@@ -99,6 +100,46 @@ export function JobsPage({
           </div>
         </div>
       </div>
+
+      {lastFetchReport && (
+        <div className="mb-4 rounded-lg border border-rule bg-paper-dark/40 px-3 py-2">
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <span className="text-[10px] font-bold text-ink-muted uppercase tracking-widest">
+              Last fetch · {lastFetchReport.fetched} jobs · {new Date(lastFetchReport.finishedAt).toLocaleTimeString()}
+            </span>
+            {lastFetchReport.sources.some(s => s.error) && (
+              <span className="text-[10px] font-medium text-amber-700 dark:text-amber-400">
+                {lastFetchReport.sources.filter(s => s.error).length} source(s) failed
+              </span>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {lastFetchReport.sources.map(s => {
+              const label = SOURCE_LABELS[s.name] || s.name;
+              if (s.error) {
+                return (
+                  <Tooltip key={s.name}>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-300 cursor-help">
+                        {label} · err
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs text-xs">{s.error}</TooltipContent>
+                  </Tooltip>
+                );
+              }
+              const tone = s.count === 0
+                ? 'bg-stone-100 text-stone-600 dark:bg-stone-800/50 dark:text-stone-400'
+                : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300';
+              return (
+                <span key={s.name} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${tone}`}>
+                  {label} · {s.count}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="border-b border-rule pb-5 mb-5 space-y-4">
 

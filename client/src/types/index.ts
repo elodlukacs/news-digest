@@ -138,6 +138,18 @@ export interface JobCounts {
 
 export type SourceCounts = Record<string, number>;
 
+export interface SourceFetchResult {
+  name: string;
+  count: number;
+  error: string | null;
+}
+
+export interface FetchReport {
+  fetched: number;
+  sources: SourceFetchResult[];
+  finishedAt: number;
+}
+
 export interface ReleaseDetail {
   id: number;
   title: string;

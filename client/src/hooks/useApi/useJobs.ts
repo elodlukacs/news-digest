@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { Job, JobFilters, JobCounts, SourceCounts } from '../../types';
+import type { Job, JobFilters, JobCounts, SourceCounts, FetchReport } from '../../types';
 import { API_BASE as BASE } from '../../config';
 
 export const DEFAULT_FILTERS: JobFilters = {
@@ -23,6 +23,7 @@ export function useJobs() {
   const [loading, setLoading] = useState(true);
   const [fetching, setFetching] = useState(false);
   const [aiFiltering, setAiFiltering] = useState(false);
+  const [lastFetchReport, setLastFetchReport] = useState<FetchReport | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const saveAbortRef = useRef<AbortController | null>(null);
 
@@ -73,7 +74,15 @@ export function useJobs() {
   const fetchJobs = useCallback(async () => {
     setFetching(true);
     try {
-      await fetch(`${BASE}/jobs/fetch`, { method: 'POST' });
+      const res = await fetch(`${BASE}/jobs/fetch`, { method: 'POST' });
+      if (res.ok) {
+        const body = await res.json();
+        setLastFetchReport({
+          fetched: body.fetched ?? 0,
+          sources: Array.isArray(body.sources) ? body.sources : [],
+          finishedAt: Date.now(),
+        });
+      }
       await fetchList(filters, 1);
       setPage(1);
     } catch { /* silent */ } finally {
@@ -154,7 +163,7 @@ export function useJobs() {
   return {
     jobs, total, counts, sources, countries, sourceCounts,
     filters, updateFilters, page, setPage,
-    loading, fetching, aiFiltering,
+    loading, fetching, aiFiltering, lastFetchReport,
     fetchJobs, saveJob, unsaveJob, aiFilter,
     refresh: () => fetchList(filters, page),
   };

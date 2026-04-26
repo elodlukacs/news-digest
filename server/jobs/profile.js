@@ -29,32 +29,30 @@ function parseAtsCompanies(envVal, fallback) {
 }
 
 // EMEA-friendly companies with public ATS job boards (no auth required).
-// Keep the list small and well-known to avoid 404 noise.
+// ATS slugs change over time (companies migrate between providers, change
+// their org slug, or shut down their public board). Treat this as a starting
+// list — the canonical override is the JOB_ATS_COMPANIES env var:
+//
+//   JOB_ATS_COMPANIES=greenhouse:gitlab:GitLab,ashby:vercel:Vercel,...
+//
+// Slugs below are well-known as of writing but not live-verified; failures
+// are logged per-slug at fetch time as `[Jobs] ATS <provider>/<slug>: 4xx`.
 const DEFAULT_ATS_COMPANIES = [
   // Greenhouse — boards-api.greenhouse.io/v1/boards/{slug}/jobs
-  { provider: 'greenhouse', slug: 'gitlab',     name: 'GitLab' },
-  { provider: 'greenhouse', slug: 'mozilla',    name: 'Mozilla' },
-  { provider: 'greenhouse', slug: 'duckduckgo', name: 'DuckDuckGo' },
-  { provider: 'greenhouse', slug: 'remotecom',  name: 'Remote' },
-  { provider: 'greenhouse', slug: 'doctolib',   name: 'Doctolib' },
-  { provider: 'greenhouse', slug: 'pitch',      name: 'Pitch' },
-  { provider: 'greenhouse', slug: 'wise',       name: 'Wise' },
-  { provider: 'greenhouse', slug: 'klaviyo',    name: 'Klaviyo' },
-  // Lever — api.lever.co/v0/postings/{slug}?mode=json
-  { provider: 'lever',      slug: 'plaid',          name: 'Plaid' },
-  { provider: 'lever',      slug: 'kraken',         name: 'Kraken' },
-  { provider: 'lever',      slug: 'getyourguide',   name: 'GetYourGuide' },
-  { provider: 'lever',      slug: 'gohenry',        name: 'GoHenry' },
+  { provider: 'greenhouse', slug: 'gitlab',   name: 'GitLab' },
+  { provider: 'greenhouse', slug: 'doctolib', name: 'Doctolib' },
+  { provider: 'greenhouse', slug: 'wise',     name: 'Wise' },
+  { provider: 'greenhouse', slug: 'pitch',    name: 'Pitch' },
   // Ashby — api.ashbyhq.com/posting-api/job-board/{slug}
-  { provider: 'ashby',      slug: 'vercel',     name: 'Vercel' },
-  { provider: 'ashby',      slug: 'supabase',   name: 'Supabase' },
-  { provider: 'ashby',      slug: 'linear',     name: 'Linear' },
-  { provider: 'ashby',      slug: 'posthog',    name: 'PostHog' },
-  { provider: 'ashby',      slug: 'n8n',        name: 'n8n' },
-  { provider: 'ashby',      slug: 'mistral',    name: 'Mistral AI' },
-  // Workable — apply.workable.com/api/v3/accounts/{slug}/jobs
-  { provider: 'workable',   slug: 'personio',   name: 'Personio' },
-  { provider: 'workable',   slug: 'intercom',   name: 'Intercom' },
+  // (Ashby is the modern startup default; these boards are stable.)
+  { provider: 'ashby',      slug: 'vercel',   name: 'Vercel' },
+  { provider: 'ashby',      slug: 'supabase', name: 'Supabase' },
+  { provider: 'ashby',      slug: 'linear',   name: 'Linear' },
+  { provider: 'ashby',      slug: 'posthog',  name: 'PostHog' },
+  { provider: 'ashby',      slug: 'n8n',      name: 'n8n' },
+  { provider: 'ashby',      slug: 'mistral',  name: 'Mistral AI' },
+  // Lever — api.lever.co/v0/postings/{slug}?mode=json
+  { provider: 'lever',      slug: 'getyourguide', name: 'GetYourGuide' },
 ];
 
 const DEFAULT_PROFILE = {
