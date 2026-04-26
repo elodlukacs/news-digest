@@ -1,6 +1,18 @@
 const { getPrompt, renderPrompt } = require('../lib/promptManager');
+const { JOB_PROFILE } = require('./profile');
 
 const BATCH_SIZE = 100;
+
+function buildPromptVariables(jobs) {
+  return {
+    jobs: JSON.stringify(jobs),
+    role: JOB_PROFILE.role,
+    stack: JOB_PROFILE.stack.join(', '),
+    seniority: JOB_PROFILE.seniorityLevels.join('/'),
+    excludes: JOB_PROFILE.excludeKeywords.join(', '),
+    region: JOB_PROFILE.region,
+  };
+}
 
 async function filterJobsWithAI(jobs, callLLM, providerId) {
   const allResults = [];
@@ -17,9 +29,7 @@ async function filterJobsWithAI(jobs, callLLM, providerId) {
     }));
 
     const jobFilterPrompt = getPrompt('job-filter');
-    const prompt = renderPrompt(jobFilterPrompt.user_prompt, {
-      jobs: JSON.stringify(jobSummaries),
-    });
+    const prompt = renderPrompt(jobFilterPrompt.user_prompt, buildPromptVariables(jobSummaries));
 
     try {
       const response = await callLLM(

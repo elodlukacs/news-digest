@@ -8,6 +8,13 @@ const {
   determineWorkType,
   parseDate,
 } = require('./common');
+const {
+  JOB_PROFILE,
+  isInRegion,
+  matchesRole,
+  linkedInExperienceFilter,
+} = require('./profile');
+const { fetchCompaniesATS } = require('./sources-ats');
 
 // ─── RemoteOK ───────────────────────────────────────────────
 
@@ -18,17 +25,19 @@ async function fetchRemoteOK(signal) {
   const data = await resp.json();
   const rawJobs = Array.isArray(data) ? data.filter(j => j.position) : [];
 
-  return rawJobs.map(raw => normalizeJob({
-    id: generateJobId('remoteok', raw.position, raw.company),
-    title: raw.position,
-    company: raw.company || 'Unknown',
-    url: raw.url || (raw.id ? `https://remoteok.com/remote-jobs/${raw.id}` : ''),
-    source: 'remoteok',
-    datePosted: raw.epoch ? formatUnixDate(raw.epoch) : (raw.date || new Date().toISOString().split('T')[0]),
-    country: extractCountry(raw.location),
-    workType: determineWorkType(raw.location, true, raw.tags),
-    description: raw.description,
-  }));
+  return rawJobs
+    .filter(raw => matchesRole(raw.position) && isInRegion(raw.location))
+    .map(raw => normalizeJob({
+      id: generateJobId('remoteok', raw.position, raw.company),
+      title: raw.position,
+      company: raw.company || 'Unknown',
+      url: raw.url || (raw.id ? `https://remoteok.com/remote-jobs/${raw.id}` : ''),
+      source: 'remoteok',
+      datePosted: raw.epoch ? formatUnixDate(raw.epoch) : (raw.date || new Date().toISOString().split('T')[0]),
+      country: extractCountry(raw.location),
+      workType: determineWorkType(raw.location, true, raw.tags),
+      description: raw.description,
+    }));
 }
 
 // ─── WeWorkRemotely ─────────────────────────────────────────
@@ -72,6 +81,9 @@ async function fetchWeWorkRemotely(signal) {
   for (const item of items) {
     const { title, company } = parseWWRTitle(item.title || '');
     if (!title || !company) continue;
+    if (!matchesRole(title)) continue;
+    const location = item.country || item.region || '';
+    if (!isInRegion(location)) continue;
     jobs.push(normalizeJob({
       id: generateJobId('weworkremotely', title, company),
       title,
@@ -79,7 +91,7 @@ async function fetchWeWorkRemotely(signal) {
       url: item.link || '',
       source: 'weworkremotely',
       datePosted: parseDate(item.pubDate),
-      country: item.country || item.region || '',
+      country: location,
       workType: determineWorkType([item.type, item.category, item.title].filter(Boolean).join(' '), true),
       description: item.description,
     }));
@@ -102,6 +114,9 @@ async function fetchHimalayas(signal) {
     if (!data.jobs || data.jobs.length === 0) break;
 
     for (const raw of data.jobs) {
+      if (!matchesRole(raw.title)) continue;
+      const country = (raw.locationRestrictions && raw.locationRestrictions[0]) || '';
+      if (!isInRegion(country)) continue;
       const emp = (raw.employmentType || '').toLowerCase();
       let workType = 'remote';
       if (emp.includes('hybrid')) workType = 'hybrid';
@@ -114,7 +129,7 @@ async function fetchHimalayas(signal) {
         url: raw.applicationLink || '',
         source: 'himalayas',
         datePosted: raw.pubDate ? formatUnixDate(raw.pubDate) : new Date().toISOString().split('T')[0],
-        country: (raw.locationRestrictions && raw.locationRestrictions[0]) || '',
+        country,
         workType,
       }));
     }
@@ -133,16 +148,18 @@ async function fetchRemotive(signal) {
   if (!resp.ok) throw new Error(`Remotive returned ${resp.status}`);
 
   const data = await resp.json();
-  return (data.jobs || []).map(raw => normalizeJob({
-    id: generateJobId('remotive', raw.title, raw.company_name),
-    title: raw.title,
-    company: raw.company_name || 'Unknown',
-    url: raw.url || '',
-    source: 'remotive',
-    datePosted: parseDate(raw.publication_date),
-    country: extractCountry(raw.candidate_required_location || ''),
-    workType: determineWorkType(raw.candidate_required_location || '', true, raw.tags),
-  }));
+  return (data.jobs || [])
+    .filter(raw => matchesRole(raw.title) && isInRegion(raw.candidate_required_location || ''))
+    .map(raw => normalizeJob({
+      id: generateJobId('remotive', raw.title, raw.company_name),
+      title: raw.title,
+      company: raw.company_name || 'Unknown',
+      url: raw.url || '',
+      source: 'remotive',
+      datePosted: parseDate(raw.publication_date),
+      country: extractCountry(raw.candidate_required_location || ''),
+      workType: determineWorkType(raw.candidate_required_location || '', true, raw.tags),
+    }));
 }
 
 // ─── Arbeitnow ──────────────────────────────────────────────
@@ -160,6 +177,10 @@ async function fetchArbeitnow(signal) {
     if (!data.data || data.data.length === 0) break;
 
     for (const raw of data.data) {
+      if (!matchesRole(raw.title)) continue;
+      const country = extractCountry(raw.location) || 'Germany';
+      if (!isInRegion(country)) continue;
+      if (JOB_PROFILE.requireRemote && !raw.remote) continue;
       allJobs.push(normalizeJob({
         id: generateJobId('arbeitnow', raw.title, raw.company_name),
         title: raw.title,
@@ -167,7 +188,7 @@ async function fetchArbeitnow(signal) {
         url: raw.url || '',
         source: 'arbeitnow',
         datePosted: raw.created_at ? formatUnixDate(raw.created_at) : new Date().toISOString().split('T')[0],
-        country: extractCountry(raw.location) || 'Germany',
+        country,
         workType: raw.remote ? 'remote' : 'onsite',
         description: raw.description,
       }));
@@ -182,50 +203,28 @@ async function fetchArbeitnow(signal) {
 
 // ─── LinkedIn ───────────────────────────────────────────────
 
-const EMEA_COUNTRIES = [
-  'United Kingdom', 'UK', 'England', 'Scotland', 'Wales', 'Ireland',
-  'Germany', 'France', 'Spain', 'Italy', 'Netherlands', 'Belgium',
-  'Sweden', 'Norway', 'Denmark', 'Finland', 'Poland', 'Switzerland',
-  'Austria', 'Portugal', 'Greece', 'Czech', 'Czechia', 'Romania', 'Hungary',
-  'Israel', 'UAE', 'United Arab Emirates', 'Saudi Arabia', 'Egypt', 'South Africa',
-  'Nigeria', 'Kenya', 'Morocco', 'Algeria', 'Tunisia', 'Turkey',
-  'Europe', 'EMEA', 'Middle East', 'Africa',
-];
-
-const EMEA_SEARCH_TERMS = [
-  'Remote', 'Europe', 'Germany', 'UK', 'United Kingdom', 'France',
-  'Spain', 'Italy', 'Netherlands', 'Poland', 'Portugal', 'Romania', 'Sweden',
-];
-
-function isEMEAJob(location) {
-  if (!location || location.trim() === '') return true;
-  const lower = location.toLowerCase();
-  if (lower.includes('united states') || lower.includes('usa') || lower.includes('canada') ||
-      lower.includes('mexico') || lower.includes('brazil') || lower.includes('argentina') ||
-      lower.includes('colombia') || lower.includes('chile') || lower.includes('america')) {
-    return false;
-  }
-  return EMEA_COUNTRIES.some(c => lower.includes(c.toLowerCase()));
-}
-
 async function fetchLinkedIn(signal) {
   const jobs = [];
   const seenIds = new Set();
+  const keyword = JOB_PROFILE.roleKeywords[0] || 'Frontend';
+  const expFilter = linkedInExperienceFilter();
 
-  for (const searchTerm of EMEA_SEARCH_TERMS) {
+  for (const searchTerm of JOB_PROFILE.regionSearchTerms) {
     if (signal?.aborted) break;
     if (jobs.length >= 60) break;
 
     for (let page = 0; page < 10; page++) {
       if (signal?.aborted || jobs.length >= 60) break;
 
-      const params = new URLSearchParams({
-        keywords: 'Frontend',
+      const paramsObj = {
+        keywords: keyword,
         location: searchTerm,
         f_TPR: 'r86400',
-        f_WT: '2',
         start: String(page * 10),
-      });
+      };
+      if (JOB_PROFILE.requireRemote) paramsObj.f_WT = '2';
+      if (expFilter) paramsObj.f_E = expFilter;
+      const params = new URLSearchParams(paramsObj);
 
       try {
         const resp = await fetchWithTimeout(
@@ -267,7 +266,7 @@ async function fetchLinkedIn(signal) {
           const jobKey = `${title}-${company}`;
           if (seenIds.has(jobKey)) continue;
           seenIds.add(jobKey);
-          if (!isEMEAJob(jobLocation)) continue;
+          if (!isInRegion(jobLocation)) continue;
 
           jobs.push(normalizeJob({
             id: generateJobId('linkedin', title, company),
@@ -292,7 +291,15 @@ async function fetchLinkedIn(signal) {
 // ─── Hacker News ────────────────────────────────────────────
 
 const HN_API = 'https://hacker-news.firebaseio.com/v0';
-const HN_PATTERN = /(?:frontend|front-end|react|vue|angular|javascript|typescript|web developer|ui developer)/i;
+
+function buildHnPattern() {
+  const tokens = [...JOB_PROFILE.roleKeywords, ...JOB_PROFILE.stack]
+    .map(k => k.toLowerCase().replace(/[.+*?^$()[\]{}|\\]/g, '\\$&'))
+    .filter(Boolean);
+  if (tokens.length === 0) return /frontend|react|web developer/i;
+  return new RegExp(`(?:${tokens.join('|')})`, 'i');
+}
+const HN_PATTERN = buildHnPattern();
 
 function extractCompanyFromTitle(title) {
   const patterns = [
@@ -346,16 +353,21 @@ async function fetchHackerNews(signal) {
       if (!item || item.type !== 'job') continue;
       if (item.time < oneMonthAgo) continue;
       if (!item.text) continue;
+      if (!HN_PATTERN.test(item.text)) continue;
 
       const lines = item.text.split('\n').filter(l => l.trim().length > 20 && !l.trim().startsWith('#'));
       for (const line of lines) {
         const trimmed = line.trim().replace(/<[^>]*>/g, '');
         if (trimmed.length < 5) continue;
+        if (!HN_PATTERN.test(trimmed)) continue;
 
         let url = '';
         let title = trimmed;
         const urlMatch = trimmed.match(/(https?:\/\/[^\s]+)/);
         if (urlMatch) { url = urlMatch[1]; title = trimmed.replace(url, '').trim(); }
+
+        const country = extractCountryFromText(trimmed);
+        if (!isInRegion(country)) continue;
 
         const company = extractCompanyFromTitle(title);
         jobs.push(normalizeJob({
@@ -364,7 +376,7 @@ async function fetchHackerNews(signal) {
           url: url || item.url || '',
           source: 'hackernews',
           datePosted: new Date(item.time * 1000).toISOString().split('T')[0],
-          country: extractCountryFromText(trimmed),
+          country,
           workType: determineWorkType(trimmed, trimmed.toLowerCase().includes('remote')),
         }));
       }
@@ -417,8 +429,14 @@ async function fetchHackerNews(signal) {
 const MEETFRANK_MAX_AGE_DAYS = 14;
 
 async function fetchMeetFrank(signal) {
+  const params = new URLSearchParams({
+    pageSize: '100',
+    q: (JOB_PROFILE.roleKeywords[0] || 'frontend') + ' developer',
+    skills: JOB_PROFILE.stack.slice(0, 4).join(',').toLowerCase(),
+    seniority: (JOB_PROFILE.seniorityLevels[0] || 'senior').toLowerCase(),
+  });
   const resp = await fetchWithTimeout(
-    'https://api.meetfrank.com/ai/jobs?pageSize=100&q=frontend+developer&skills=react,typescript&seniority=senior',
+    `https://api.meetfrank.com/ai/jobs?${params}`,
     signal,
     30000,
     { headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' } },
@@ -510,7 +528,10 @@ async function fetchWorkingNomads(signal) {
   return jobs
     .filter(raw => {
       const cat = (raw.category_name || '').toLowerCase();
-      return cat.includes('develop') || cat.includes('engineer') || cat.includes('software') || cat.includes('frontend');
+      const isDev = cat.includes('develop') || cat.includes('engineer') || cat.includes('software') || cat.includes('frontend');
+      if (!isDev) return false;
+      if (!matchesRole(raw.title)) return false;
+      return isInRegion(raw.location || '');
     })
     .map(raw => normalizeJob({
       id: generateJobId('workingnomads', raw.title, raw.company_name),
@@ -527,8 +548,6 @@ async function fetchWorkingNomads(signal) {
 
 // ─── Adzuna ──────────────────────────────────────────────────
 
-const ADZUNA_COUNTRIES = ['gb', 'de', 'fr', 'nl', 'se', 'at', 'pl'];
-
 async function fetchAdzuna(signal) {
   const appId = process.env.ADZUNA_APP_ID;
   const appKey = process.env.ADZUNA_APP_KEY;
@@ -538,16 +557,32 @@ async function fetchAdzuna(signal) {
   }
 
   const allJobs = [];
+  const seniorityWord = (JOB_PROFILE.seniorityLevels[0] || 'senior').toLowerCase();
+  const roleWord = (JOB_PROFILE.roleKeywords[0] || 'frontend').toLowerCase();
+  const stackWord = (JOB_PROFILE.stack[0] || 'react').toLowerCase();
+  const what = `${seniorityWord} ${roleWord} ${stackWord}`.trim();
+  // Adzuna's `what_exclude` is a single space-separated token list.
+  // We only emit unambiguous single-word negatives — multi-word excludes like
+  // "data engineer" would split into "engineer" and wrongly cut frontend roles.
+  const SAFE_EXCLUDE_TOKENS = new Set([
+    'devops', 'sre', 'wordpress', 'php', 'salesforce', 'sap', 'android', 'ios',
+    'embedded', 'firmware', 'mainframe',
+  ]);
+  const whatExclude = JOB_PROFILE.excludeKeywords
+    .flatMap(k => k.toLowerCase().split(/\s+/))
+    .filter(k => SAFE_EXCLUDE_TOKENS.has(k))
+    .filter((k, i, a) => a.indexOf(k) === i)
+    .join(' ');
 
-  for (const country of ADZUNA_COUNTRIES) {
+  for (const country of JOB_PROFILE.adzunaCountries) {
     if (signal?.aborted) break;
     try {
       const params = new URLSearchParams({
         app_id: appId,
         app_key: appKey,
         results_per_page: '50',
-        what: 'senior frontend react',
-        what_exclude: 'backend devops data',
+        what,
+        what_exclude: whatExclude,
         sort_by: 'date',
       });
 
@@ -602,6 +637,7 @@ const ALL_SOURCES = [
   { name: 'realworkfromanywhere', fn: fetchRealWorkFromAnywhere },
   { name: 'workingnomads', fn: fetchWorkingNomads },
   { name: 'adzuna', fn: fetchAdzuna },
+  { name: 'companies-ats', fn: fetchCompaniesATS },
 ];
 
 async function fetchAllSources(signal) {
