@@ -102,12 +102,15 @@ async function fetchWeWorkRemotely(signal) {
 // ─── Himalayas ──────────────────────────────────────────────
 
 async function fetchHimalayas(signal) {
+  // Himalayas' public /jobs/api takes no role-targeting parameters, so we
+  // pull a much larger window (10 pages × 100) and filter client-side. The
+  // previous 5×20 = 100 sample was too small to surface frontend-EMEA hits.
   const allJobs = [];
   let offset = 0;
 
-  for (let page = 0; page < 5; page++) {
+  for (let page = 0; page < 10; page++) {
     if (signal?.aborted) break;
-    const resp = await fetchWithTimeout(`https://himalayas.app/jobs/api?limit=20&offset=${offset}`, signal);
+    const resp = await fetchWithTimeout(`https://himalayas.app/jobs/api?limit=100&offset=${offset}`, signal);
     if (!resp.ok) throw new Error(`Himalayas returned ${resp.status}`);
 
     const data = await resp.json();
@@ -144,22 +147,39 @@ async function fetchHimalayas(signal) {
 // ─── Remotive ───────────────────────────────────────────────
 
 async function fetchRemotive(signal) {
-  const resp = await fetchWithTimeout('https://remotive.com/api/remote-jobs?category=software-dev&limit=50', signal);
-  if (!resp.ok) throw new Error(`Remotive returned ${resp.status}`);
-
-  const data = await resp.json();
-  return (data.jobs || [])
-    .filter(raw => matchesRole(raw.title) && isInRegion(raw.candidate_required_location || ''))
-    .map(raw => normalizeJob({
-      id: generateJobId('remotive', raw.title, raw.company_name),
-      title: raw.title,
-      company: raw.company_name || 'Unknown',
-      url: raw.url || '',
-      source: 'remotive',
-      datePosted: parseDate(raw.publication_date),
-      country: extractCountry(raw.candidate_required_location || ''),
-      workType: determineWorkType(raw.candidate_required_location || '', true, raw.tags),
-    }));
+  // Remotive's `category=software-dev` returns the latest 50 across all
+  // sub-specialties (backend, mobile, devops...), so frontend matches were
+  // ~0 after our role+region filter. Run one targeted `search` per primary
+  // role keyword instead; dedupe on the generated job id.
+  const seen = new Set();
+  const out = [];
+  // First 3 keywords cover Frontend / Front End / React.
+  for (const keyword of JOB_PROFILE.roleKeywords.slice(0, 3)) {
+    if (signal?.aborted) break;
+    const params = new URLSearchParams({ search: keyword, limit: '50' });
+    const resp = await fetchWithTimeout(`https://remotive.com/api/remote-jobs?${params}`, signal);
+    if (!resp.ok) throw new Error(`Remotive returned ${resp.status}`);
+    const data = await resp.json();
+    for (const raw of (data.jobs || [])) {
+      if (!matchesRole(raw.title)) continue;
+      if (!isInRegion(raw.candidate_required_location || '')) continue;
+      const job = normalizeJob({
+        id: generateJobId('remotive', raw.title, raw.company_name),
+        title: raw.title,
+        company: raw.company_name || 'Unknown',
+        url: raw.url || '',
+        source: 'remotive',
+        datePosted: parseDate(raw.publication_date),
+        country: extractCountry(raw.candidate_required_location || ''),
+        workType: determineWorkType(raw.candidate_required_location || '', true, raw.tags),
+      });
+      if (seen.has(job.id)) continue;
+      seen.add(job.id);
+      out.push(job);
+    }
+    await abortableDelay(500, signal);
+  }
+  return out;
 }
 
 // ─── Arbeitnow ──────────────────────────────────────────────
@@ -180,7 +200,14 @@ async function fetchArbeitnow(signal) {
       if (!matchesRole(raw.title)) continue;
       const country = extractCountry(raw.location) || 'Germany';
       if (!isInRegion(country)) continue;
-      if (JOB_PROFILE.requireRemote && !raw.remote) continue;
+      // Arbeitnow's `remote` boolean is rarely set even when the listing
+      // mentions remote in title/tags/job_types, so check multiple signals.
+      const tags = (raw.tags || []).join(' ');
+      const types = (raw.job_types || []).join(' ');
+      const haystack = `${raw.title} ${tags} ${types} ${raw.location || ''}`.toLowerCase();
+      const isRemote = !!raw.remote || /\bremote\b/.test(haystack);
+      const isHybrid = /\bhybrid\b/.test(haystack);
+      if (JOB_PROFILE.requireRemote && !isRemote && !isHybrid) continue;
       allJobs.push(normalizeJob({
         id: generateJobId('arbeitnow', raw.title, raw.company_name),
         title: raw.title,
@@ -189,7 +216,7 @@ async function fetchArbeitnow(signal) {
         source: 'arbeitnow',
         datePosted: raw.created_at ? formatUnixDate(raw.created_at) : new Date().toISOString().split('T')[0],
         country,
-        workType: raw.remote ? 'remote' : 'onsite',
+        workType: isRemote ? 'remote' : (isHybrid ? 'hybrid' : 'onsite'),
         description: raw.description,
       }));
     }
@@ -551,9 +578,10 @@ async function fetchWorkingNomads(signal) {
 async function fetchAdzuna(signal) {
   const appId = process.env.ADZUNA_APP_ID;
   const appKey = process.env.ADZUNA_APP_KEY;
+  // Throw so the source-health panel surfaces the missing-key state instead
+  // of silently reporting 0 jobs (free key at adzuna.com/developer).
   if (!appId || !appKey) {
-    console.warn('Adzuna: ADZUNA_APP_ID / ADZUNA_APP_KEY not set, skipping');
-    return [];
+    throw new Error('ADZUNA_APP_ID / ADZUNA_APP_KEY not set');
   }
 
   const allJobs = [];
