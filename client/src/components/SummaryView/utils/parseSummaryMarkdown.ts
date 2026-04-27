@@ -9,6 +9,9 @@ export interface ParsedSection {
   source?: string;
   pubDate?: string;
   imageUrl?: string;
+  bias?: string;
+  credibility?: number;
+  factCheckGrade?: string;
 }
 
 export function parseSummaryMarkdown(
@@ -23,6 +26,9 @@ export function parseSummaryMarkdown(
   const sourceByTitle = new Map<string, string>();
   const pubDateByTitle = new Map<string, string>();
   const imageByTitle = new Map<string, string>();
+  const biasByTitle = new Map<string, string>();
+  const credibilityByTitle = new Map<string, number>();
+  const factCheckGradeByTitle = new Map<string, string>();
 
   if (sentimentData) {
     for (const entry of sentimentData) {
@@ -40,6 +46,15 @@ export function parseSummaryMarkdown(
       }
       if (entry.title && entry.image) {
         imageByTitle.set(entry.title.toLowerCase(), entry.image);
+      }
+      if (entry.title && entry.bias) {
+        biasByTitle.set(entry.title.toLowerCase(), entry.bias);
+      }
+      if (entry.title && typeof entry.credibility === 'number') {
+        credibilityByTitle.set(entry.title.toLowerCase(), entry.credibility);
+      }
+      if (entry.title && entry.factCheckGrade) {
+        factCheckGradeByTitle.set(entry.title.toLowerCase(), entry.factCheckGrade);
       }
     }
   }
@@ -75,6 +90,9 @@ export function parseSummaryMarkdown(
       source: sourceByTitle.get(title.toLowerCase()),
       pubDate: pubDateByTitle.get(title.toLowerCase()),
       imageUrl: imageByTitle.get(title.toLowerCase()),
+      bias: biasByTitle.get(title.toLowerCase()),
+      credibility: credibilityByTitle.get(title.toLowerCase()),
+      factCheckGrade: factCheckGradeByTitle.get(title.toLowerCase()),
     });
   }
 

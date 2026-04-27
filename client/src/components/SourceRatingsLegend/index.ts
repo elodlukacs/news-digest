@@ -1,0 +1,1 @@
+export { SourceRatingsLegend } from './SourceRatingsLegend';

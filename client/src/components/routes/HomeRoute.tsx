@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import {
   ExternalLink,
   Sparkles,
@@ -13,6 +14,10 @@ import { Button } from '../ui/button';
 import { timeAgo } from '../../utils/date';
 import { ArticleChatPopup } from '../ArticleChatPopup';
 import type { ChatMessage } from '../../types';
+import type { AppOutletContext } from '../../types/routing';
+import { BiasBar } from '../BiasBar';
+import { CredibilityBadge } from '../CredibilityBadge';
+import { SourceRatingsLegend } from '../SourceRatingsLegend';
 
 /* ─── Types ─── */
 
@@ -26,6 +31,9 @@ interface SurpriseArticle {
   pub_date: string;
   category_name?: string;
   has_expanded?: boolean;
+  bias?: string | null;
+  credibility?: number | null;
+  factCheckGrade?: string | null;
 }
 
 /* ─── Constants ─── */
@@ -67,6 +75,7 @@ function clearSeenUrls() {
 /* ─── Component ─── */
 
 export function HomeRoute() {
+  const { articleFontSize } = useOutletContext<AppOutletContext>();
   const [article, setArticle] = useState<SurpriseArticle | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -312,6 +321,9 @@ export function HomeRoute() {
                           {article.source}
                         </span>
                       )}
+                      {article.bias && <BiasBar bias={article.bias} />}
+                      {article.credibility != null && <CredibilityBadge credibility={article.credibility} factCheckGrade={article.factCheckGrade ?? undefined} />}
+                      <SourceRatingsLegend />
                       {article.pub_date && (
                         <>
                           {article.source && (
@@ -324,7 +336,7 @@ export function HomeRoute() {
                   </div>
 
                   <div className="px-5 md:px-8 pb-4">
-                    <div className="font-[family-name:var(--font-body)] text-[16px] leading-[1.75] md:text-[18px] md:leading-[1.8] text-ink-light space-y-4 [&_strong]:text-ink [&_strong]:font-bold [&_a]:underline [&_a]:decoration-rule hover:[&_a]:decoration-ink">
+                    <div className="font-[family-name:var(--font-body)] text-ink-light space-y-4 [&_strong]:text-ink [&_strong]:font-bold [&_a]:underline [&_a]:decoration-rule hover:[&_a]:decoration-ink" style={{ fontSize: `${articleFontSize}px`, lineHeight: `${articleFontSize * 1.8}px` }}>
                       <ReactMarkdown
                         components={{
                           p: ({ children }) => (

@@ -1,0 +1,1 @@
+export { CredibilityBadge } from './CredibilityBadge';

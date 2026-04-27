@@ -36,6 +36,9 @@ import { parseRateLimitError } from './utils/parseRateLimitError';
 import type { ParsedSection } from './utils/parseSummaryMarkdown';
 import { PromptLensSelector, type PromptLens } from '../PromptLensSelector';
 import { SourceBadge } from '../SourceBadge';
+import { BiasBar } from '../BiasBar';
+import { CredibilityBadge } from '../CredibilityBadge';
+import { SourceRatingsLegend } from '../SourceRatingsLegend';
 
 interface Props {
   categoryName: string;
@@ -291,6 +294,7 @@ export function SummaryView({
           <PromptLensSelector selectedSlug={selectedLens?.slug ?? null} onSelect={onLensChange} onRun={onRunLens} running={lensLoading} disabled={busy} />
 
           <div className="inline-flex items-center gap-1">
+            <SourceRatingsLegend />
             <button
               onClick={onManageFeeds}
               className="h-9 inline-flex items-center gap-2 px-3 rounded-md border border-rule bg-paper text-[13px] font-medium text-ink hover:bg-paper-dark transition-colors cursor-pointer shadow-sm"
@@ -468,6 +472,8 @@ export function SummaryView({
                         {(section.source || section.pubDate) && (
                           <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-ink-light font-[family-name:var(--font-body)]">
                             {section.source && <SourceBadge source={section.source} url={section.url} />}
+                            {section.bias && <BiasBar bias={section.bias} />}
+                            {section.credibility != null && <CredibilityBadge credibility={section.credibility} factCheckGrade={section.factCheckGrade} />}
                             {section.source && section.pubDate && <span className="text-ink-muted text-xl px-0.5 font-bold">·</span>}
                             {section.pubDate && (
                               <span className="italic">
@@ -490,6 +496,8 @@ export function SummaryView({
                       {(section.source || section.pubDate) && (
                         <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-ink-light font-[family-name:var(--font-body)]">
                           {section.source && <SourceBadge source={section.source} url={section.url} />}
+                          {section.bias && <BiasBar bias={section.bias} />}
+                          {section.credibility != null && <CredibilityBadge credibility={section.credibility} factCheckGrade={section.factCheckGrade} />}
                           {section.source && section.pubDate && <span className="text-ink-muted text-xl px-0.5 font-bold">·</span>}
                           {section.pubDate && (
                             <span className="italic">
@@ -526,6 +534,8 @@ export function SummaryView({
                       {(section.source || section.pubDate) && (
                         <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-ink-light font-[family-name:var(--font-body)]">
                           {section.source && <SourceBadge source={section.source} url={section.url} />}
+                          {section.bias && <BiasBar bias={section.bias} />}
+                          {section.credibility != null && <CredibilityBadge credibility={section.credibility} factCheckGrade={section.factCheckGrade} />}
                           {section.source && section.pubDate && <span className="text-ink-muted text-xl px-0.5 font-bold">·</span>}
                           {section.pubDate && (
                             <span className="italic">

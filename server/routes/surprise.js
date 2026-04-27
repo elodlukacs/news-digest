@@ -14,6 +14,7 @@ const express = require('express');
 const db = require('../db');
 const { callLLM } = require('../lib/llm');
 const { buildMessages } = require('../lib/promptManager');
+const { matchOutlet } = require('../lib/outletMatcher');
 
 const router = express.Router();
 
@@ -130,12 +131,15 @@ function pickArticle({ excludeUrls } = {}) {
         (fallback && fallback.originalContent) ||
         '';
 
+      const sourceName = (articleRow && articleRow.feed_name) || (fallback && fallback.source) || '';
+      const rating = matchOutlet(sourceName);
+
       return {
         article_id: articleRow ? articleRow.id : null,
         title: section.title,
         brief: section.content,
         link: section.url || (articleRow ? articleRow.link : ''),
-        source: (articleRow && articleRow.feed_name) || (fallback && fallback.source) || '',
+        source: sourceName,
         pub_date: (articleRow && articleRow.pub_date) || (fallback && fallback.pubDate) || row.generated_at,
         category_name: row.category_name || '',
         raw_content: originalContent,
@@ -144,6 +148,9 @@ function pickArticle({ excludeUrls } = {}) {
           articleRow.surprise_expanded &&
           String(articleRow.surprise_expanded).trim().length >= EXPANDED_MIN_LENGTH
         ),
+        bias: rating ? rating.bias : null,
+        credibility: rating ? rating.credibility : null,
+        factCheckGrade: rating ? rating.factCheckGrade : null,
       };
     }
   }

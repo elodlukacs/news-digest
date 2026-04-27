@@ -5,6 +5,7 @@ const { callLLM: rawCallLLM } = require('../lib/llm');
 const validateId = require('../middleware/validateId');
 const { extractKeywords } = require('../lib/bias-radar/topicCluster');
 const { buildMessages } = require('../lib/promptManager');
+const { matchOutlet } = require('../lib/outletMatcher');
 
 const router = express.Router();
 
@@ -16,6 +17,17 @@ function deriveTopicId(title) {
   return extractKeywords(title).sort().slice(0, 5).join('-');
 }
 
+function enrichSentimentData(sentimentData) {
+  if (!Array.isArray(sentimentData)) return sentimentData;
+  return sentimentData.map((entry) => {
+    if (!entry.source) return entry;
+    const rating = matchOutlet(entry.source);
+    return rating
+      ? { ...entry, bias: rating.bias, credibility: rating.credibility, factCheckGrade: rating.factCheckGrade }
+      : entry;
+  });
+}
+
 router.get('/:id/summary', validateId, (req, res) => {
   const category = db.prepare('SELECT * FROM categories WHERE id = ?').get(req.params.id);
   if (!category) return res.status(404).json({ error: 'Category not found' });
@@ -25,6 +37,7 @@ router.get('/:id/summary', validateId, (req, res) => {
   if (summary_id) {
     const hist = db.prepare('SELECT * FROM summary_history WHERE id = ? AND category_id = ?').get(summary_id, req.params.id);
     if (hist) {
+      const parsedSentiment = hist.sentiment_data ? JSON.parse(hist.sentiment_data) : null;
       return res.json({
         id: hist.id,
         category: category.name,
@@ -33,7 +46,7 @@ router.get('/:id/summary', validateId, (req, res) => {
         feed_count: hist.feed_count,
         generated_at: hist.generated_at,
         provider: hist.provider,
-        sentiment_data: hist.sentiment_data ? JSON.parse(hist.sentiment_data) : null,
+        sentiment_data: enrichSentimentData(parsedSentiment),
         tags_data: hist.tags_data ? JSON.parse(hist.tags_data) : null,
       });
     }
@@ -43,6 +56,7 @@ router.get('/:id/summary', validateId, (req, res) => {
   if (date) {
     const hist = db.prepare('SELECT * FROM summary_history WHERE category_id = ? AND date_key = ? ORDER BY generated_at DESC LIMIT 1').get(req.params.id, date);
     if (hist) {
+      const parsedSentiment = hist.sentiment_data ? JSON.parse(hist.sentiment_data) : null;
       return res.json({
         id: hist.id,
         category: category.name,
@@ -51,7 +65,7 @@ router.get('/:id/summary', validateId, (req, res) => {
         feed_count: hist.feed_count,
         generated_at: hist.generated_at,
         provider: hist.provider,
-        sentiment_data: hist.sentiment_data ? JSON.parse(hist.sentiment_data) : null,
+        sentiment_data: enrichSentimentData(parsedSentiment),
         tags_data: hist.tags_data ? JSON.parse(hist.tags_data) : null,
       });
     }
@@ -60,6 +74,7 @@ router.get('/:id/summary', validateId, (req, res) => {
 
   const latest = db.prepare('SELECT * FROM summary_history WHERE category_id = ? ORDER BY generated_at DESC LIMIT 1').get(req.params.id);
   if (latest) {
+    const parsedSentiment = latest.sentiment_data ? JSON.parse(latest.sentiment_data) : null;
     return res.json({
       id: latest.id,
       category: category.name,
@@ -68,7 +83,7 @@ router.get('/:id/summary', validateId, (req, res) => {
       feed_count: latest.feed_count,
       generated_at: latest.generated_at,
       provider: latest.provider,
-      sentiment_data: latest.sentiment_data ? JSON.parse(latest.sentiment_data) : null,
+      sentiment_data: enrichSentimentData(parsedSentiment),
       tags_data: latest.tags_data ? JSON.parse(latest.tags_data) : null,
     });
   }
@@ -277,7 +292,7 @@ router.post('/:id/refresh', validateId, async (req, res) => {
       feed_count: feeds.length,
       generated_at,
       provider: result.provider,
-      sentiment_data: sentimentData,
+      sentiment_data: enrichSentimentData(sentimentData),
       tags_data: tagsData,
     });
   } catch (err) {

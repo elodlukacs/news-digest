@@ -33,6 +33,9 @@ export interface SentimentSection {
   source?: string;
   pub_date?: string;
   image?: string;
+  bias?: string;
+  credibility?: number;
+  factCheckGrade?: string;
 }
 
 export interface HistoryEntry {
