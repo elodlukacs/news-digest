@@ -15,6 +15,7 @@ app.use('/api/categories', require('./routes/summaries'));
 app.use('/api/feeds', require('./routes/feedDelete'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/discover-feed', require('./routes/discovery'));
+app.use('/api/explore-feeds', require('./routes/explore-feeds'));
 app.use('/api/briefing', require('./routes/briefing'));
 app.use('/api/chat', require('./routes/chat'));
 app.use('/api/tags', require('./routes/tags'));

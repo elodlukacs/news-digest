@@ -1,0 +1,97 @@
+{
+  "topics": [
+    { "id": "world", "name": "World News", "description": "International news from major global outlets" },
+    { "id": "politics", "name": "Politics", "description": "Political analysis and government coverage" },
+    { "id": "business", "name": "Business & Finance", "description": "Markets, economy, and corporate news" },
+    { "id": "tech", "name": "Technology", "description": "Tech industry, gadgets, and software" },
+    { "id": "programming", "name": "Programming", "description": "Software engineering, code, and dev tools" },
+    { "id": "ai", "name": "AI & Machine Learning", "description": "Artificial intelligence research and applications" },
+    { "id": "science", "name": "Science", "description": "Research, discoveries, and the natural world" },
+    { "id": "health", "name": "Health & Medicine", "description": "Medical research, public health, and wellness" },
+    { "id": "culture", "name": "Culture & Arts", "description": "Books, film, music, and the arts" },
+    { "id": "design", "name": "Design", "description": "Visual design, UX, and creative work" },
+    { "id": "sports", "name": "Sports", "description": "Sports news and analysis" },
+    { "id": "gaming", "name": "Gaming", "description": "Video games and gaming industry" }
+  ],
+  "feeds": [
+    { "id": "bbc-world", "title": "BBC World News", "description": "International news from the BBC", "url": "http://feeds.bbci.co.uk/news/world/rss.xml", "site": "bbc.com", "language": "en", "topic": "world" },
+    { "id": "reuters-world", "title": "Reuters World", "description": "Global breaking news from Reuters", "url": "https://feeds.reuters.com/Reuters/worldNews", "site": "reuters.com", "language": "en", "topic": "world" },
+    { "id": "ap-top", "title": "Associated Press — Top News", "description": "Headlines from the Associated Press", "url": "https://feeds.apnews.com/rss/apf-topnews", "site": "apnews.com", "language": "en", "topic": "world" },
+    { "id": "guardian-world", "title": "The Guardian — World", "description": "World news from The Guardian", "url": "https://www.theguardian.com/world/rss", "site": "theguardian.com", "language": "en", "topic": "world" },
+    { "id": "aljazeera", "title": "Al Jazeera English", "description": "News and analysis from Al Jazeera", "url": "https://www.aljazeera.com/xml/rss/all.xml", "site": "aljazeera.com", "language": "en", "topic": "world" },
+    { "id": "dw-top", "title": "Deutsche Welle — Top Stories", "description": "International perspective from Germany", "url": "https://rss.dw.com/rdf/rss-en-all", "site": "dw.com", "language": "en", "topic": "world" },
+    { "id": "france24", "title": "France 24", "description": "International news from France", "url": "https://www.france24.com/en/rss", "site": "france24.com", "language": "en", "topic": "world" },
+    { "id": "nyt-world", "title": "New York Times — World", "description": "World coverage from the NYT", "url": "https://rss.nytimes.com/services/xml/rss/nyt/World.xml", "site": "nytimes.com", "language": "en", "topic": "world" },
+
+    { "id": "politico", "title": "Politico", "description": "US politics and policy", "url": "https://www.politico.com/rss/politicopicks.xml", "site": "politico.com", "language": "en", "topic": "politics" },
+    { "id": "the-hill", "title": "The Hill", "description": "Congress, campaigns, and policy", "url": "https://thehill.com/news/feed/", "site": "thehill.com", "language": "en", "topic": "politics" },
+    { "id": "foreign-affairs", "title": "Foreign Affairs", "description": "Long-form international policy analysis", "url": "https://www.foreignaffairs.com/rss.xml", "site": "foreignaffairs.com", "language": "en", "topic": "politics" },
+    { "id": "fivethirtyeight-politics", "title": "FiveThirtyEight — Politics", "description": "Data-driven political analysis", "url": "https://fivethirtyeight.com/politics/feed/", "site": "fivethirtyeight.com", "language": "en", "topic": "politics" },
+
+    { "id": "ft-home", "title": "Financial Times — Home", "description": "Global business and finance", "url": "https://www.ft.com/rss/home", "site": "ft.com", "language": "en", "topic": "business" },
+    { "id": "wsj-business", "title": "Wall Street Journal — Business", "description": "Markets and corporate news", "url": "https://feeds.a.dj.com/rss/RSSWSJD.xml", "site": "wsj.com", "language": "en", "topic": "business" },
+    { "id": "bloomberg", "title": "Bloomberg", "description": "Markets, economy, and business news", "url": "https://feeds.bloomberg.com/markets/news.rss", "site": "bloomberg.com", "language": "en", "topic": "business" },
+    { "id": "economist", "title": "The Economist — Latest", "description": "Weekly global affairs and economics", "url": "https://www.economist.com/latest/rss.xml", "site": "economist.com", "language": "en", "topic": "business" },
+    { "id": "cnbc-top", "title": "CNBC — Top News", "description": "Markets and business news", "url": "https://www.cnbc.com/id/100003114/device/rss/rss.html", "site": "cnbc.com", "language": "en", "topic": "business" },
+    { "id": "marketwatch", "title": "MarketWatch — Top Stories", "description": "Investing and personal finance", "url": "https://feeds.marketwatch.com/marketwatch/topstories/", "site": "marketwatch.com", "language": "en", "topic": "business" },
+
+    { "id": "techcrunch", "title": "TechCrunch", "description": "Startups and tech industry", "url": "https://techcrunch.com/feed/", "site": "techcrunch.com", "language": "en", "topic": "tech" },
+    { "id": "verge", "title": "The Verge", "description": "Tech, science, and culture", "url": "https://www.theverge.com/rss/index.xml", "site": "theverge.com", "language": "en", "topic": "tech" },
+    { "id": "ars-technica", "title": "Ars Technica", "description": "In-depth technology coverage", "url": "https://feeds.arstechnica.com/arstechnica/index", "site": "arstechnica.com", "language": "en", "topic": "tech" },
+    { "id": "wired", "title": "Wired", "description": "Tech, business, science, and culture", "url": "https://www.wired.com/feed/rss", "site": "wired.com", "language": "en", "topic": "tech" },
+    { "id": "engadget", "title": "Engadget", "description": "Consumer technology news", "url": "https://www.engadget.com/rss.xml", "site": "engadget.com", "language": "en", "topic": "tech" },
+    { "id": "hn-frontpage", "title": "Hacker News — Front Page", "description": "Community-curated tech links", "url": "https://hnrss.org/frontpage", "site": "news.ycombinator.com", "language": "en", "topic": "tech" },
+    { "id": "mit-tr", "title": "MIT Technology Review", "description": "Emerging technology analysis", "url": "https://www.technologyreview.com/feed/", "site": "technologyreview.com", "language": "en", "topic": "tech" },
+
+    { "id": "github-blog", "title": "The GitHub Blog", "description": "Updates from GitHub", "url": "https://github.blog/feed/", "site": "github.blog", "language": "en", "topic": "programming" },
+    { "id": "stackoverflow-blog", "title": "Stack Overflow Blog", "description": "Engineering culture and community", "url": "https://stackoverflow.blog/feed/", "site": "stackoverflow.blog", "language": "en", "topic": "programming" },
+    { "id": "css-tricks", "title": "CSS-Tricks", "description": "Front-end web development", "url": "https://css-tricks.com/feed/", "site": "css-tricks.com", "language": "en", "topic": "programming" },
+    { "id": "smashing", "title": "Smashing Magazine", "description": "Web design and development", "url": "https://www.smashingmagazine.com/feed/", "site": "smashingmagazine.com", "language": "en", "topic": "programming" },
+    { "id": "martin-fowler", "title": "martinfowler.com", "description": "Software architecture writing", "url": "https://martinfowler.com/feed.atom", "site": "martinfowler.com", "language": "en", "topic": "programming" },
+    { "id": "lobsters", "title": "Lobsters", "description": "Computing-focused community links", "url": "https://lobste.rs/rss", "site": "lobste.rs", "language": "en", "topic": "programming" },
+    { "id": "infoq", "title": "InfoQ", "description": "Software development news", "url": "https://feed.infoq.com/", "site": "infoq.com", "language": "en", "topic": "programming" },
+
+    { "id": "openai-blog", "title": "OpenAI Blog", "description": "Updates from OpenAI", "url": "https://openai.com/blog/rss.xml", "site": "openai.com", "language": "en", "topic": "ai" },
+    { "id": "google-ai", "title": "Google Research Blog", "description": "Research from Google", "url": "https://blog.research.google/feeds/posts/default", "site": "research.google", "language": "en", "topic": "ai" },
+    { "id": "deepmind", "title": "Google DeepMind", "description": "DeepMind research and announcements", "url": "https://deepmind.google/blog/rss.xml", "site": "deepmind.google", "language": "en", "topic": "ai" },
+    { "id": "anthropic-news", "title": "Anthropic News", "description": "Updates from Anthropic", "url": "https://www.anthropic.com/news/rss.xml", "site": "anthropic.com", "language": "en", "topic": "ai" },
+    { "id": "huggingface-blog", "title": "Hugging Face Blog", "description": "Open-source ML community", "url": "https://huggingface.co/blog/feed.xml", "site": "huggingface.co", "language": "en", "topic": "ai" },
+    { "id": "import-ai", "title": "Import AI", "description": "Weekly AI newsletter by Jack Clark", "url": "https://jack-clark.net/feed/", "site": "jack-clark.net", "language": "en", "topic": "ai" },
+    { "id": "the-batch", "title": "The Batch — DeepLearning.AI", "description": "AI news from Andrew Ng", "url": "https://www.deeplearning.ai/the-batch/feed/", "site": "deeplearning.ai", "language": "en", "topic": "ai" },
+
+    { "id": "nature", "title": "Nature — Latest", "description": "Latest research from Nature", "url": "https://www.nature.com/nature.rss", "site": "nature.com", "language": "en", "topic": "science" },
+    { "id": "science-mag", "title": "Science Magazine", "description": "AAAS Science news", "url": "https://www.science.org/rss/news_current.xml", "site": "science.org", "language": "en", "topic": "science" },
+    { "id": "scientific-american", "title": "Scientific American", "description": "Science journalism", "url": "https://rss.sciam.com/sciam/60secsciencepodcast", "site": "scientificamerican.com", "language": "en", "topic": "science" },
+    { "id": "newscientist", "title": "New Scientist", "description": "Science and tech news", "url": "https://www.newscientist.com/feed/home/", "site": "newscientist.com", "language": "en", "topic": "science" },
+    { "id": "quanta", "title": "Quanta Magazine", "description": "Mathematics and fundamental science", "url": "https://www.quantamagazine.org/feed/", "site": "quantamagazine.org", "language": "en", "topic": "science" },
+    { "id": "phys-org", "title": "Phys.org", "description": "Physics, chemistry, and earth science news", "url": "https://phys.org/rss-feed/", "site": "phys.org", "language": "en", "topic": "science" },
+    { "id": "nasa", "title": "NASA Breaking News", "description": "Updates from NASA", "url": "https://www.nasa.gov/feeds/iotd-feed/", "site": "nasa.gov", "language": "en", "topic": "science" },
+
+    { "id": "stat-news", "title": "STAT News", "description": "Health, medicine, and biotech reporting", "url": "https://www.statnews.com/feed/", "site": "statnews.com", "language": "en", "topic": "health" },
+    { "id": "kff-health", "title": "KFF Health News", "description": "In-depth health policy reporting", "url": "https://kffhealthnews.org/feed/", "site": "kffhealthnews.org", "language": "en", "topic": "health" },
+    { "id": "nih-news", "title": "NIH News Releases", "description": "From the National Institutes of Health", "url": "https://www.nih.gov/news-events/news-releases/feed.xml", "site": "nih.gov", "language": "en", "topic": "health" },
+    { "id": "who-news", "title": "World Health Organization", "description": "WHO news releases", "url": "https://www.who.int/rss-feeds/news-english.xml", "site": "who.int", "language": "en", "topic": "health" },
+    { "id": "medical-news-today", "title": "Medical News Today", "description": "Daily medical news", "url": "https://www.medicalnewstoday.com/newsfeeds/rss/medical_all.xml", "site": "medicalnewstoday.com", "language": "en", "topic": "health" },
+
+    { "id": "newyorker", "title": "The New Yorker", "description": "Reportage, criticism, and culture", "url": "https://www.newyorker.com/feed/everything", "site": "newyorker.com", "language": "en", "topic": "culture" },
+    { "id": "atlantic", "title": "The Atlantic", "description": "Politics, culture, and ideas", "url": "https://www.theatlantic.com/feed/all/", "site": "theatlantic.com", "language": "en", "topic": "culture" },
+    { "id": "paris-review", "title": "The Paris Review", "description": "Literature, art, and interviews", "url": "https://www.theparisreview.org/blog/feed/", "site": "theparisreview.org", "language": "en", "topic": "culture" },
+    { "id": "lithub", "title": "Literary Hub", "description": "Books and writing", "url": "https://lithub.com/feed/", "site": "lithub.com", "language": "en", "topic": "culture" },
+    { "id": "pitchfork-news", "title": "Pitchfork — News", "description": "Music news and reviews", "url": "https://pitchfork.com/rss/news/", "site": "pitchfork.com", "language": "en", "topic": "culture" },
+
+    { "id": "dezeen", "title": "Dezeen", "description": "Architecture and design", "url": "https://www.dezeen.com/feed/", "site": "dezeen.com", "language": "en", "topic": "design" },
+    { "id": "fast-co-design", "title": "Fast Company — Co.Design", "description": "Design and innovation", "url": "https://www.fastcompany.com/co-design/rss", "site": "fastcompany.com", "language": "en", "topic": "design" },
+    { "id": "creative-bloq", "title": "Creative Bloq", "description": "Design news and tutorials", "url": "https://www.creativebloq.com/feeds.xml", "site": "creativebloq.com", "language": "en", "topic": "design" },
+    { "id": "uxdesign-cc", "title": "UX Collective", "description": "User experience design", "url": "https://uxdesign.cc/feed", "site": "uxdesign.cc", "language": "en", "topic": "design" },
+
+    { "id": "espn-top", "title": "ESPN — Top Headlines", "description": "Sports headlines from ESPN", "url": "https://www.espn.com/espn/rss/news", "site": "espn.com", "language": "en", "topic": "sports" },
+    { "id": "bbc-sport", "title": "BBC Sport", "description": "International sports from the BBC", "url": "http://feeds.bbci.co.uk/sport/rss.xml", "site": "bbc.com", "language": "en", "topic": "sports" },
+    { "id": "athletic", "title": "The Athletic — All", "description": "In-depth sports reporting", "url": "https://theathletic.com/rss-feed/", "site": "theathletic.com", "language": "en", "topic": "sports" },
+    { "id": "sports-illustrated", "title": "Sports Illustrated", "description": "Sports news and features", "url": "https://www.si.com/rss/si_topstories.rss", "site": "si.com", "language": "en", "topic": "sports" },
+
+    { "id": "polygon", "title": "Polygon", "description": "Gaming and entertainment", "url": "https://www.polygon.com/rss/index.xml", "site": "polygon.com", "language": "en", "topic": "gaming" },
+    { "id": "kotaku", "title": "Kotaku", "description": "Video game culture", "url": "https://kotaku.com/rss", "site": "kotaku.com", "language": "en", "topic": "gaming" },
+    { "id": "rps", "title": "Rock Paper Shotgun", "description": "PC gaming news and reviews", "url": "https://www.rockpapershotgun.com/feed", "site": "rockpapershotgun.com", "language": "en", "topic": "gaming" },
+    { "id": "eurogamer", "title": "Eurogamer", "description": "Gaming news and reviews", "url": "https://www.eurogamer.net/feed", "site": "eurogamer.net", "language": "en", "topic": "gaming" }
+  ]
+}
