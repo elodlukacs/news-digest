@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Plus, X, Coffee, AlignJustify, Home, Film, Brain, Briefcase, BarChart2, Shield, MessageSquareCode, ChevronDown, Check, Zap, Minus } from 'lucide-react';
+import { Plus, X, Coffee, AlignJustify, Home, Film, Brain, Briefcase, BarChart2, Shield, MessageSquareCode, ChevronDown, Check, Zap, Minus, Compass } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -68,6 +68,7 @@ export function NavigationBar({
   const showJobs = path === '/jobs';
   const showCognitive = path.startsWith('/mindgames');
   const showPrompts = path === '/prompts';
+  const showExplore = path === '/explore';
 
   const handleAdd = async () => {
     if (!newName.trim()) return;
@@ -92,6 +93,7 @@ export function NavigationBar({
   const jobsAndClose = () => { navigate('/jobs'); setDrawerOpen(false); };
   const cognitiveAndClose = () => { navigate('/mindgames'); setDrawerOpen(false); };
   const promptsAndClose = () => { navigate('/prompts'); setDrawerOpen(false); };
+  const exploreAndClose = () => { navigate('/explore'); setDrawerOpen(false); };
   const homeAndClose = () => { navigate('/'); setDrawerOpen(false); };
 
   const todayShort = new Date().toLocaleDateString('en-US', {
@@ -100,7 +102,7 @@ export function NavigationBar({
     year: 'numeric',
   });
 
-  const currentLabel = showJobs ? 'Jobs' : showReleases ? 'Releases' : showBriefing ? 'Briefing' : showCognitive ? 'MindGames' : showPrompts ? 'Prompts' : activeCategoryId ? (categories.find(c => c.id === activeCategoryId)?.name) : 'Home';
+  const currentLabel = showJobs ? 'Jobs' : showReleases ? 'Releases' : showBriefing ? 'Briefing' : showCognitive ? 'MindGames' : showPrompts ? 'Prompts' : showExplore ? 'Explore' : activeCategoryId ? (categories.find(c => c.id === activeCategoryId)?.name) : 'Home';
 
   return (
     <>
@@ -297,6 +299,8 @@ export function NavigationBar({
             <div className="flex items-center justify-start gap-1">
               <NavBox label="Briefing" icon={<Coffee size={13} />} active={showBriefing} onClick={() => navigate('/briefing')} compact />
               <NavDivider />
+              <NavBox label="Explore" icon={<Compass size={13} />} active={showExplore} onClick={() => navigate('/explore')} compact />
+              <NavDivider />
               <NavBox label="Releases" icon={<Film size={13} />} active={showReleases} onClick={() => navigate('/releases')} compact />
               <NavDivider />
               <NavBox label="Jobs" icon={<Briefcase size={13} />} active={showJobs} onClick={() => navigate('/jobs')} compact />
@@ -350,6 +354,7 @@ export function NavigationBar({
             <div className="py-1">
               <DrawerItem label="Home" icon={<Zap size={14} />} active={isHome} onClick={homeAndClose} />
               <DrawerItem label="Morning Briefing" icon={<Coffee size={14} />} active={showBriefing} onClick={briefingAndClose} />
+              <DrawerItem label="Explore Feeds" icon={<Compass size={14} />} active={showExplore} onClick={exploreAndClose} />
               <DrawerItem label="Releases" icon={<Film size={14} />} active={showReleases} onClick={releasesAndClose} />
               <DrawerItem label="Jobs" icon={<Briefcase size={14} />} active={showJobs} onClick={jobsAndClose} />
               <DrawerItem label="MindGames" icon={<Shield size={14} />} active={showCognitive} onClick={cognitiveAndClose} />

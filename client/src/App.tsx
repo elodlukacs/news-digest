@@ -9,6 +9,7 @@ import {
   PromptManagerRoute,
   HomeRoute,
   LogsRoute,
+  ExploreFeedsRoute,
   MindGamesOverviewRoute,
   MindGamesTrainingRoute,
   MindGamesAnalysisRoute,
@@ -24,6 +25,7 @@ function App() {
         <Route index element={<HomeRoute />} />
         <Route path="category/:categoryName" element={<CategoryRoute />} />
         <Route path="briefing" element={<BriefingRoute />} />
+        <Route path="explore" element={<ExploreFeedsRoute />} />
         <Route path="jobs" element={<JobsRoute />} />
         <Route path="releases" element={<ReleasesRoute />} />
         <Route path="prompts" element={<PromptManagerRoute />} />

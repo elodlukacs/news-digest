@@ -13,6 +13,33 @@ export interface Feed {
   url: string;
 }
 
+export interface ExploreTopic {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface ExploreFeed {
+  id: string;
+  title: string;
+  description: string;
+  url: string;
+  site: string;
+  language: string;
+  topic: string;
+  subscribed: boolean;
+}
+
+export interface ExploreCatalog {
+  topics: ExploreTopic[];
+  feeds: ExploreFeed[];
+}
+
+export interface DiscoveredFeed {
+  title: string;
+  url: string;
+}
+
 export interface Summary {
   id?: number;
   category: string;

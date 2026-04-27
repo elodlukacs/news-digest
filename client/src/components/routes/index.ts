@@ -6,6 +6,7 @@ export { MindGamesRoute } from './MindGamesRoute';
 export { PromptManagerRoute } from './PromptManagerRoute';
 export { HomeRoute } from './HomeRoute';
 export { LogsRoute } from './LogsRoute';
+export { ExploreFeedsRoute } from './ExploreFeedsRoute';
 export {
   MindGamesOverviewRoute,
   MindGamesTrainingRoute,

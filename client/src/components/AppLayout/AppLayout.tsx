@@ -49,11 +49,16 @@ export function AppLayout() {
     await deleteCategory(id);
   }, [deleteCategory]);
 
+  const handleAddCategory = useCallback(async (name: string) => {
+    await addCategory(name);
+  }, [addCategory]);
+
   const outletContext: AppOutletContext = {
     categories,
     selectedLlm,
     onLlmChange: setSelectedLlm,
     onManageFeeds: handleManageFeeds,
+    addCategory: handleAddCategory,
     deleteCategory: handleDeleteCategory,
     onSelectCategory: handleSelectCategory,
     articleFontSize,
