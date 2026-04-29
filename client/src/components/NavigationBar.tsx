@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Plus, X, Coffee, AlignJustify, Home, Film, Brain, Briefcase, BarChart2, Shield, MessageSquareCode, ChevronDown, Check, Zap, Minus, Compass } from 'lucide-react';
+import { Plus, X, Coffee, AlignJustify, Home, Film, Brain, Briefcase, BarChart2, Shield, MessageSquareCode, ChevronDown, ChevronLeft, ChevronRight, Check, Zap, Minus, Compass } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -55,6 +55,9 @@ export function NavigationBar({
   const [addingMobile, setAddingMobile] = useState(false);
   const [newName, setNewName] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const path = location.pathname;
 
@@ -80,6 +83,30 @@ export function NavigationBar({
     } catch {
       // keep input open on failure
     }
+  };
+
+  const updateScrollButtons = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 0);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+  }, []);
+
+  useEffect(() => {
+    updateScrollButtons();
+    const el = scrollRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(updateScrollButtons);
+    observer.observe(el);
+    el.addEventListener('scroll', updateScrollButtons, { passive: true });
+    return () => {
+      observer.disconnect();
+      el.removeEventListener('scroll', updateScrollButtons);
+    };
+  }, [categories, updateScrollButtons]);
+
+  const scroll = (dir: 'left' | 'right') => {
+    scrollRef.current?.scrollBy({ left: dir === 'left' ? -220 : 220, behavior: 'smooth' });
   };
 
   const selectAndClose = (id: number) => {
@@ -247,49 +274,76 @@ export function NavigationBar({
 
         <nav className="bg-paper border-b border-t border-rule">
           <div className="max-w-[1600px] mx-auto px-6">
-            <div className="flex items-center justify-start overflow-x-auto scrollbar-none">
-              <NavBox label="Home" icon={<Home size={14} />} active={isHome} onClick={() => navigate('/')} />
-              <NavDivider />
+            <div className="flex items-center">
+              <button
+                type="button"
+                onClick={() => scroll('left')}
+                className={`shrink-0 px-1.5 py-2.5 cursor-pointer transition-all duration-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-masthead focus-visible:ring-offset-1 ${
+                  canScrollLeft ? 'text-ink-muted/70 hover:text-ink hover:bg-paper-dark' : 'invisible opacity-0'
+                }`}
+                aria-label="Scroll categories left"
+                disabled={!canScrollLeft}
+              >
+                <ChevronLeft size={16} strokeWidth={1.5} />
+              </button>
+              <div
+                ref={scrollRef}
+                className="flex items-center flex-1 overflow-x-auto scrollbar-none scroll-smooth min-w-0"
+              >
+                <NavBox label="Home" icon={<Home size={14} />} active={isHome} onClick={() => navigate('/')} />
+                <NavDivider />
 
-              {categories.map((cat) => (
-                <NavBox
-                  key={cat.id}
-                  label={cat.name}
-                  active={cat.id === activeCategoryId}
-                  onClick={() => navigate(`/category/${slugify(cat.name)}`)}
-                />
-              ))}
-
-              {addingDesktop ? (
-                <form
-                  onSubmit={(e) => { e.preventDefault(); handleAdd(); }}
-                  className="flex items-center gap-1 shrink-0 px-2"
-                >
-                  <Input
-                    autoFocus
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Escape') { setAddingDesktop(false); setNewName(''); }
-                    }}
-                    enterKeyHint="done"
-                    placeholder="New section..."
-                    className="w-28 px-2 py-0.5 text-[11px] uppercase tracking-wider font-medium border-b border-masthead bg-transparent text-ink placeholder-ink-muted focus:outline-none h-auto"
+                {categories.map((cat) => (
+                  <NavBox
+                    key={cat.id}
+                    label={cat.name}
+                    active={cat.id === activeCategoryId}
+                    onClick={() => navigate(`/category/${slugify(cat.name)}`)}
                   />
-                  <Button type="button" variant="ghost" size="icon" onClick={() => { setAddingDesktop(false); setNewName(''); }} className="h-6 w-6">
-                    <X size={11} />
-                  </Button>
-                </form>
-              ) : (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" onClick={() => setAddingDesktop(true)} className="h-6 w-6 text-ink-muted/50">
-                      <Plus size={12} />
+                ))}
+
+                {addingDesktop ? (
+                  <form
+                    onSubmit={(e) => { e.preventDefault(); handleAdd(); }}
+                    className="flex items-center gap-1 shrink-0 px-2"
+                  >
+                    <Input
+                      autoFocus
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') { setAddingDesktop(false); setNewName(''); }
+                      }}
+                      enterKeyHint="done"
+                      placeholder="New section..."
+                      className="w-28 px-2 py-0.5 text-[11px] uppercase tracking-wider font-medium border-b border-masthead bg-transparent text-ink placeholder-ink-muted focus:outline-none h-auto"
+                    />
+                    <Button type="button" variant="ghost" size="icon" onClick={() => { setAddingDesktop(false); setNewName(''); }} className="h-6 w-6">
+                      <X size={11} />
                     </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Add section</TooltipContent>
-                </Tooltip>
-              )}
+                  </form>
+                ) : (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" onClick={() => setAddingDesktop(true)} className="h-6 w-6 text-ink-muted/50">
+                        <Plus size={12} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Add section</TooltipContent>
+                  </Tooltip>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => scroll('right')}
+                className={`shrink-0 px-1.5 py-2.5 cursor-pointer transition-all duration-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-masthead focus-visible:ring-offset-1 ${
+                  canScrollRight ? 'text-ink-muted/70 hover:text-ink hover:bg-paper-dark' : 'invisible opacity-0'
+                }`}
+                aria-label="Scroll categories right"
+                disabled={!canScrollRight}
+              >
+                <ChevronRight size={16} strokeWidth={1.5} />
+              </button>
             </div>
           </div>
         </nav>

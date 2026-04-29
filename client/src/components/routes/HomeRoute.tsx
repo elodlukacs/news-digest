@@ -6,6 +6,8 @@ import {
   MessageCircle,
   RotateCw,
   ArrowRight,
+  SlidersHorizontal,
+  Check,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { API_BASE } from '../../config';
@@ -18,6 +20,13 @@ import type { AppOutletContext } from '../../types/routing';
 import { BiasBar } from '../BiasBar';
 import { CredibilityBadge } from '../CredibilityBadge';
 import { SourceRatingsLegend } from '../SourceRatingsLegend';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '../ui/sheet';
 
 /* ─── Types ─── */
 
@@ -40,7 +49,28 @@ interface SurpriseArticle {
 
 const SURPRISE_BASE = `${API_BASE}/homepage/surprise`;
 const SESSION_SEEN_KEY = 'home_seen_urls';
+const SELECTED_CATEGORIES_KEY = 'home_selected_categories';
 const MAX_SEEN = 50;
+
+function getStoredCategoryIds(): number[] {
+  try {
+    const raw = localStorage.getItem(SELECTED_CATEGORIES_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr.filter((n) => typeof n === 'number' && Number.isFinite(n));
+  } catch {
+    return [];
+  }
+}
+
+function storeCategoryIds(ids: number[]) {
+  try {
+    localStorage.setItem(SELECTED_CATEGORIES_KEY, JSON.stringify(ids));
+  } catch {
+    // ignore
+  }
+}
 /* ─── Session helpers ─── */
 
 function getSeenUrls(): Set<string> {
@@ -75,7 +105,11 @@ function clearSeenUrls() {
 /* ─── Component ─── */
 
 export function HomeRoute() {
-  const { articleFontSize } = useOutletContext<AppOutletContext>();
+  const { articleFontSize, categories } = useOutletContext<AppOutletContext>();
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>(() =>
+    getStoredCategoryIds(),
+  );
+  const [filterOpen, setFilterOpen] = useState(false);
   const [article, setArticle] = useState<SurpriseArticle | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -107,10 +141,12 @@ export function HomeRoute() {
 
     try {
       const seen = getSeenUrls();
-      const excludeParam = seen.size > 0
-        ? `?exclude=${encodeURIComponent([...seen].join(','))}`
-        : '';
-      const res = await fetch(`${SURPRISE_BASE}${excludeParam}`, {
+      const params = new URLSearchParams();
+      if (seen.size > 0) params.set('exclude', [...seen].join(','));
+      if (selectedCategoryIds.length > 0)
+        params.set('categories', selectedCategoryIds.join(','));
+      const qs = params.toString();
+      const res = await fetch(`${SURPRISE_BASE}${qs ? `?${qs}` : ''}`, {
         signal: controller.signal,
       });
       if (!res.ok) {
@@ -139,7 +175,7 @@ export function HomeRoute() {
         }
       }
     }
-  }, []);
+  }, [selectedCategoryIds]);
 
   useEffect(() => {
     fetchArticle();
@@ -252,6 +288,37 @@ export function HomeRoute() {
     [article, chatSending, elaborated],
   );
 
+  const toggleCategory = useCallback((id: number) => {
+    setSelectedCategoryIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  }, []);
+
+  const clearCategorySelection = useCallback(() => {
+    setSelectedCategoryIds([]);
+  }, []);
+
+  const handleApplyFilter = useCallback(() => {
+    storeCategoryIds(selectedCategoryIds);
+    setFilterOpen(false);
+    clearSeenUrls();
+    if (article && !loading && phase === 'idle') {
+      transitionRef.current = true;
+      setPhase('exit');
+    } else {
+      fetchArticle();
+    }
+  }, [selectedCategoryIds, article, loading, phase, fetchArticle]);
+
+  const selectedCount = selectedCategoryIds.length;
+  const filterLabel =
+    selectedCount === 0
+      ? 'All categories'
+      : selectedCount === 1
+        ? categories.find((c) => c.id === selectedCategoryIds[0])?.name ||
+          '1 category'
+        : `${selectedCount} categories`;
+
   /* ─── Render ─── */
 
   const bodyText = elaborated ?? article?.brief ?? '';
@@ -260,6 +327,23 @@ export function HomeRoute() {
     <div className="relative min-h-[calc(100dvh-3.5rem)] md:min-h-[calc(100dvh-4rem)] flex flex-col" style={{ overscrollBehaviorX: 'contain' }}>
       <div className="flex-1 flex justify-center px-3 md:px-6 pb-[calc(12rem+env(safe-area-inset-bottom))] md:pb-[13rem] pt-2 md:pt-4">
         <div className="w-full max-w-[680px]">
+            {/* Category filter pill */}
+            <div className="flex justify-end mb-3 md:mb-4 px-1">
+              <button
+                onClick={() => setFilterOpen(true)}
+                aria-label="Filter categories"
+                className="inline-flex items-center gap-2 h-9 px-3.5 rounded-full border border-rule bg-paper hover:bg-ink/5 transition-colors text-[12px] font-[family-name:var(--font-widget)] font-semibold text-ink-muted hover:text-ink cursor-pointer"
+              >
+                <SlidersHorizontal size={13} />
+                <span className="max-w-[180px] truncate">{filterLabel}</span>
+                {selectedCount > 0 && (
+                  <span className="ml-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-masthead text-paper text-[10px] font-bold tabular-nums">
+                    {selectedCount}
+                  </span>
+                )}
+              </button>
+            </div>
+
             {/* Loading state */}
             {loading && (
               <div className="flex-1 p-6 md:p-8 flex flex-col justify-center space-y-5">
@@ -444,6 +528,71 @@ export function HomeRoute() {
           </div>
         </div>
       )}
+
+      {/* Category filter sheet */}
+      <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
+        <SheetContent
+          side="bottom"
+          className="rounded-t-2xl border-rule bg-paper max-h-[85dvh] flex flex-col"
+        >
+          <SheetHeader className="text-left">
+            <SheetTitle className="font-serif text-[22px] md:text-[26px] font-black text-ink tracking-[-0.01em]">
+              Choose your categories
+            </SheetTitle>
+            <SheetDescription className="font-[family-name:var(--font-body)] text-[13px] md:text-[14px] text-ink-muted">
+              Pick one or more topics to populate this page. Leave empty to draw from all categories.
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="flex-1 overflow-y-auto py-5 -mx-1 px-1">
+            {categories.length === 0 ? (
+              <p className="text-[13px] text-ink-muted italic font-[family-name:var(--font-body)]">
+                No categories available yet.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {categories.map((cat) => {
+                  const checked = selectedCategoryIds.includes(cat.id);
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => toggleCategory(cat.id)}
+                      aria-pressed={checked}
+                      className={`group inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full border text-[13px] font-[family-name:var(--font-widget)] font-semibold transition-colors cursor-pointer ${
+                        checked
+                          ? 'bg-masthead text-paper border-masthead'
+                          : 'bg-paper text-ink-muted border-rule hover:border-ink/40 hover:text-ink'
+                      }`}
+                    >
+                      {checked && <Check size={13} strokeWidth={3} />}
+                      <span>{cat.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 pt-3 border-t border-rule">
+            <Button
+              variant="outline"
+              onClick={clearCategorySelection}
+              disabled={selectedCount === 0}
+              className="h-11 rounded-xl text-[13px] font-[family-name:var(--font-widget)] font-semibold text-ink-muted hover:text-ink"
+            >
+              Clear
+            </Button>
+            <Button
+              onClick={handleApplyFilter}
+              className="flex-1 h-11 rounded-xl text-[14px] font-[family-name:var(--font-widget)] font-bold tracking-wide bg-masthead text-paper hover:bg-masthead/90"
+            >
+              {selectedCount === 0
+                ? 'Show all categories'
+                : `Show ${selectedCount} selected`}
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Chat popup */}
       {article && article.article_id != null && (

@@ -65,7 +65,11 @@ function parseSummaryMarkdown(markdown) {
   return sections;
 }
 
-function pickArticle({ excludeUrls } = {}) {
+function pickArticle({ excludeUrls, categoryIds } = {}) {
+  const hasCategoryFilter = Array.isArray(categoryIds) && categoryIds.length > 0;
+  const categoryClause = hasCategoryFilter
+    ? `AND sh.category_id IN (${categoryIds.map(() => '?').join(',')})`
+    : '';
   const rows = db.prepare(`
     SELECT sh.id, sh.category_id, sh.summary, sh.sentiment_data, sh.generated_at,
            c.name as category_name
@@ -74,9 +78,14 @@ function pickArticle({ excludeUrls } = {}) {
     WHERE sh.generated_at > datetime('now', ?)
       AND sh.category_id > 0
       AND sh.summary IS NOT NULL
+      ${categoryClause}
     ORDER BY sh.generated_at DESC
     LIMIT ?
-  `).all(`-${SUMMARY_LOOKBACK_DAYS} days`, RANDOM_POOL_SIZE);
+  `).all(
+    `-${SUMMARY_LOOKBACK_DAYS} days`,
+    ...(hasCategoryFilter ? categoryIds : []),
+    RANDOM_POOL_SIZE,
+  );
 
   if (rows.length === 0) return null;
 
@@ -175,7 +184,13 @@ router.get('/', (req, res) => {
     excludeParam.split(',').map(u => u.trim()).filter(Boolean)
   );
 
-  const article = pickArticle({ excludeUrls });
+  const categoriesParam = typeof req.query.categories === 'string' ? req.query.categories.trim() : '';
+  const categoryIds = categoriesParam
+    .split(',')
+    .map(s => Number(s.trim()))
+    .filter(n => Number.isFinite(n) && n > 0);
+
+  const article = pickArticle({ excludeUrls, categoryIds });
   if (!article) {
     return res
       .status(404)
