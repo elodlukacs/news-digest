@@ -457,62 +457,46 @@ export function SummaryView({
                 {section.sentiment && (
                   <SentimentRibbon sentiment={section.sentiment} />
                 )}
-                <div className="px-4 md:px-5 pt-4 md:pt-5">
-                  {section.imageUrl && (
-                    <div className="flex gap-3 items-start md:hidden">
-                      <img
-                        src={section.imageUrl}
-                        alt={section.title}
-                        loading="lazy"
-                        className="shrink-0 w-16 self-stretch object-cover rounded-md"
-                        style={{ boxShadow: '2px 3px 8px 0 color-mix(in srgb, var(--color-masthead) 25%, transparent)' }}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <CardTitle className="text-xl pr-10 break-words leading-snug">{section.title}</CardTitle>
-                        {(section.source || section.pubDate) && (
-                          <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-ink-light font-[family-name:var(--font-body)]">
-                            {section.source && <SourceBadge source={section.source} url={section.url} />}
-                            {section.bias && <BiasBar bias={section.bias} />}
-                            {section.credibility != null && <CredibilityBadge credibility={section.credibility} factCheckGrade={section.factCheckGrade} />}
-                            {section.source && section.pubDate && <span className="text-ink-muted text-xl px-0.5 font-bold">·</span>}
-                            {section.pubDate && (
-                              <span className="italic">
-                                {(() => {
-                                  try {
-                                    const d = new Date(section.pubDate);
-                                    return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
-                                  } catch { return section.pubDate; }
-                                })()}
-                              </span>
-                            )}
-                          </div>
+                {section.imageUrl && (
+                  <div className="md:hidden relative w-full h-40 -mb-14 overflow-hidden">
+                    <img
+                      src={section.imageUrl}
+                      alt=""
+                      loading="lazy"
+                      className="w-full h-full object-cover"
+                    />
+                    <div
+                      aria-hidden
+                      className="absolute inset-x-0 bottom-0 h-2/3 pointer-events-none"
+                      style={{
+                        background:
+                          'linear-gradient(to bottom, color-mix(in srgb, var(--color-paper-dark) 0%, transparent) 0%, var(--color-paper-dark) 90%)',
+                      }}
+                    />
+                  </div>
+                )}
+                <div className="relative px-4 md:px-5 pt-4 md:pt-5">
+                  <div className="md:hidden">
+                    <CardTitle className="text-xl pr-10 break-words leading-snug">{section.title}</CardTitle>
+                    {(section.source || section.pubDate) && (
+                      <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-ink-light font-[family-name:var(--font-body)]">
+                        {section.source && <SourceBadge source={section.source} url={section.url} />}
+                        {section.bias && <BiasBar bias={section.bias} />}
+                        {section.credibility != null && <CredibilityBadge credibility={section.credibility} factCheckGrade={section.factCheckGrade} />}
+                        {section.source && section.pubDate && <span className="text-ink-muted text-xl px-0.5 font-bold">·</span>}
+                        {section.pubDate && (
+                          <span className="italic">
+                            {(() => {
+                              try {
+                                const d = new Date(section.pubDate);
+                                return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+                              } catch { return section.pubDate; }
+                            })()}
+                          </span>
                         )}
                       </div>
-                    </div>
-                  )}
-                  {!section.imageUrl && (
-                    <div className="md:hidden">
-                      <CardTitle className="text-xl pr-10 break-words leading-snug">{section.title}</CardTitle>
-                      {(section.source || section.pubDate) && (
-                        <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-ink-light font-[family-name:var(--font-body)]">
-                          {section.source && <SourceBadge source={section.source} url={section.url} />}
-                          {section.bias && <BiasBar bias={section.bias} />}
-                          {section.credibility != null && <CredibilityBadge credibility={section.credibility} factCheckGrade={section.factCheckGrade} />}
-                          {section.source && section.pubDate && <span className="text-ink-muted text-xl px-0.5 font-bold">·</span>}
-                          {section.pubDate && (
-                            <span className="italic">
-                              {(() => {
-                                try {
-                                  const d = new Date(section.pubDate);
-                                  return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
-                                  } catch { return section.pubDate; }
-                              })()}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                    )}
+                  </div>
                   <div className="mt-4 md:hidden">
                     <p className="break-words [overflow-wrap:anywhere]" style={{ fontSize: `${articleFontSize}px`, lineHeight: `${articleFontSize * 1.8}px`, color: 'var(--color-ink)', fontFamily: 'var(--font-body)' }}>
                       {section.content}
