@@ -17,6 +17,10 @@ const TICK_MS = 5 * 60 * 1000;
 // First sweep happens shortly after startup so the server isn't blocked.
 const STARTUP_DELAY_MS = 30 * 1000;
 
+// Match the frontend default (client/src/hooks/useModels.ts) so scheduled and
+// user-triggered refreshes produce summaries from the same model.
+const DEFAULT_PROVIDER = 'openai/gpt-oss-120b';
+
 let running = false;
 
 function findStaleCategories() {
@@ -44,7 +48,7 @@ async function refreshStaleCategories() {
     console.log(`[Scheduler] Refreshing ${stale.length} stale categor${stale.length === 1 ? 'y' : 'ies'} (>${REFRESH_MAX_AGE_HOURS}h old)`);
     for (const { id } of stale) {
       try {
-        await refreshCategorySummary(db, callLLM, id, {});
+        await refreshCategorySummary(db, callLLM, id, { provider: DEFAULT_PROVIDER });
         console.log(`[Scheduler] Refreshed category ${id}`);
       } catch (err) {
         console.warn(`[Scheduler] Failed to refresh category ${id}: ${err.message}`);
