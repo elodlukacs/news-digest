@@ -52,7 +52,4 @@ app.use('/api/logs', require('./routes/logs'));
 
 app.listen(PORT, () => {
   console.log(`News Reader API running on http://localhost:${PORT}`);
-  // Keep every category's summary at most 3 hours old by sweeping for stale
-  // entries on a fixed cadence.
-  require('./jobs/scheduler').start();
 });
