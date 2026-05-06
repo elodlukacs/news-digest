@@ -40,6 +40,7 @@ interface SurpriseArticle {
   pub_date: string;
   category_name?: string;
   has_expanded?: boolean;
+  image?: string;
   bias?: string | null;
   credibility?: number | null;
   factCheckGrade?: string | null;
@@ -387,7 +388,25 @@ export function HomeRoute() {
                       : { opacity: 1, transform: 'translateY(0)' }
                 }
               >
-                <div>
+                {article.image && (
+                  <div className="relative w-full h-48 md:h-64 overflow-hidden md:rounded-t-2xl">
+                    <img
+                      src={article.image}
+                      alt=""
+                      loading="lazy"
+                      className="w-full h-full object-cover"
+                    />
+                    <div
+                      aria-hidden
+                      className="absolute inset-0 pointer-events-none"
+                      style={{
+                        background:
+                          'linear-gradient(to bottom, transparent 0%, transparent 65%, var(--color-paper) 90%)',
+                      }}
+                    />
+                  </div>
+                )}
+                <div className={article.image ? 'relative -mt-24 md:-mt-32' : ''}>
                   <div className="p-5 md:p-8 pb-2">
                     {article.category_name && (
                       <p className="text-[10px] md:text-[11px] font-[family-name:var(--font-widget)] uppercase tracking-[0.25em] font-bold text-masthead mb-3">

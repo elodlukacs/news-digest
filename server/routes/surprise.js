@@ -95,7 +95,7 @@ function pickArticle({ excludeUrls, categoryIds } = {}) {
   }
 
   const findArticleByLink = db.prepare(
-    'SELECT id, link, feed_name, pub_date, body_text, description, surprise_expanded FROM articles WHERE link = ? LIMIT 1'
+    'SELECT id, link, feed_name, pub_date, body_text, description, image_url, surprise_expanded FROM articles WHERE link = ? LIMIT 1'
   );
 
   for (const row of rows) {
@@ -113,6 +113,7 @@ function pickArticle({ excludeUrls, categoryIds } = {}) {
                 originalContent: entry.original_content || '',
                 source: entry.source || '',
                 pubDate: entry.pub_date || '',
+                image: entry.image || '',
               });
             }
           }
@@ -152,6 +153,7 @@ function pickArticle({ excludeUrls, categoryIds } = {}) {
         pub_date: (articleRow && articleRow.pub_date) || (fallback && fallback.pubDate) || row.generated_at,
         category_name: row.category_name || '',
         raw_content: originalContent,
+        image: (articleRow && articleRow.image_url) || (fallback && fallback.image) || '',
         has_expanded: !!(
           articleRow &&
           articleRow.surprise_expanded &&
