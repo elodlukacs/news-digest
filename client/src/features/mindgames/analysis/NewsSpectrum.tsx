@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
@@ -20,6 +20,7 @@ import {
 import { FeaturePanelHeader } from '../common';
 import { API_BASE } from '../../../config';
 import { useLlm } from '../../../contexts/LlmContext';
+import { safeHref } from '../../../utils/safeHref';
 
 interface OutletRating {
   id: string;
@@ -88,18 +89,27 @@ export function NewsSpectrum() {
   const [showOutletDetails, setShowOutletDetails] = useState<string | null>(null);
   const [expandedSection, setExpandedSection] = useState<'headlines' | 'facts' | 'analysis'>('headlines');
 
-  const loadOutlets = useCallback(async () => {
+  const abortRef = useRef<AbortController | null>(null);
+
+  const loadOutlets = useCallback(async (signal?: AbortSignal) => {
     try {
-      const res = await fetch(`${API_BASE}/spectrum/outlet-ratings`);
+      const res = await fetch(`${API_BASE}/spectrum/outlet-ratings`, { signal });
+      if (!res.ok) throw new Error(`Failed to load outlets (${res.status})`);
       const data = await res.json();
       setOutlets(data.outlets || []);
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
       console.error('Failed to load outlets:', err);
     }
   }, []);
 
   useEffect(() => {
-    loadOutlets();
+    const controller = new AbortController();
+    loadOutlets(controller.signal);
+    return () => {
+      controller.abort();
+      abortRef.current?.abort();
+    };
   }, [loadOutlets]);
 
   const compareCoverage = async () => {
@@ -513,7 +523,7 @@ export function NewsSpectrum() {
                         </div>
                         
                         <a
-                          href={outlet.url}
+                          href={safeHref(outlet.url)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 text-xs text-curiosity hover:text-curiosity/80 transition-colors"

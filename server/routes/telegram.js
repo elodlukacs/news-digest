@@ -1,6 +1,6 @@
 const express = require('express');
 const { escTg, splitTgMessage } = require('../lib/telegram');
-const { parser } = require('../lib/rss');
+const { parseFeedUrl } = require('../lib/rss');
 const { callLLM: rawCallLLM } = require('../lib/llm');
 const db = require('../db');
 const { buildMessages } = require('../lib/promptManager');
@@ -9,7 +9,7 @@ const callLLM = (messages, opts) => rawCallLLM(messages, { ...opts, db });
 const router = express.Router();
 
 router.post('/send', async (req, res) => {
-  const { categoryId } = req.body;
+  const { categoryId } = req.body || {};
   if (!categoryId && categoryId !== 0) return res.status(400).json({ error: 'categoryId required' });
 
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
@@ -89,7 +89,7 @@ router.post('/digest', async (req, res) => {
     const feedResults = await Promise.allSettled(
       feedsWithCategories.map(async (feed) => {
         try {
-          const parsed = await parser.parseURL(feed.url);
+          const parsed = await parseFeedUrl(feed.url);
           return {
             category: feed.categoryName,
             source: feed.name,

@@ -6,7 +6,7 @@ const { buildMessages } = require('../lib/promptManager');
 const router = express.Router();
 
 router.post('/', async (req, res) => {
-  const { summary_id, message, provider: selectedProvider, article_title, article_content } = req.body;
+  const { summary_id, message, provider: selectedProvider, article_title, article_content } = req.body || {};
   if (!summary_id || !message) return res.status(400).json({ error: 'summary_id and message required' });
 
   try {

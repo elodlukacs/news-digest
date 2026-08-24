@@ -9,6 +9,7 @@ import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Skeleton } from './ui/skeleton';
 import type { UpcomingRelease, ReleaseDetail, ReleasesResponse } from '../types';
+import { safeHref } from '../utils/safeHref';
 
 interface Props {
   releases: UpcomingRelease[];
@@ -433,7 +434,7 @@ export function ReleasesPage({ releases: defaultReleases }: Props) {
                   {detail.trailer && (
                     <div className="mt-5">
                       <Button asChild>
-                        <a href={detail.trailer} target="_blank" rel="noopener noreferrer">
+                        <a href={safeHref(detail.trailer)} target="_blank" rel="noopener noreferrer">
                           <Play size={14} />
                           Watch Trailer
                           <ExternalLink size={11} />

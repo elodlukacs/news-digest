@@ -18,7 +18,7 @@ router.get('/eras', (_req, res) => {
 
 // POST /api/propaganda-timeline/generate
 router.post('/generate', async (req, res) => {
-  const { count = 8, provider } = req.body;
+  const { count = 8, provider } = req.body || {};
 
   try {
     const prompt = getPrompt('propaganda-timeline');

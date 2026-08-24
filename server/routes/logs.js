@@ -3,30 +3,25 @@ const router = express.Router();
 
 const db = require('../db');
 
-function toRomaniaTime(isoString) {
-  let date;
-  if (isoString.includes(' ')) {
-    date = new Date(isoString.replace(' ', 'T') + 'Z');
-  } else if (isoString.includes('T')) {
-    date = new Date(isoString);
-  } else {
-    date = new Date(isoString + 'Z');
-  }
-  date.setHours(date.getHours() + 3);
-  return date.toISOString().slice(0, 19).replace('T', ' ');
+const DISPLAY_TIMEZONE = process.env.DISPLAY_TIMEZONE || 'Europe/Bucharest';
+
+// `date.setHours(h + 3)` assumed Romania is permanently on EEST, so between late
+// October and late March every timestamp — and the day-grouping key below — was
+// an hour out, splitting one local day into two buckets.
+function parseStoredDate(isoString) {
+  if (isoString.includes(' ')) return new Date(isoString.replace(' ', 'T') + 'Z');
+  if (isoString.includes('T')) return new Date(isoString);
+  return new Date(isoString + 'Z');
+}
+
+// 'sv-SE' formats as YYYY-MM-DD HH:mm:ss, which is what the UI expects.
+function toLocalTime(isoString) {
+  return parseStoredDate(isoString)
+    .toLocaleString('sv-SE', { timeZone: DISPLAY_TIMEZONE });
 }
 
 function getDateOnly(isoString) {
-  let date;
-  if (isoString.includes(' ')) {
-    date = new Date(isoString.replace(' ', 'T') + 'Z');
-  } else if (isoString.includes('T')) {
-    date = new Date(isoString);
-  } else {
-    date = new Date(isoString + 'Z');
-  }
-  date.setHours(date.getHours() + 3);
-  return date.toISOString().slice(0, 10);
+  return toLocalTime(isoString).slice(0, 10);
 }
 
 router.get('/', (req, res) => {
@@ -51,7 +46,7 @@ router.get('/', (req, res) => {
 
   const formatted = rows.map(r => ({
     ...r,
-    created_at: toRomaniaTime(r.created_at)
+    created_at: toLocalTime(r.created_at)
   }));
 
   const dailySummary = {};

@@ -63,7 +63,17 @@ async function filterJobsWithAI(jobs, callLLM, providerId) {
       }
 
       if (Array.isArray(results)) {
-        allResults.push(...results.map(r => ({
+        // Only accept IDs that were actually in the batch. The model
+        // occasionally invents them, and `ai_filtered_jobs` has no foreign key,
+        // so hallucinated rows persisted and inflated the AI-filtered count
+        // while the aiOnly INNER JOIN silently dropped them again.
+        const batchIds = new Set(batch.map(j => j.id));
+        const accepted = results.filter(r => batchIds.has(r.id));
+        const rejected = results.length - accepted.length;
+        if (rejected > 0) {
+          console.warn(`Batch ${Math.floor(i / BATCH_SIZE) + 1}: discarded ${rejected} result(s) with unknown job IDs`);
+        }
+        allResults.push(...accepted.map(r => ({
           id: r.id,
           remote: ['yes', 'no', 'possible'].includes(r.remote) ? r.remote : 'possible',
         })));

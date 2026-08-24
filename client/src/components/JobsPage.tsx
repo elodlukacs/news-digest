@@ -8,6 +8,7 @@ import { Badge } from './ui/badge';
 import { Skeleton } from './ui/skeleton';
 import type { Job, JobFilters, JobCounts, SourceCounts, FetchReport } from '../types';
 import { timeAgoDays } from '../utils/date';
+import { safeHref } from '../utils/safeHref';
 
 interface Props {
   jobs: Job[];
@@ -407,7 +408,7 @@ function JobCard({ job, onSave, onUnsave }: { job: Job; onSave: () => void; onUn
           </button>
 
           <a
-            href={job.url}
+            href={safeHref(job.url)}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-md text-ink-muted/40 hover:text-masthead hover:bg-masthead/5 transition-all duration-150 active:scale-90"

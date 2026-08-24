@@ -91,7 +91,7 @@ const SCENARIOS = [
 
 // POST /api/bias-mirror/quiz — generate quiz
 router.post('/quiz', (req, res) => {
-  const { count = 5 } = req.body;
+  const { count = 5 } = req.body || {};
   const shuffled = [...SCENARIOS].sort(() => Math.random() - 0.5);
   const selected = shuffled.slice(0, Math.min(count, SCENARIOS.length));
 
@@ -109,7 +109,7 @@ router.post('/quiz', (req, res) => {
 
 // POST /api/bias-mirror/score — score answers and save profile
 router.post('/score', (req, res) => {
-  const { answers } = req.body;
+  const { answers } = req.body || {};
   const uid = req.body.userId || 'default';
 
   if (!answers || !Array.isArray(answers)) {

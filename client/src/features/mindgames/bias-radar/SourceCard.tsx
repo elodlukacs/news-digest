@@ -1,5 +1,6 @@
 import type { SourceArticle } from '../../../types/lens';
 import { BIAS_LABELS, BIAS_COLORS } from '../../../utils/biasRatings';
+import { safeHref } from '../../../utils/safeHref';
 
 interface SourceCardProps {
   article: SourceArticle;
@@ -27,7 +28,7 @@ export default function SourceCard({ article, isMain }: SourceCardProps) {
       <p className="text-sm font-medium text-ink leading-snug">{article.title}</p>
       <p className="text-xs text-ink-muted line-clamp-3">{article.excerpt}</p>
       <a
-        href={article.url}
+        href={safeHref(article.url)}
         target="_blank"
         rel="noopener noreferrer"
         className="text-xs text-blue-600 hover:underline"

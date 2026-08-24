@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const db = require('../db');
+const { feedKey } = require('../lib/feedHealth');
 
 const router = express.Router();
 
@@ -18,12 +19,16 @@ function loadCatalog() {
 router.get('/', (_req, res) => {
   try {
     const catalog = loadCatalog();
+    // Compare normalized URLs. Exact string equality meant a catalog feed added
+    // earlier via discovery — or stored as http rather than https, or with a
+    // ?format= suffix — showed as unsubscribed, and re-adding duplicated it.
     const subscribed = new Set(
-      db.prepare('SELECT url FROM feeds').all().map((row) => row.url)
+      db.prepare('SELECT url, url_key FROM feeds').all()
+        .map((row) => row.url_key || feedKey(row.url))
     );
     const feeds = catalog.feeds.map((f) => ({
       ...f,
-      subscribed: subscribed.has(f.url),
+      subscribed: subscribed.has(feedKey(f.url)),
     }));
     res.json({ topics: catalog.topics, feeds });
   } catch (err) {

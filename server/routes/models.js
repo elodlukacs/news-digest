@@ -3,11 +3,13 @@ const router = express.Router();
 
 const env = (name) => process.env[name];
 
+// llama-3.3-70b-versatile and llama-3.1-8b-instant were deprecated by Groq on
+// 2026-06-17 and now 404. Groq's recommended replacements are gpt-oss-120b and
+// qwen3.6-27b (the latter is the only Groq model with a thinking mode).
 const ALLOWED_IDS = [
-  'llama-3.3-70b-versatile',
-  'llama-3.1-8b-instant',
   'openai/gpt-oss-120b',
   'openai/gpt-oss-20b',
+  'qwen/qwen3.6-27b',
 ];
 
 const GOOGLE_MODELS = [
@@ -84,7 +86,7 @@ async function fetchGroqModels() {
       .filter(m => m.active && m.id && ALLOWED_IDS.includes(m.id))
       .map(m => ({
         id: m.id,
-        name: m.id.replace(/^openai\//, '').replace(/^meta-llama\//, 'Llama '),
+        name: m.id.replace(/^openai\//, '').replace(/^meta-llama\//, 'Llama ').replace(/^qwen\//, ''),
         owned_by: m.owned_by || 'Groq',
         context_window: m.context_window,
         max_completion_tokens: m.max_completion_tokens,

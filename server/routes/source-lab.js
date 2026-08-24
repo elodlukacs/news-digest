@@ -8,7 +8,7 @@ const router = express.Router();
 
 // POST /api/source-lab/analyze
 router.post('/analyze', async (req, res) => {
-  const { input, context = '', provider } = req.body;
+  const { input, context = '', provider } = req.body || {};
   if (!input || input.trim().length < 5) {
     return res.status(400).json({ error: 'URL or claim must be at least 5 characters' });
   }

@@ -1,9 +1,10 @@
 const express = require('express');
 const db = require('../db');
-const { parser, extractImage } = require('../lib/rss');
+const { parseFeedUrl, extractImage } = require('../lib/rss');
 const { callLLM: rawCallLLM } = require('../lib/llm');
 const validateId = require('../middleware/validateId');
 const { refreshCategorySummary, enrichSentimentData, RefreshError } = require('../jobs/refreshSummary');
+const { runExclusive } = require('../lib/inFlight');
 
 const router = express.Router();
 
@@ -91,7 +92,13 @@ router.get('/:id/history', validateId, (req, res) => {
 router.post('/:id/refresh', validateId, async (req, res) => {
   try {
     const { provider, keyword } = req.body || {};
-    const result = await refreshCategorySummary(db, callLLM, Number(req.params.id), { provider, keyword });
+    const categoryId = Number(req.params.id);
+    // Double-clicking Refresh would otherwise run two full feed-fetch + LLM
+    // cycles and write two history rows; the second caller joins the first run.
+    const result = await runExclusive(
+      `refresh:${categoryId}:${keyword || ''}`,
+      () => refreshCategorySummary(db, callLLM, categoryId, { provider, keyword })
+    );
     res.json(result);
   } catch (err) {
     if (err instanceof RefreshError) {
@@ -127,7 +134,7 @@ router.post('/:id/lens', validateId, async (req, res) => {
     const feedResults = await Promise.allSettled(
       feeds.map(async (feed) => {
         try {
-          const parsed = await parser.parseURL(feed.url);
+          const parsed = await parseFeedUrl(feed.url);
           return parsed.items.slice(0, 10).map((item) => ({
             title: item.title || '',
             description: (item.contentSnippet || item.content || '').slice(0, 3000),

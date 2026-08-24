@@ -35,21 +35,11 @@ export function useSummary(
           throw new Error('Invalid response from server');
         }
         if (!res.ok) throw new Error(data.error || 'Failed to load summary');
-        if (data.summary) {
-          setSummary(data);
-        } else if (!snapshotId) {
-          const refreshRes = await fetch(`${BASE}/categories/${categoryId}/refresh`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ provider: providerId }),
-            signal: controller.signal,
-          });
-          const refreshData: Summary & { error?: string } = await refreshRes.json();
-          if (!refreshRes.ok) throw new Error(refreshData.error || 'Failed to refresh summary');
-          setSummary(refreshData);
-        } else {
-          setSummary(null);
-        }
+        // No implicit generation here. This used to POST /refresh — a paid LLM
+        // call — whenever a category had no summary yet, with no user intent,
+        // and re-fired it whenever the navbar model changed. The caller shows a
+        // "Generate summary" affordance and calls refresh() explicitly.
+        setSummary(data.summary ? data : null);
       } catch (e: unknown) {
         if (e instanceof DOMException && e.name === 'AbortError') return;
         setError(e instanceof Error ? e.message : 'Unknown error');
@@ -58,7 +48,9 @@ export function useSummary(
       }
     };
     load();
-  }, [categoryId, snapshotId, providerId]);
+    // providerId is deliberately excluded: it only affects refresh(), and
+    // including it made switching models reload (and previously regenerate).
+  }, [categoryId, snapshotId]);
 
   const refresh = useCallback(async (keyword?: string) => {
     if (!categoryId) return;

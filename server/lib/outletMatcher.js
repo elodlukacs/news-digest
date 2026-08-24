@@ -474,46 +474,62 @@ function normalize(s) {
     .trim();
 }
 
-function matchOutlet(sourceName) {
-  if (!sourceName || typeof sourceName !== 'string') return null;
+// Precomputed once: normalize() was previously called for every outlet on
+// every one of the four passes, for every article.
+const OUTLET_INDEX = OUTLET_RATINGS.map(outlet => ({
+  outlet,
+  norm: normalize(outlet.name),
+  words: outlet.name.toLowerCase().split(/[\s-]+/).filter(w => w.length > 2 && w !== 'news' && w !== 'the'),
+  longWords: outlet.name.toLowerCase().split(/[\s-]+/).filter(w => w.length > 3 && w !== 'news' && w !== 'the'),
+}));
 
+// Source names repeat constantly across a refresh (one per article, a handful of
+// distinct feeds), so the cache hit rate is near total. Bounded so a stream of
+// junk names can't grow it without limit.
+const MATCH_CACHE_LIMIT = 500;
+const matchCache = new Map();
+
+function findOutlet(sourceName) {
   const normSource = normalize(sourceName);
   if (!normSource) return null;
 
   // 1. Exact normalized match
-  for (const outlet of OUTLET_RATINGS) {
-    if (normalize(outlet.name) === normSource) {
-      return outlet;
-    }
+  for (const entry of OUTLET_INDEX) {
+    if (entry.norm === normSource) return entry.outlet;
   }
 
   // 2. Contains match (either direction)
-  for (const outlet of OUTLET_RATINGS) {
-    const normOutlet = normalize(outlet.name);
-    if (normOutlet.includes(normSource) || normSource.includes(normOutlet)) {
-      return outlet;
-    }
+  for (const entry of OUTLET_INDEX) {
+    if (entry.norm.includes(normSource) || normSource.includes(entry.norm)) return entry.outlet;
   }
+
+  const sourceWords = new Set(
+    sourceName.toLowerCase().split(/[\s-]+/).filter(w => w.length > 2 && w !== 'news' && w !== 'the')
+  );
 
   // 3. Word-overlap match: at least 2 significant words in common
-  const sourceWords = new Set(sourceName.toLowerCase().split(/[\s-]+/).filter(w => w.length > 2 && w !== 'news' && w !== 'the'));
-  for (const outlet of OUTLET_RATINGS) {
-    const outletWords = outlet.name.toLowerCase().split(/[\s-]+/).filter(w => w.length > 2 && w !== 'news' && w !== 'the');
-    const overlap = outletWords.filter(w => sourceWords.has(w));
-    if (overlap.length >= 2) {
-      return outlet;
-    }
+  for (const entry of OUTLET_INDEX) {
+    let overlap = 0;
+    for (const w of entry.words) if (sourceWords.has(w)) overlap++;
+    if (overlap >= 2) return entry.outlet;
   }
 
-  // 4. Single significant word match (e.g., "Reuters World" matches "Reuters")
-  for (const outlet of OUTLET_RATINGS) {
-    const outletWords = outlet.name.toLowerCase().split(/[\s-]+/).filter(w => w.length > 3 && w !== 'news' && w !== 'the');
-    if (outletWords.some(w => sourceWords.has(w))) {
-      return outlet;
-    }
+  // 4. Single significant word match (e.g. "Reuters World" matches "Reuters")
+  for (const entry of OUTLET_INDEX) {
+    if (entry.longWords.some(w => sourceWords.has(w))) return entry.outlet;
   }
 
   return null;
+}
+
+function matchOutlet(sourceName) {
+  if (!sourceName || typeof sourceName !== 'string') return null;
+  if (matchCache.has(sourceName)) return matchCache.get(sourceName);
+
+  const result = findOutlet(sourceName);
+  if (matchCache.size >= MATCH_CACHE_LIMIT) matchCache.clear();
+  matchCache.set(sourceName, result);
+  return result;
 }
 
 module.exports = { matchOutlet };

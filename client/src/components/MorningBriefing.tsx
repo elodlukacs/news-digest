@@ -5,6 +5,7 @@ import type { Briefing } from '../types';
 import { Button } from './ui/button';
 import { Alert, AlertDescription } from './ui/alert';
 import { Skeleton } from './ui/skeleton';
+import { safeHref } from '../utils/safeHref';
 
 interface Props {
   briefing: Briefing | null;
@@ -152,7 +153,7 @@ const inlineComponents = {
   ),
   a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
     <a
-      href={href}
+      href={safeHref(href)}
       target="_blank"
       rel="noopener noreferrer"
       className="text-masthead underline decoration-masthead/30 underline-offset-2 hover:decoration-masthead transition-colors cursor-pointer"

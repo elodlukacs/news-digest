@@ -36,7 +36,10 @@ function updatePrompt(slug, { name, description, system_message, user_prompt }) 
 function renderPrompt(template, variables) {
   let result = template;
   for (const [key, value] of Object.entries(variables)) {
-    result = result.replaceAll(`{{${key}}}`, value ?? '');
+    // Function form, not a string: a string replacement expands $&, $`, $', $1
+    // inside the value, so article text or a chat message containing those
+    // sequences silently rewrote the prompt.
+    result = result.replaceAll(`{{${key}}}`, () => value ?? '');
   }
   return result;
 }

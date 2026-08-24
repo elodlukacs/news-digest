@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { LlmProvider } from '../../contexts/LlmContext';
 import { NavigationBar } from '../NavigationBar';
@@ -20,7 +20,11 @@ export function AppLayout() {
   const { categories, addCategory, deleteCategory, renameCategory, reorderCategory } = useCategories();
   const [managingId, setManagingId] = useState<number | null>(null);
   const [showStats, setShowStats] = useState(false);
-  const [selectedLlm, setSelectedLlm] = useState('openai/gpt-oss-120b');
+  // Persisted like articleFontSize — it reset on every reload, which was
+  // inconsistent with the other toolbar preference.
+  const [selectedLlm, setSelectedLlm] = useState(
+    () => localStorage.getItem('selectedLlm') || 'openai/gpt-oss-120b',
+  );
   const [articleFontSize, setArticleFontSize] = useState(() => {
     const saved = localStorage.getItem('articleFontSize');
     return saved ? Number(saved) : 16;
@@ -29,6 +33,11 @@ export function AppLayout() {
   const handleFontSizeChange = useCallback((size: number) => {
     setArticleFontSize(size);
     localStorage.setItem('articleFontSize', String(size));
+  }, []);
+
+  const handleLlmChange = useCallback((model: string) => {
+    setSelectedLlm(model);
+    localStorage.setItem('selectedLlm', model);
   }, []);
   const navigate = useNavigate();
 
@@ -53,17 +62,22 @@ export function AppLayout() {
     await addCategory(name);
   }, [addCategory]);
 
-  const outletContext: AppOutletContext = {
+  // Memoized: a fresh object literal every render re-rendered every
+  // useOutletContext consumer and churned the dep arrays downstream of it.
+  const outletContext: AppOutletContext = useMemo(() => ({
     categories,
     selectedLlm,
-    onLlmChange: setSelectedLlm,
+    onLlmChange: handleLlmChange,
     onManageFeeds: handleManageFeeds,
     addCategory: handleAddCategory,
     deleteCategory: handleDeleteCategory,
     onSelectCategory: handleSelectCategory,
     articleFontSize,
     onFontSizeChange: handleFontSizeChange,
-  };
+  }), [
+    categories, selectedLlm, handleLlmChange, handleManageFeeds, handleAddCategory,
+    handleDeleteCategory, handleSelectCategory, articleFontSize, handleFontSizeChange,
+  ]);
 
   const { pulling, pullProgress, containerRef } = usePullToRefresh({
     onRefresh: () => window.location.reload(),
@@ -91,7 +105,7 @@ export function AppLayout() {
 
         <Outlet context={outletContext} />
 
-        {managingId && managingCategory && (
+        {managingId != null && managingCategory && (
           <FeedManager
             categoryId={managingId}
             categoryName={managingCategory.name}

@@ -389,16 +389,16 @@ export function PatternTests() {
   
   // Reveal sequence answer
   const revealSequence = () => {
-    if (!sequenceInput.trim()) return;
+    if (!sequenceInput.trim() || !currentSequence) return;
     const prediction = parseInt(sequenceInput, 10);
     if (isNaN(prediction)) return;
     setSequenceRevealed(true);
     completeTest({
       testType: 'sequence',
       userAnswer: sequenceInput,
-      correctAnswer: currentSequence!.correctAnswer.toString(),
+      correctAnswer: currentSequence.correctAnswer.toString(),
       isPattern: false,
-      explanation: currentSequence!.explanation,
+      explanation: currentSequence.explanation,
       educationalNote: 'Humans have a strong drive to find patterns in sequences, a trait that served us well in survival situations but can lead us astray with random data. "Seeing" a pattern doesn\'t mean one exists.',
     });
   };

@@ -6,7 +6,6 @@ import { AlertTriangle, Loader2, AlertCircle, GitBranch, ShieldAlert } from 'luc
 import { FeaturePanelHeader } from '../common';
 import { API_BASE } from '../../../config';
 import { useLlm } from '../../../contexts/LlmContext';
-import { escapeHtml } from '../../../utils/escapeHtml';
 
 interface GatewayTopic {
   id: string;
@@ -104,7 +103,7 @@ export function DisinfoMap() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedLlm]);
 
   useEffect(() => {
     loadMap(false);
@@ -268,15 +267,23 @@ export function DisinfoMap() {
                         fill="var(--color-paper)"
                         stroke={TIER_COLORS.gateway}
                         strokeWidth={isHovered ? 2 : 1}
-                        className="cursor-pointer transition-all"
+                        className="cursor-pointer transition-all focus:outline-none focus-visible:stroke-[3] focus-visible:stroke-[var(--color-masthead)]"
+                        tabIndex={0}
+                        role="button"
                         onClick={() => setExpandedGateway(expandedGateway === topic.id ? null : topic.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setExpandedGateway(expandedGateway === topic.id ? null : topic.id);
+                          }
+                        }}
                       />
                       <rect x="0" y="0" width="4" height="40" rx="2" fill={TIER_COLORS.gateway} />
                       <text x="10" y="18" style={{ fontSize: '11px', fontFamily: 'var(--font-sans)', fontWeight: 600 }} className="fill-ink">
-                        {escapeHtml(topic.name)}
+                        {topic.name}
                       </text>
                       <text x="10" y="32" style={{ fontSize: '9px', fontFamily: 'var(--font-sans)' }} className="fill-ink-muted">
-                        {escapeHtml(topic.leakageRisk)} risk
+                        {topic.leakageRisk} risk
                       </text>
                       {isExpanded && (
                         <g transform="translate(10, 42)">
@@ -311,8 +318,16 @@ export function DisinfoMap() {
                         fill="var(--color-paper)"
                         stroke={TIER_COLORS.bridge}
                         strokeWidth={isHovered ? 2 : 1}
-                        className="cursor-pointer transition-all"
+                        className="cursor-pointer transition-all focus:outline-none focus-visible:stroke-[3] focus-visible:stroke-[var(--color-masthead)]"
+                        tabIndex={0}
+                        role="button"
                         onClick={() => setExpandedFigure(expandedFigure === figure.id ? null : figure.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setExpandedFigure(expandedFigure === figure.id ? null : figure.id);
+                          }
+                        }}
                       />
                       <rect x="0" y="0" width="4" height="50" rx="2" fill={TIER_COLORS.bridge} />
                       <text x="10" y="18" style={{ fontSize: '11px', fontFamily: 'var(--font-sans)', fontWeight: 600 }} className="fill-ink">
@@ -361,8 +376,16 @@ export function DisinfoMap() {
                         fill="var(--color-paper)"
                         stroke={TIER_COLORS.conspiracy}
                         strokeWidth={isHovered ? 2 : 1}
-                        className="cursor-pointer transition-all"
+                        className="cursor-pointer transition-all focus:outline-none focus-visible:stroke-[3] focus-visible:stroke-[var(--color-masthead)]"
+                        tabIndex={0}
+                        role="button"
                         onClick={() => setExpandedCore(expandedCore === core.id ? null : core.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setExpandedCore(expandedCore === core.id ? null : core.id);
+                          }
+                        }}
                         filter={core.radicalizationPotential === 'high' ? 'url(#glow)' : undefined}
                       />
                       <rect x="0" y="0" width="4" height="45" rx="2" fill={TIER_COLORS.conspiracy} />

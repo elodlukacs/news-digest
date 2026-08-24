@@ -1,6 +1,7 @@
 import { CalendarDays } from 'lucide-react';
 import { WidgetHeader } from './SharedWidgets';
 import type { OnThisDayEvent } from '../types';
+import { safeHref } from '../utils/safeHref';
 
 export function OnThisDayCard({ events }: { events: OnThisDayEvent[] }) {
   if (events.length === 0) return null;
@@ -15,7 +16,7 @@ export function OnThisDayCard({ events }: { events: OnThisDayEvent[] }) {
               <p className="text-[11px] font-bold text-masthead tracking-wider">{event.year}</p>
               <p className="text-[12px] leading-snug text-ink">
                 {event.link ? (
-                  <a href={event.link} target="_blank" rel="noopener noreferrer" className="hover:text-ink-muted transition-colors cursor-pointer">
+                  <a href={safeHref(event.link)} target="_blank" rel="noopener noreferrer" className="hover:text-ink-muted transition-colors cursor-pointer">
                     {event.text}
                   </a>
                 ) : event.text}

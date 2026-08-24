@@ -24,7 +24,7 @@ router.get('/:slug', (req, res) => {
 
 router.put('/:slug', (req, res) => {
   try {
-    const { name, description, system_message, user_prompt } = req.body;
+    const { name, description, system_message, user_prompt } = req.body || {};
     const updated = updatePrompt(req.params.slug, { name, description, system_message, user_prompt });
     res.json(updated);
   } catch (err) {

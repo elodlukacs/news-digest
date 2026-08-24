@@ -128,10 +128,53 @@ TELEGRAM_CHAT_ID=       # Your chat ID
 TMDB_API_KEY=           # https://www.themoviedb.org/settings/api
 DB_PATH=                # SQLite path (default: ./newsreader.db)
 PORT=                   # Server port (default: 3001)
+
+# Access control — see "Securing a deployed backend" below
+API_TOKEN=              # Bearer token required on every endpoint except /api/health
+ALLOWED_ORIGINS=        # Comma-separated browser origins allowed to call the API
+
+# Timeouts
+LLM_TIMEOUT_MS=         # Per-LLM-request timeout (default 90000)
+RSS_TIMEOUT_MS=         # Per-feed fetch timeout (default 15000)
+
+# Maintenance
+PROMPT_SEED_FORCE=      # Set to 1 for one startup to overwrite locally-edited prompts
 ```
 
 **Client** (build-time only):
-- `VITE_API_URL` — backend URL for production split deployment (e.g., `https://your-railway-app.up.railway.app/api`)
+- `VITE_API_URL` — backend URL for a split deployment (e.g. `https://api.example.com/api`). Omit only if the frontend host proxies `/api` to the backend.
+- `VITE_API_TOKEN` — must match the server's `API_TOKEN` when auth is enabled.
+
+### Securing a deployed backend
+
+Running locally needs nothing: with `API_TOKEN` empty the API is open, and CORS
+allows `localhost` only. **As soon as the backend is reachable from anywhere
+else, set both variables.** Without a token, anyone who can reach the host can
+delete categories, rewrite the system prompts that produce every summary, and
+spend your LLM credits.
+
+```env
+# server/.env
+API_TOKEN=<a long random string>
+ALLOWED_ORIGINS=https://your-frontend.example
+```
+
+```env
+# client build environment
+VITE_API_TOKEN=<the same string>
+```
+
+`GET /api/health` stays unauthenticated so container health checks work. The API
+also rate-limits: 300 requests/min per IP overall, 20/min on the LLM-backed
+routes.
+
+### Prompt edits are preserved
+
+Prompts you edit in the `/prompts` UI survive restarts. On boot the server
+re-seeds the prompts defined in `server/db.js`, but only for rows still
+byte-identical to what it last wrote (tracked via `prompts.source_hash`).
+Anything you have changed is left alone and listed in the startup log. To
+deliberately adopt the code versions, run once with `PROMPT_SEED_FORCE=1`.
 
 ### Running
 
@@ -244,20 +287,44 @@ news-reader/
 
 ## Deployment
 
+Both halves deploy independently. Whichever host you use, set `API_TOKEN` +
+`ALLOWED_ORIGINS` on the server and `VITE_API_TOKEN` on the client — see
+[Securing a deployed backend](#securing-a-deployed-backend).
+
+### Docker / CasaOS (what `.github/workflows/deploy-*.yml` uses)
+
+Both `client/Dockerfile` and `server/Dockerfile` build standalone images; the
+workflows SSH to the host and run `~/newsreader/deploy-frontend.sh` /
+`deploy-backend.sh` there.
+
+- **Backend** — mount a volume for the DB and set `DB_PATH=/data/newsreader.db`
+  (already the image default). Health check hits `/api/health`.
+- **Frontend** — `client/nginx.conf` proxies `/api/` to `http://newsreader-api:3001`,
+  so put both containers on the same Docker network and the default
+  `VITE_API_URL=/api` works with no build arg. If your backend container has a
+  different name, change the `set $api_upstream` line in `client/nginx.conf`.
+
 ### Frontend (Vercel)
 
 - Build command: `cd client && npm install && npm run build`
 - Output directory: `client/dist`
-- Set `VITE_API_URL` env var to your backend URL
+- Set `VITE_API_URL` to your backend URL, including the `/api` suffix
 
-### Backend (Railway)
+`vercel.json` excludes `api/` from the SPA rewrite. Without that exclusion the
+rewrite matched `/api/*` too and every API call came back as `200 OK` with an
+HTML body — which surfaced as "Invalid response from server" rather than a
+network error. The client now detects HTML responses on API requests and reports
+the misconfiguration explicitly.
+
+### Backend (any Node host)
 
 - Root directory: `server`
 - Start command: `node index.js`
-- Set `PORT` env var (Railway provides this)
-- For database persistence: attach a volume (e.g., `/data`), set `DB_PATH=/data/newsreader.db`
+- Set `PORT` (most hosts provide it)
+- For database persistence: attach a volume (e.g. `/data`), set `DB_PATH=/data/newsreader.db`
 
-After deploying the backend, set `VITE_API_URL` in Vercel environment variables and redeploy the frontend.
+The process handles `SIGTERM`/`SIGINT` by checkpointing the SQLite WAL and
+closing the DB, so restarts don't leave an unflushed WAL behind.
 
 ## License
 

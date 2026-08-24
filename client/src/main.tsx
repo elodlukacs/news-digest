@@ -3,6 +3,11 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App'
+import { installApiFetch } from './lib/apiFetch'
+
+// Must run before any component mounts: adds the API bearer token (when
+// configured) and converts HTML-instead-of-JSON API responses into a clear error.
+installApiFetch()
 
 // Track the visible viewport height (shrinks when the iOS keyboard opens) so
 // bottom-anchored overlays (drawers, popups) can resize above the keyboard.

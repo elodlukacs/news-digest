@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { Compass, Search, Globe, Plus, Check, X, ExternalLink, Rss, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -18,6 +18,7 @@ import type {
   ExploreTopic,
   DiscoveredFeed,
 } from '../types';
+import { API_BASE } from '../config';
 
 interface Props {
   catalog: ExploreCatalog | null;
@@ -398,13 +399,22 @@ function SubscribeDialog({
   const [done, setDone] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  // The success delay was an untracked setTimeout that fired after unmount.
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+  }, []);
+  const scheduleClose = () => {
+    closeTimerRef.current = setTimeout(onClose, 800);
+  };
+
   const handlePick = async (categoryId: number) => {
     setBusy(true);
     setErr(null);
     try {
       await subscribe(categoryId, target.title, target.url);
       setDone(true);
-      setTimeout(onClose, 800);
+      scheduleClose();
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to subscribe');
     } finally {
@@ -419,14 +429,17 @@ function SubscribeDialog({
     setErr(null);
     try {
       await addCategory(name);
-      const res = await fetch('/api/categories');
+      // Was a hardcoded '/api/categories', which ignored VITE_API_URL and so
+      // broke this flow on any deployment where the API isn't same-origin.
+      const res = await fetch(`${API_BASE}/categories`);
+      if (!res.ok) throw new Error('Could not reload sections');
       const fresh: Category[] = await res.json();
       const created = fresh.find((c) => c.name === name);
       if (!created) throw new Error('Could not locate the new section');
       await subscribe(created.id, target.title, target.url);
       await refresh();
       setDone(true);
-      setTimeout(onClose, 800);
+      scheduleClose();
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to create section');
     } finally {

@@ -1,12 +1,72 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const db = require('./db');
+const requireAuth = require('./middleware/auth');
+const rateLimit = require('./middleware/rateLimit');
+const { notFound, errorHandler } = require('./middleware/errors');
+const { startRetention } = require('./lib/retention');
+const { backfillUrlKeys } = require('./lib/feedHealth');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors());
-app.use(express.json());
+// CORS: allowlist from ALLOWED_ORIGINS (comma-separated). Unset means
+// same-origin/local only — a wildcard would let any page the owner visits read
+// API responses and spend the LLM keys.
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin) return callback(null, true);            // same-origin / curl / server-to-server
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    if (!allowedOrigins.length && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+      return callback(null, true);                       // dev default
+    }
+    const err = new Error(`Origin not allowed: ${origin}`);
+    err.statusCode = 403;
+    err.code = 'origin_not_allowed';
+    err.expose = true;
+    return callback(err);
+  },
+  credentials: false,
+}));
+
+app.use(express.json({ limit: '256kb' }));
+
+// Baseline security headers (hand-rolled — no helmet dependency needed for an
+// API that serves only JSON).
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
+  next();
+});
+
+// Liveness probe: must not touch the DB, so it still answers when the DB is
+// the thing that's broken. Placed before auth so probes need no token.
+app.get('/api/health', (req, res) => {
+  res.json({ ok: true, uptime: Math.round(process.uptime()), auth: requireAuth.enabled });
+});
+
+app.use(rateLimit({ windowMs: 60_000, max: 300, name: 'api' }));
+app.use(requireAuth);
+
+// Tighter bucket on the routes that spend money. Every one of these makes at
+// least one LLM call per request.
+const llmLimit = rateLimit({ windowMs: 60_000, max: 20, name: 'llm' });
+for (const path of [
+  '/api/chat', '/api/forensics', '/api/compare', '/api/spectrum', '/api/briefing',
+  '/api/inoculation', '/api/scientist', '/api/bridge', '/api/cognitive',
+  '/api/bias-radar', '/api/bias-mirror', '/api/fallacy-dojo', '/api/conspiracy-anatomy',
+  '/api/source-lab', '/api/propaganda-timeline', '/api/manipulator',
+  '/api/homepage/surprise', '/api/discover-feed',
+]) {
+  app.use(path, llmLimit);
+}
 
 // Routers
 app.use('/api/categories', require('./routes/categories'));
@@ -50,6 +110,45 @@ app.use('/api/propaganda-timeline', require('./routes/propaganda-timeline'));
 app.use('/api/manipulator', require('./routes/manipulator'));
 app.use('/api/logs', require('./routes/logs'));
 
-app.listen(PORT, () => {
+// Terminal handlers — must come after every router.
+app.use('/api', notFound);
+app.use(errorHandler);
+
+// Maintenance on a timer, not inside a GET handler.
+startRetention(db);
+backfillUrlKeys(db);
+
+const server = app.listen(PORT, () => {
   console.log(`News Reader API running on http://localhost:${PORT}`);
+  console.log(`[startup] auth: ${requireAuth.enabled ? 'enabled (API_TOKEN set)' : 'DISABLED — set API_TOKEN if this host is reachable from outside localhost'}`);
+  console.log(`[startup] cors: ${allowedOrigins.length ? allowedOrigins.join(', ') : 'localhost only (set ALLOWED_ORIGINS for a deployed frontend)'}`);
 });
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[fatal] unhandled promise rejection:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[fatal] uncaught exception:', err);
+});
+
+// SQLite runs in WAL mode; without an explicit close on shutdown the WAL is
+// left unflushed on every container restart.
+let shuttingDown = false;
+function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`[shutdown] ${signal} received, closing server...`);
+  server.close(() => {
+    try {
+      db.pragma('wal_checkpoint(TRUNCATE)');
+      db.close();
+      console.log('[shutdown] database closed');
+    } catch (err) {
+      console.error('[shutdown] error closing database:', err.message);
+    }
+    process.exit(0);
+  });
+  setTimeout(() => process.exit(1), 10_000).unref();
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

@@ -50,15 +50,33 @@ export function EchoChamberSimulator() {
   const [biasLevel, setBiasLevel] = useState(50);
   const [userLean, setUserLean] = useState<'left' | 'center' | 'right'>('center');
 
+  // Deterministic per-post value instead of Math.random(): the memo used to
+  // re-roll on every slider tick, so posts flickered in and out
+  // non-monotonically as you dragged — and a random draw during render is
+  // impure. A stable hash also makes the simulation reproducible, which is what
+  // you want when the point is to demonstrate an effect.
+  const postRolls = useMemo(
+    () => SIMULATED_POSTS.map((post, i) => {
+      const seed = `${post.bias}:${i}`;
+      let h = 2166136261;
+      for (let c = 0; c < seed.length; c++) {
+        h ^= seed.charCodeAt(c);
+        h = Math.imul(h, 16777619);
+      }
+      return ((h >>> 0) % 1000) / 1000;
+    }),
+    [],
+  );
+
   const feed = useMemo(() => {
     const userPos = BIAS_POSITIONS[userLean === 'left' ? 'left' : userLean === 'right' ? 'right' : 'center'];
     const suppressionStrength = biasLevel / 100;
 
-    return SIMULATED_POSTS.map(post => {
+    return SIMULATED_POSTS.map((post, i) => {
       const postPos = BIAS_POSITIONS[post.bias];
       const distance = Math.abs(postPos - userPos);
       const suppressionChance = distance * 0.25 * suppressionStrength;
-      const suppressed = Math.random() < suppressionChance;
+      const suppressed = postRolls[i] < suppressionChance;
       const dimmed = !suppressed && distance >= 2 && suppressionStrength > 0.3;
 
       return {
@@ -74,7 +92,7 @@ export function EchoChamberSimulator() {
       if (!a.suppressed && b.suppressed) return -1;
       return b.effectiveLikes - a.effectiveLikes;
     });
-  }, [biasLevel, userLean]);
+  }, [biasLevel, userLean, postRolls]);
 
   const visibleCount = feed.filter(p => !p.suppressed).length;
   const suppressedCount = feed.filter(p => p.suppressed).length;

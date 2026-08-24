@@ -136,4 +136,51 @@ router.post('/recovery-boost', (req, res) => {
   });
 });
 
+// POST /api/gamification/skill-event — record one answer from any exercise.
+//
+// Every module used to keep its own scoreboard, and the in-reading-flow
+// ChallengeQuiz kept none at all. A single event log makes mastery per
+// technique derivable instead of guessed.
+router.post('/skill-event', (req, res) => {
+  const { module: moduleName, itemType, itemRef, userAnswer, correctAnswer, correct, latencyMs } = req.body || {};
+  if (!moduleName) return res.status(400).json({ error: 'module is required' });
+
+  const clip = (v) => (v == null ? null : String(v).slice(0, 200));
+  const latency = Number.isFinite(Number(latencyMs)) ? Math.max(0, Math.round(Number(latencyMs))) : null;
+
+  db.prepare(`
+    INSERT INTO skill_events (module, item_type, item_ref, user_answer, correct_answer, correct, latency_ms, created_at)
+    VALUES (?,?,?,?,?,?,?,?)
+  `).run(
+    clip(moduleName), clip(itemType), clip(itemRef),
+    clip(userAnswer), clip(correctAnswer),
+    correct ? 1 : 0, latency, new Date().toISOString()
+  );
+
+  res.json({ ok: true });
+});
+
+// GET /api/gamification/mastery — accuracy per item type, weakest first.
+router.get('/mastery', (req, res) => {
+  const days = Math.min(Math.max(1, parseInt(req.query.days, 10) || 90), 365);
+  const since = new Date(Date.now() - days * 86400000).toISOString();
+
+  const rows = db.prepare(`
+    SELECT item_type AS itemType,
+           COUNT(*) AS attempts,
+           SUM(correct) AS correct,
+           CAST(AVG(latency_ms) AS INTEGER) AS avgLatencyMs
+    FROM skill_events
+    WHERE created_at >= ? AND item_type IS NOT NULL
+    GROUP BY item_type
+    HAVING attempts > 0
+  `).all(since);
+
+  res.json(
+    rows
+      .map(r => ({ ...r, accuracy: r.attempts ? r.correct / r.attempts : 0 }))
+      .sort((a, b) => a.accuracy - b.accuracy)
+  );
+});
+
 module.exports = router;

@@ -27,6 +27,7 @@ import {
   SheetTitle,
   SheetDescription,
 } from '../ui/sheet';
+import { safeHref } from '../../utils/safeHref';
 
 /* ─── Types ─── */
 
@@ -124,12 +125,25 @@ export function HomeRoute() {
   const [chatSending, setChatSending] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
+  const elaborateAbortRef = useRef<AbortController | null>(null);
+  const chatAbortRef = useRef<AbortController | null>(null);
   const transitionRef = useRef(false);
+
+  // The filter sheet's checkboxes are draft state. `appliedIdsRef` holds what
+  // the user actually confirmed with Apply — reading the draft array directly
+  // made `fetchArticle` change identity on every chip tap, so every tap inside
+  // the open sheet aborted and re-issued the request.
+  const appliedIdsRef = useRef<number[]>(getStoredCategoryIds());
+  // Identifies the article currently on screen, so a slow elaborate/chat
+  // response can tell it has been superseded.
+  const articleKeyRef = useRef<string | null>(null);
 
   const [phase, setPhase] = useState<'idle' | 'exit' | 'enter'>('idle');
 
   const fetchArticle = useCallback(async (retryAfterClear = false) => {
     if (abortRef.current) abortRef.current.abort();
+    elaborateAbortRef.current?.abort();
+    chatAbortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
 
@@ -142,10 +156,10 @@ export function HomeRoute() {
 
     try {
       const seen = getSeenUrls();
+      const appliedIds = appliedIdsRef.current;
       const params = new URLSearchParams();
       if (seen.size > 0) params.set('exclude', [...seen].join(','));
-      if (selectedCategoryIds.length > 0)
-        params.set('categories', selectedCategoryIds.join(','));
+      if (appliedIds.length > 0) params.set('categories', appliedIds.join(','));
       const qs = params.toString();
       const res = await fetch(`${SURPRISE_BASE}${qs ? `?${qs}` : ''}`, {
         signal: controller.signal,
@@ -163,6 +177,7 @@ export function HomeRoute() {
       }
       const data = (await res.json()) as SurpriseArticle;
       if (data.link) addSeenUrls([data.link]);
+      articleKeyRef.current = String(data.article_id ?? data.link ?? '');
       setArticle(data);
     } catch (e: unknown) {
       if (e instanceof DOMException && e.name === 'AbortError') return;
@@ -176,12 +191,14 @@ export function HomeRoute() {
         }
       }
     }
-  }, [selectedCategoryIds]);
+  }, []);
 
   useEffect(() => {
     fetchArticle();
     return () => {
       abortRef.current?.abort();
+      elaborateAbortRef.current?.abort();
+      chatAbortRef.current?.abort();
     };
   }, [fetchArticle]);
 
@@ -211,12 +228,20 @@ export function HomeRoute() {
 
   const handleElaborate = useCallback(async () => {
     if (!article || elaborating) return;
+    elaborateAbortRef.current?.abort();
+    const controller = new AbortController();
+    elaborateAbortRef.current = controller;
+    // Pressing "Next story" while this is in flight used to paint the previous
+    // article's expansion under the new headline.
+    const requestedFor = String(article.article_id ?? article.link ?? '');
+
     setElaborating(true);
     setElaborateError(null);
     try {
       const res = await fetch(`${SURPRISE_BASE}/elaborate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           article_id: article.article_id,
           title: article.title,
@@ -229,13 +254,16 @@ export function HomeRoute() {
         throw new Error(data.error || 'Failed to elaborate');
       }
       const data = await res.json();
+      if (articleKeyRef.current !== requestedFor) return;
       setElaborated(String(data.content || '').trim());
     } catch (e: unknown) {
+      if (e instanceof DOMException && e.name === 'AbortError') return;
+      if (articleKeyRef.current !== requestedFor) return;
       setElaborateError(
         e instanceof Error ? e.message : 'Failed to elaborate',
       );
     } finally {
-      setElaborating(false);
+      if (!controller.signal.aborted) setElaborating(false);
     }
   }, [article, elaborating]);
 
@@ -247,12 +275,18 @@ export function HomeRoute() {
         content: text,
         created_at: new Date().toISOString(),
       };
+      chatAbortRef.current?.abort();
+      const controller = new AbortController();
+      chatAbortRef.current = controller;
+      const requestedFor = String(article.article_id ?? article.link ?? '');
+
       setChatMessages((prev) => [...prev, optimistic]);
       setChatSending(true);
       try {
         const res = await fetch(`${SURPRISE_BASE}/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
           body: JSON.stringify({
             article_id: article.article_id,
             title: article.title,
@@ -265,6 +299,7 @@ export function HomeRoute() {
           throw new Error(data.error || 'Chat failed');
         }
         const reply = await res.json();
+        if (articleKeyRef.current !== requestedFor) return;
         setChatMessages((prev) => [
           ...prev,
           {
@@ -274,6 +309,8 @@ export function HomeRoute() {
           },
         ]);
       } catch (e: unknown) {
+        if (e instanceof DOMException && e.name === 'AbortError') return;
+        if (articleKeyRef.current !== requestedFor) return;
         setChatMessages((prev) => [
           ...prev,
           {
@@ -283,7 +320,7 @@ export function HomeRoute() {
           },
         ]);
       } finally {
-        setChatSending(false);
+        if (!controller.signal.aborted) setChatSending(false);
       }
     },
     [article, chatSending, elaborated],
@@ -301,6 +338,7 @@ export function HomeRoute() {
 
   const handleApplyFilter = useCallback(() => {
     storeCategoryIds(selectedCategoryIds);
+    appliedIdsRef.current = selectedCategoryIds;
     setFilterOpen(false);
     clearSeenUrls();
     if (article && !loading && phase === 'idle') {
@@ -523,7 +561,7 @@ export function HomeRoute() {
                   className="flex-1 h-11 md:h-12 rounded-xl text-[13px] md:text-[14px] font-[family-name:var(--font-widget)] font-semibold text-ink-muted hover:text-ink hover:bg-ink/5"
                 >
                   <a
-                    href={article.link}
+                    href={safeHref(article.link)}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}

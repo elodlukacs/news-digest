@@ -9,7 +9,7 @@ const router = express.Router();
 const PLATFORMS = ['Twitter/X', 'Facebook', 'Reddit', 'News sites', 'YouTube', 'TikTok', 'Instagram'];
 
 router.post('/narrative-map', async (req, res) => {
-  const { topic, userId, provider } = req.body;
+  const { topic, userId, provider } = req.body || {};
   
   if (!topic || topic.trim().length < 3) {
     return res.status(400).json({ error: 'Topic must be at least 3 characters' });

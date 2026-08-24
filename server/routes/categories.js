@@ -22,7 +22,7 @@ router.get('/:id', validateId, (req, res) => {
 });
 
 router.post('/', (req, res) => {
-  const { name, icon } = req.body;
+  const { name, icon } = req.body || {};
   if (!name) return res.status(400).json({ error: 'Name is required' });
   try {
     const maxOrder = db.prepare('SELECT MAX(sort_order) as m FROM categories').get();
@@ -34,7 +34,7 @@ router.post('/', (req, res) => {
 });
 
 router.put('/:id/name', validateId, (req, res) => {
-  const { name } = req.body;
+  const { name } = req.body || {};
   if (!name || !name.trim()) return res.status(400).json({ error: 'Name is required' });
   try {
     const result = db.prepare('UPDATE categories SET name = ? WHERE id = ?').run(name.trim(), req.params.id);
@@ -49,20 +49,20 @@ router.put('/:id/name', validateId, (req, res) => {
 });
 
 router.put('/:id/prompt', validateId, (req, res) => {
-  const { prompt } = req.body;
+  const { prompt } = req.body || {};
   db.prepare('UPDATE categories SET custom_prompt = ? WHERE id = ?').run(prompt || '', req.params.id);
   res.json({ ok: true });
 });
 
 router.put('/:id/language', validateId, (req, res) => {
-  const { language } = req.body;
+  const { language } = req.body || {};
   db.prepare('UPDATE categories SET language = ? WHERE id = ?').run(language || 'English', req.params.id);
   res.json({ ok: true });
 });
 
 router.put('/:id/order', validateId, (req, res) => {
   const id = parseInt(req.params.id);
-  const { afterId } = req.body;
+  const { afterId } = req.body || {};
 
   const all = db.prepare('SELECT id FROM categories ORDER BY sort_order').all();
   const ids = all.map(r => r.id).filter(cid => cid !== id);

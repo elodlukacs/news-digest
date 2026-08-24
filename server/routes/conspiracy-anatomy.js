@@ -8,7 +8,7 @@ const router = express.Router();
 
 // POST /api/conspiracy-anatomy/analyze
 router.post('/analyze', async (req, res) => {
-  const { claim, provider } = req.body;
+  const { claim, provider } = req.body || {};
   if (!claim || claim.trim().length < 10) {
     return res.status(400).json({ error: 'Claim must be at least 10 characters' });
   }

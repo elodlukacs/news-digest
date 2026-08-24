@@ -13,10 +13,6 @@ import { useLlm } from '../../../contexts/LlmContext';
 import type { DebateResponse, RethinkingEntry } from '../../../types';
 import { JournalTrends } from './JournalTrends';
 
-interface Props {
-  // selectedLlm now comes from LlmContext
-}
-
 type ThinkingMode = 'scientist' | 'preacher' | 'prosecutor' | 'politician' | 'unknown';
 
 const THINKING_MODES: Record<ThinkingMode, { label: string; color: string; description: string; shortLabel: string }> = {
@@ -51,7 +47,7 @@ function detectThinkingMode(claim: string, confidence: number): ThinkingMode {
   return 'unknown';
 }
 
-export function ScientistPanel(_props: Props) {
+export function ScientistPanel() {
   const selectedLlm = useLlm();
   const [claim, setClaim] = useState('');
   const [debate, setDebate] = useState<DebateResponse[] | null>(null);

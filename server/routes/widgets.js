@@ -1,20 +1,42 @@
 const express = require('express');
-const { parser } = require('../lib/rss');
+const { parseFeedUrl } = require('../lib/rss');
 const { fetchWithTimeout } = require('../lib/fetchWithTimeout');
 
 const router = express.Router();
+
+// Upstream JSON with a status check. Without this an upstream error page was
+// parsed as data and surfaced as a TypeError several lines later.
+async function fetchUpstreamJson(url, label) {
+  const resp = await fetchWithTimeout(url);
+  if (!resp.ok) {
+    const err = new Error(`${label} request failed (${resp.status})`);
+    err.statusCode = 502;
+    err.expose = true;
+    throw err;
+  }
+  return resp.json();
+}
+
+// Coordinates are interpolated into an upstream query string, so an
+// unvalidated value could inject extra `&`-separated parameters and change what
+// the upstream returns.
+function coord(value, fallback, limit) {
+  const n = Number.parseFloat(value);
+  if (!Number.isFinite(n) || Math.abs(n) > limit) return fallback;
+  return n;
+}
 
 let cryptoCache = { data: null, fetchedAt: 0 };
 const releasesCache = new Map();
 
 router.get('/weather', async (req, res) => {
   try {
-    const lat = req.query.lat || 46.77;
-    const lon = req.query.lon || 23.60;
-    const resp = await fetchWithTimeout(
-      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=4&timezone=auto`
+    const lat = coord(req.query.lat, 46.77, 90);
+    const lon = coord(req.query.lon, 23.60, 180);
+    const data = await fetchUpstreamJson(
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=4&timezone=auto`,
+      'Weather'
     );
-    const data = await resp.json();
     const current = data.current;
 
     const weatherCodes = {
@@ -55,8 +77,7 @@ router.get('/weather', async (req, res) => {
 
 router.get('/rates', async (req, res) => {
   try {
-    const resp = await fetchWithTimeout('https://open.er-api.com/v6/latest/RON');
-    const data = await resp.json();
+    const data = await fetchUpstreamJson('https://open.er-api.com/v6/latest/RON', 'Exchange rates');
     const pick = ['EUR', 'USD', 'GBP', 'HUF'];
     const rates = {};
     for (const c of pick) {
@@ -79,7 +100,7 @@ router.get('/headlines', async (req, res) => {
 
     const results = await Promise.allSettled(
       [pbsFeed].map(async (feed) => {
-        const parsed = await parser.parseURL(feed.url);
+        const parsed = await parseFeedUrl(feed.url);
         return parsed.items.slice(0, 10).map((item) => ({
           title: item.title || '',
           link: item.link || '',
@@ -105,8 +126,7 @@ router.get('/crypto', async (req, res) => {
     return res.json(cryptoCache.data);
   }
   try {
-    const resp = await fetchWithTimeout('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd&include_24hr_change=true');
-    const data = await resp.json();
+    const data = await fetchUpstreamJson('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd&include_24hr_change=true', 'Crypto prices');
     if (!data.bitcoin?.usd) {
       if (cryptoCache.data) return res.json(cryptoCache.data);
       return res.json([]);
@@ -159,14 +179,12 @@ router.get('/releases', async (req, res) => {
 
     const moviePages = await Promise.all(
       Array.from({ length: TMDB_PAGES }, (_, i) =>
-        fetchWithTimeout(`https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&primary_release_date.gte=${from}&primary_release_date.lte=${to}&sort_by=popularity.desc&page=${i + 1}&without_genres=16`)
-          .then(r => r.json())
+        fetchUpstreamJson(`https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&primary_release_date.gte=${from}&primary_release_date.lte=${to}&sort_by=popularity.desc&page=${i + 1}&without_genres=16`, 'TMDB')
       )
     );
     const tvPages = await Promise.all(
       Array.from({ length: TMDB_PAGES }, (_, i) =>
-        fetchWithTimeout(`https://api.themoviedb.org/3/discover/tv?api_key=${apiKey}&first_air_date.gte=${from}&first_air_date.lte=${to}&sort_by=popularity.desc&page=${i + 1}&without_genres=16`)
-          .then(r => r.json())
+        fetchUpstreamJson(`https://api.themoviedb.org/3/discover/tv?api_key=${apiKey}&first_air_date.gte=${from}&first_air_date.lte=${to}&sort_by=popularity.desc&page=${i + 1}&without_genres=16`, 'TMDB')
       )
     );
 
@@ -238,10 +256,15 @@ router.get('/releases/:type/:id', async (req, res) => {
 
   const { type, id } = req.params;
   if (type !== 'movie' && type !== 'tv') return res.status(400).json({ error: 'Invalid type' });
+  // `id` lands in the upstream PATH — an encoded traversal would otherwise reach
+  // other TMDB endpoints with our API key attached.
+  if (!/^\d+$/.test(id)) return res.status(400).json({ error: 'Invalid id' });
 
   try {
-    const resp = await fetchWithTimeout(`https://api.themoviedb.org/3/${type}/${id}?api_key=${apiKey}&append_to_response=credits,videos`);
-    const data = await resp.json();
+    const data = await fetchUpstreamJson(
+      `https://api.themoviedb.org/3/${type}/${id}?api_key=${apiKey}&append_to_response=credits,videos`,
+      'TMDB'
+    );
     if (data.success === false) return res.status(404).json({ error: 'Not found' });
 
     const cast = (data.credits?.cast || []).slice(0, 8).map(c => c.name);
@@ -284,7 +307,7 @@ router.get('/weird-fact', async (req, res) => {
     return res.json(weirdFactCache.data);
   }
   try {
-    const parsed = await parser.parseURL('https://www.atlasobscura.com/feeds/latest');
+    const parsed = await parseFeedUrl('https://www.atlasobscura.com/feeds/latest');
     const item = parsed.items[0];
     if (!item) return res.json(null);
     const data = {
@@ -314,8 +337,7 @@ router.get('/on-this-day', async (req, res) => {
     const mm = String(now.getMonth() + 1).padStart(2, '0');
     const dd = String(now.getDate()).padStart(2, '0');
     const url = `https://api.wikimedia.org/feed/v1/wikipedia/en/onthisday/all/${mm}/${dd}`;
-    const resp = await fetchWithTimeout(url, {}, 5000);
-    const data = await resp.json();
+    const data = await fetchUpstreamJson(url, 'On this day');
     const events = (data.selected || data.events || []).slice(0, 3).map(e => ({
       year: e.year,
       text: e.text,

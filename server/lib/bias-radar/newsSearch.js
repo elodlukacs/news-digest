@@ -1,4 +1,4 @@
-const { parser } = require('../rss');
+const { parseFeedUrl } = require('../rss');
 const { getBiasRating, getBiasRatingByName } = require('./biasRatings');
 
 const STOPWORDS = new Set([
@@ -127,7 +127,7 @@ async function searchGoogleNews(title, language = 'English') {
 
     try {
       const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=${langConfig.hl}&gl=${langConfig.gl}`;
-      const parsed = await parser.parseURL(url);
+      const parsed = await parseFeedUrl(url);
 
       if (!parsed.items || parsed.items.length === 0) {
         console.warn('[GoogleNews] No results for query:', query);

@@ -13,7 +13,7 @@ const PERSONA_SLUGS = [
 
 // POST /api/scientist/debate — run multi-agent debate
 router.post('/debate', async (req, res) => {
-  const { claim, provider: selectedProvider } = req.body;
+  const { claim, provider: selectedProvider } = req.body || {};
   if (!claim || claim.trim().length < 10) return res.status(400).json({ error: 'Claim must be at least 10 characters' });
 
   try {
@@ -50,7 +50,7 @@ router.post('/debate', async (req, res) => {
 
 // POST /api/scientist/journal — log rethinking entry
 router.post('/journal', (req, res) => {
-  const { topic, initialConfidence, finalConfidence, shiftingEvidence, mode, userId } = req.body;
+  const { topic, initialConfidence, finalConfidence, shiftingEvidence, mode, userId } = req.body || {};
   if (!topic) return res.status(400).json({ error: 'Topic required' });
 
   const uid = userId || 'default';

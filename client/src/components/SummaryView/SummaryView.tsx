@@ -39,6 +39,7 @@ import { SourceBadge } from '../SourceBadge';
 import { BiasBar } from '../BiasBar';
 import { CredibilityBadge } from '../CredibilityBadge';
 import { SourceRatingsLegend } from '../SourceRatingsLegend';
+import { safeHref } from '../../utils/safeHref';
 
 interface Props {
   categoryName: string;
@@ -379,7 +380,7 @@ export function SummaryView({
                         li: ({ children }) => <li className="text-[16px] leading-[1.8] text-ink font-[family-name:var(--font-body)]">{children}</li>,
                         strong: ({ children }) => <strong className="font-bold text-ink">{children}</strong>,
                         a: ({ href, children }) => (
-                          <a href={href} target="_blank" rel="noopener noreferrer" className="text-masthead underline decoration-masthead/30 underline-offset-2 hover:decoration-masthead transition-colors cursor-pointer">
+                          <a href={safeHref(href)} target="_blank" rel="noopener noreferrer" className="text-masthead underline decoration-masthead/30 underline-offset-2 hover:decoration-masthead transition-colors cursor-pointer">
                             {children}
                           </a>
                         ),
@@ -452,7 +453,7 @@ export function SummaryView({
       {summary && sections.length > 0 && (
         <div className="pt-2 md:pt-8 pb-12 space-y-3 md:space-y-4">
           {sections.map((section, idx) => (
-            <article key={idx} className="rounded-2xl border border-rule/70 bg-paper-dark shadow-[0_2px_10px_-4px_rgba(0,0,0,0.08)] overflow-hidden md:rounded-none md:border-0 md:shadow-none md:bg-transparent md:overflow-visible">
+            <article key={section.url || section.title || idx} className="rounded-2xl border border-rule/70 bg-paper-dark shadow-[0_2px_10px_-4px_rgba(0,0,0,0.08)] overflow-hidden md:rounded-none md:border-0 md:shadow-none md:bg-transparent md:overflow-visible">
               <Card className="relative border-0 bg-transparent md:bg-paper-dark md:border md:border-rule overflow-visible md:overflow-hidden min-w-0">
                 {section.sentiment && (
                   <SentimentRibbon sentiment={section.sentiment} />
@@ -544,7 +545,7 @@ export function SummaryView({
                   <div className="mt-4 md:mt-5 -mx-4 md:-mx-5 px-3 md:px-4 py-3 md:py-3.5 flex flex-wrap gap-2 items-center border-t border-rule/70 bg-ink/[0.025]">
                     {section.url && (
                       <Button variant="outline" size="sm" className="group h-9 gap-2 rounded-xl pl-1.5 pr-3.5 text-[13px] font-medium bg-paper border-rule/80 hover:border-masthead/50 hover:text-masthead transition-colors [&_svg]:!size-4" asChild>
-                        <a href={section.url} target="_blank" rel="noopener noreferrer">
+                        <a href={safeHref(section.url)} target="_blank" rel="noopener noreferrer">
                           <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-masthead/10 text-masthead transition-colors group-hover:bg-masthead/20">
                             <ExternalLink size={16} strokeWidth={2} />
                           </span>
@@ -638,7 +639,17 @@ export function SummaryView({
 
       {!loading && !refreshing && !error && !summary && (
         <div className="py-24 text-center">
-          <p className="font-serif text-xl text-ink-muted italic">Click refresh to load the latest summary</p>
+          <p className="font-serif text-xl text-ink-muted italic">No summary for this section yet</p>
+          {/* Explicit affordance: loading a category no longer kicks off an
+              LLM call on its own. */}
+          <Button
+            variant="outline"
+            onClick={() => onRefresh()}
+            className="mt-5 h-11 rounded-xl px-6 font-[family-name:var(--font-widget)] text-[13px] font-semibold"
+          >
+            <RefreshCw size={15} />
+            <span>Generate summary</span>
+          </Button>
         </div>
       )}
 
@@ -648,7 +659,9 @@ export function SummaryView({
           if (radarSection.url) {
             sourceDomain = new URL(radarSection.url).hostname.replace(/^www\./, '');
           }
-        } catch {}
+        } catch {
+          // Malformed URL — fall back to the category name set above.
+        }
         return (
           <BiasRadarPanel
             open={radarOpen}

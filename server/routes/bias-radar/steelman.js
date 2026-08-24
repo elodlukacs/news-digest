@@ -7,7 +7,7 @@ const router = express.Router();
 
 router.post('/', async (req, res) => {
   try {
-    const { userPosition, articleContext, language } = req.body;
+    const { userPosition, articleContext, language } = req.body || {};
     // language: forwarded for future localized prompts (V2)
 
     if (!userPosition?.trim() || !articleContext?.trim()) {

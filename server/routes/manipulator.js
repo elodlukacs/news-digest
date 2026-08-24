@@ -41,7 +41,7 @@ router.get('/personas', (_req, res) => {
 
 // POST /api/manipulator/chat
 router.post('/chat', async (req, res) => {
-  const { personaId, message, interests = '', provider } = req.body;
+  const { personaId, message, interests = '', provider } = req.body || {};
 
   const persona = PERSONAS.find(p => p.id === personaId);
   if (!persona) {

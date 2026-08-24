@@ -59,7 +59,7 @@ function touchInoculationDate(userId) {
 
 // ─── POST /api/inoculation/generate — Passive Inoculation ───
 router.post('/generate', async (req, res) => {
-  const { topic, userId } = req.body;
+  const { topic, userId } = req.body || {};
   if (!topic) return res.status(400).json({ error: 'Topic required' });
 
   const uid = userId || 'default';
@@ -133,7 +133,7 @@ router.post('/generate', async (req, res) => {
 
 // ─── POST /api/inoculation/answer — submit answer ───
 router.post('/answer', async (req, res) => {
-  const { sessionId, selectedIndex } = req.body;
+  const { sessionId, selectedIndex } = req.body || {};
   if (!sessionId || selectedIndex === undefined) return res.status(400).json({ error: 'sessionId and selectedIndex required' });
 
   try {
@@ -182,7 +182,7 @@ router.post('/answer', async (req, res) => {
 
 // ─── POST /api/inoculation/craft — Active Inoculation ───
 router.post('/craft', async (req, res) => {
-  const { topic, tactic, userId } = req.body;
+  const { topic, tactic, userId } = req.body || {};
   if (!topic || !tactic) return res.status(400).json({ error: 'Topic and tactic required' });
 
   const uid = userId || 'default';
@@ -275,7 +275,7 @@ router.get('/targets', (_req, res) => {
 
 // ─── POST /api/inoculation/campaign — generate campaign round ───
 router.post('/campaign', async (req, res) => {
-  const { targetId, round = 1, totalRounds = 3, topic, userId } = req.body;
+  const { targetId, round = 1, totalRounds = 3, topic, userId } = req.body || {};
   if (!targetId) return res.status(400).json({ error: 'targetId required' });
 
   const uid = userId || 'default';
@@ -324,7 +324,7 @@ router.post('/campaign', async (req, res) => {
 
 // ─── POST /api/inoculation/campaign/answer — score campaign answer ───
 router.post('/campaign/answer', (req, res) => {
-  const { correctTechniques, actualTechniques, timeToIdentify } = req.body;
+  const { correctTechniques, actualTechniques, timeToIdentify } = req.body || {};
 
   if (!actualTechniques || !Array.isArray(actualTechniques)) {
     return res.status(400).json({ error: 'actualTechniques array required' });

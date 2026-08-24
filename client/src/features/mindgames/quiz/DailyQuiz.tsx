@@ -4,6 +4,7 @@ import { useLlm } from '../../../contexts/LlmContext';
 import TechniquePicker from '../bias-radar/TechniquePicker';
 import TechniqueCard from '../bias-radar/TechniqueCard';
 import type { TechniqueName, TechniqueResult } from '../../../types/lens';
+import { safeHref } from '../../../utils/safeHref';
 
 interface QuizArticle {
   id: number;
@@ -133,7 +134,7 @@ export function DailyQuiz({ onCorrect }: DailyQuizProps) {
           <p className="text-lg font-serif font-semibold text-ink leading-snug">{article.headline}</p>
           <p className="text-sm text-ink-muted line-clamp-4">{article.content?.slice(0, 300)}</p>
           <a 
-            href={article.url} 
+            href={safeHref(article.url)} 
             target="_blank" 
             rel="noopener noreferrer" 
             className="text-xs text-blue-600 underline"

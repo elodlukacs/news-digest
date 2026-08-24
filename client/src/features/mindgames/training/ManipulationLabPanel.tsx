@@ -84,7 +84,12 @@ export function ManipulationLabPanel() {
     }
   }, []);
 
-  useEffect(() => { loadTargets(); }, [loadTargets]);
+  useEffect(() => {
+    loadTargets();
+    // abortRef was declared but never aborted, so every in-flight campaign
+    // request resolved into an unmounted component.
+    return () => abortRef.current?.abort();
+  }, [loadTargets]);
 
   const startCampaign = async (target: AudienceTarget) => {
     abortRef.current?.abort();
@@ -141,6 +146,8 @@ export function ManipulationLabPanel() {
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
       setError(err instanceof Error ? err.message : 'Failed to generate round');
+      setStage('result');
+      setCurrentRound(currentRound);
     }
   };
 
@@ -172,12 +179,17 @@ export function ManipulationLabPanel() {
         }),
         signal: ctrl.signal,
       });
+      // res.ok was unchecked, so an error body was pushed into roundScores as
+      // if it were a score.
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Failed to score answer');
       const score = await res.json();
       setRoundScores(prev => [...prev, score]);
       setStage('result');
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
-      setError('Failed to score answer');
+      setError(err instanceof Error ? err.message : 'Failed to score answer');
+      // Without this the panel stayed on the loading spinner with no way back.
+      setStage('guessing');
     }
   };
 

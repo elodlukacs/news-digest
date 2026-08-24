@@ -1,5 +1,6 @@
 const Database = require('better-sqlite3');
 const path = require('path');
+const crypto = require('crypto');
 
 const dbPath = process.env.DB_PATH || path.join(__dirname, 'newsreader.db');
 const db = new Database(dbPath);
@@ -226,6 +227,30 @@ db.exec(`
     time_to_identify INTEGER DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
+
+  -- Cache for POST /api/bias-radar/decode. The same article always produces the
+  -- same analysis, so this endpoint used to re-run the model on every open.
+  CREATE TABLE IF NOT EXISTS article_decodes (
+    cache_key TEXT PRIMARY KEY,
+    headline TEXT,
+    result_json TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  -- Unified answer log across every exercise. ChallengeQuiz — the highest
+  -- frequency exercise — previously recorded the user's guess nowhere, so the
+  -- richest available signal about detection skill was discarded.
+  CREATE TABLE IF NOT EXISTS skill_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    module TEXT NOT NULL,
+    item_type TEXT,
+    item_ref TEXT,
+    user_answer TEXT,
+    correct_answer TEXT,
+    correct INTEGER DEFAULT 0,
+    latency_ms INTEGER,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
 `);
 
 function addColumnIfNotExists(table, column, definition) {
@@ -241,9 +266,31 @@ function addColumnIfNotExists(table, column, definition) {
 addColumnIfNotExists('categories', 'custom_prompt', "TEXT DEFAULT ''");
 addColumnIfNotExists('categories', 'language', "TEXT DEFAULT 'English'");
 addColumnIfNotExists('articles', 'topic_id', "TEXT DEFAULT ''");
+addColumnIfNotExists('prompts', 'source_hash', 'TEXT');
+// Normalized form of feeds.url — the Explore page compared raw URLs with exact
+// string equality, so an http/https or ?format= variant of a feed you already
+// had showed as unsubscribed and re-adding created a duplicate.
+addColumnIfNotExists('feeds', 'url_key', 'TEXT');
+// Broken feeds used to fail invisibly forever: refreshSummary catches per-feed
+// errors with console.warn and returns [], so a dead source silently shrank the
+// digest with nothing in the UI to say so.
+addColumnIfNotExists('feeds', 'last_ok_at', 'TEXT');
+addColumnIfNotExists('feeds', 'last_error', 'TEXT');
+addColumnIfNotExists('feeds', 'consecutive_failures', 'INTEGER DEFAULT 0');
 
 db.exec(`
   CREATE INDEX IF NOT EXISTS idx_sh_cat_date ON summary_history(category_id, date_key);
+  -- articles(link) is probed once per candidate inside the Break feature's
+  -- selection loop (routes/surprise.js) — without it that is a full table scan
+  -- per candidate, the hottest N+1 in the app.
+  CREATE INDEX IF NOT EXISTS idx_articles_link ON articles(link);
+  -- Every chat lookup filters on this pair (routes/chat.js, routes/surprise.js).
+  CREATE INDEX IF NOT EXISTS idx_chat_summary_title ON chat_messages(summary_id, article_title);
+  CREATE INDEX IF NOT EXISTS idx_llm_purpose ON llm_usage(purpose);
+  CREATE INDEX IF NOT EXISTS idx_llm_provider ON llm_usage(provider);
+  CREATE INDEX IF NOT EXISTS idx_decodes_created ON article_decodes(created_at);
+  CREATE INDEX IF NOT EXISTS idx_skill_module ON skill_events(module, created_at);
+  CREATE INDEX IF NOT EXISTS idx_skill_item ON skill_events(item_type, correct);
   CREATE INDEX IF NOT EXISTS idx_articles_cat ON articles(category_id);
   CREATE INDEX IF NOT EXISTS idx_llm_date ON llm_usage(created_at);
   CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
@@ -886,11 +933,68 @@ Jobs:
   seedPrompts();
 }
 
-// Force-update Foolproof inoculation prompts on every startup
+/**
+ * Seed a code-owned prompt without destroying user edits.
+ *
+ * These blocks used to run an unconditional `ON CONFLICT DO UPDATE`, so every
+ * prompt edited through `PUT /api/prompts/:slug` was silently reverted on the
+ * next restart — i.e. on every deploy.
+ *
+ * `prompts.source_hash` records the content this file last wrote. A row is
+ * safe to update only when it still hashes to that value, meaning nobody has
+ * edited it since. Rows with a NULL hash predate this mechanism and have
+ * unknown provenance, so they are left alone unless PROMPT_SEED_FORCE=1.
+ */
+const PROMPT_SEED_FORCE = process.env.PROMPT_SEED_FORCE === '1';
+const promptSeedStats = { inserted: 0, updated: 0, current: 0, preserved: [] };
+
+const contentHash = (systemMessage, userPrompt) =>
+  crypto.createHash('sha256').update(`${systemMessage ?? ''} ${userPrompt ?? ''}`).digest('hex');
+
+const selectPromptRow = db.prepare('SELECT system_message, user_prompt, source_hash FROM prompts WHERE slug = ?');
+const insertSeededPrompt = db.prepare(`INSERT INTO prompts (slug, name, description, category, system_message, user_prompt, source_hash, created_at, updated_at)
+  VALUES (?,?,?,?,?,?,?,datetime('now'),datetime('now'))`);
+const updateSeededPrompt = db.prepare(`UPDATE prompts
+  SET name = ?, description = ?, category = ?, system_message = ?, user_prompt = ?, source_hash = ?, updated_at = datetime('now')
+  WHERE slug = ?`);
+const stampPromptHash = db.prepare('UPDATE prompts SET source_hash = ? WHERE slug = ?');
+
+function seedManagedPrompt(slug, name, description, category, systemMessage, userPrompt) {
+  const hash = contentHash(systemMessage, userPrompt);
+  const row = selectPromptRow.get(slug);
+
+  if (!row) {
+    insertSeededPrompt.run(slug, name, description, category, systemMessage, userPrompt, hash);
+    promptSeedStats.inserted++;
+    return;
+  }
+
+  const rowHash = contentHash(row.system_message, row.user_prompt);
+
+  // The DB already holds exactly what the code wants — stamp the hash if it
+  // predates this mechanism, then leave it alone.
+  if (rowHash === hash) {
+    if (row.source_hash !== hash) stampPromptHash.run(hash, slug);
+    promptSeedStats.current++;
+    return;
+  }
+
+  // The row differs from the code. Overwrite only when it is still byte-identical
+  // to whatever this file last seeded, i.e. nobody has edited it.
+  const untouchedSinceSeed = row.source_hash !== null && rowHash === row.source_hash;
+  if (untouchedSinceSeed || PROMPT_SEED_FORCE) {
+    updateSeededPrompt.run(name, description, category, systemMessage, userPrompt, hash, slug);
+    promptSeedStats.updated++;
+    return;
+  }
+
+  // User-edited, or pre-existing with unknown provenance — keep the DB copy.
+  promptSeedStats.preserved.push(slug);
+}
+
+// Foolproof inoculation prompts
 const updateInoculationPrompts = db.transaction(() => {
-  const upsert = db.prepare(`INSERT INTO prompts (slug, name, description, category, system_message, user_prompt, created_at, updated_at)
-    VALUES (?,?,?,?,?,?,datetime('now'),datetime('now'))
-    ON CONFLICT(slug) DO UPDATE SET system_message=excluded.system_message, user_prompt=excluded.user_prompt, updated_at=datetime('now')`);
+  const upsert = { run: seedManagedPrompt };
 
   upsert.run(
     'foolproof_passive_inoculation',
@@ -1133,11 +1237,9 @@ Respond in plain text, not JSON. Stay in character.`
 });
 updateInoculationPrompts();
 
-// Enhancement prompts — upserted on every startup
+// Enhancement prompts
 const updateEnhancementPrompts = db.transaction(() => {
-  const upsert = db.prepare(`INSERT INTO prompts (slug, name, description, category, system_message, user_prompt, created_at, updated_at)
-    VALUES (?,?,?,?,?,?,datetime('now'),datetime('now'))
-    ON CONFLICT(slug) DO UPDATE SET system_message=excluded.system_message, user_prompt=excluded.user_prompt, updated_at=datetime('now')`);
+  const upsert = { run: seedManagedPrompt };
 
   upsert.run(
     'contrarian-take',
@@ -1333,11 +1435,9 @@ Write it as if you're speaking to an audience. Use "so...", "you know what's wil
 });
 updateEnhancementPrompts();
 
-// Break / Surprise feature prompts — upserted on every startup
+// Break / Surprise feature prompts
 const updateSurprisePrompts = db.transaction(() => {
-  const upsert = db.prepare(`INSERT INTO prompts (slug, name, description, category, system_message, user_prompt, created_at, updated_at)
-    VALUES (?,?,?,?,?,?,datetime('now'),datetime('now'))
-    ON CONFLICT(slug) DO UPDATE SET system_message=excluded.system_message, user_prompt=excluded.user_prompt, updated_at=datetime('now')`);
+  const upsert = { run: seedManagedPrompt };
 
   upsert.run(
     'surprise-brief',
@@ -1392,16 +1492,10 @@ Rules:
 });
 updateSurprisePrompts();
 
-// Force-update the job-filter prompt so existing DBs get the parameterised
-// version that reads role/stack/region from JOB_PROFILE at runtime.
+// Job-filter prompt: the parameterised version reads role/stack/region from
+// JOB_PROFILE at runtime.
 try {
-  db.prepare(`INSERT INTO prompts (slug, name, description, category, system_message, user_prompt, created_at, updated_at)
-    VALUES (?,?,?,?,?,?,datetime('now'),datetime('now'))
-    ON CONFLICT(slug) DO UPDATE SET
-      description=excluded.description,
-      system_message=excluded.system_message,
-      user_prompt=excluded.user_prompt,
-      updated_at=datetime('now')`).run(
+  seedManagedPrompt(
     'job-filter',
     'Job Filter',
     'Classifies job postings by relevance for the configured JOB_PROFILE',
@@ -1424,9 +1518,20 @@ If none match, return: []
 Jobs:
 {{jobs}}`
   );
-} catch (e) { console.warn('[db] job-filter prompt upsert failed:', e.message); }
+} catch (e) { console.warn('[db] job-filter prompt seed failed:', e.message); }
 
 // Clean up deprecated prompt slugs
 try { db.prepare("DELETE FROM prompts WHERE slug IN ('inoculation-twister', 'inoculation-cdo')").run(); } catch (e) {}
+
+console.log(
+  `[db] prompts seeded: ${promptSeedStats.inserted} new, ${promptSeedStats.updated} updated, ` +
+  `${promptSeedStats.current} already current, ${promptSeedStats.preserved.length} preserved`
+);
+if (promptSeedStats.preserved.length > 0) {
+  console.log(
+    `[db] kept local prompt content for: ${promptSeedStats.preserved.join(', ')}\n` +
+    '      (run once with PROMPT_SEED_FORCE=1 to overwrite these with the code versions)'
+  );
+}
 
 module.exports = db;

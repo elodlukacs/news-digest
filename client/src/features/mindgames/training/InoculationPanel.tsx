@@ -101,9 +101,17 @@ export function InoculationPanel() {
 
   // Display antibody count from server (no optimistic update to avoid stale state on wrong answers)
 
-  const abortRef = useRef<AbortController | null>(null);
+  // One controller per request stream. A single shared ref meant generating a
+  // round, answering it, and crafting a headline all cancelled each other.
+  const generateAbortRef = useRef<AbortController | null>(null);
+  const answerAbortRef = useRef<AbortController | null>(null);
+  const craftAbortRef = useRef<AbortController | null>(null);
 
-  useEffect(() => { return () => abortRef.current?.abort(); }, []);
+  useEffect(() => () => {
+    generateAbortRef.current?.abort();
+    answerAbortRef.current?.abort();
+    craftAbortRef.current?.abort();
+  }, []);
 
   // Load session history + antigens on mount
   const loadSessions = useCallback(async () => {
@@ -144,9 +152,9 @@ export function InoculationPanel() {
 
   const generate = async () => {
     if (!topic.trim()) return;
-    abortRef.current?.abort();
+    generateAbortRef.current?.abort();
     const ctrl = new AbortController();
-    abortRef.current = ctrl;
+    generateAbortRef.current = ctrl;
     setLoading(true);
     setSession(null);
     setSelected(null);
@@ -162,7 +170,7 @@ export function InoculationPanel() {
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Failed to generate round');
       const data = await res.json();
-      setSession({ ...data, score: session?.score ?? 0 });
+      setSession(prev => ({ ...data, score: prev?.score ?? 0 }));
       if (data.dose) setCurrentDose(data.dose);
       if (data.needsBooster !== undefined) setNeedsBooster(data.needsBooster);
       if (data.antibodyCount !== undefined) setAntibodyCount(data.antibodyCount);
@@ -176,9 +184,9 @@ export function InoculationPanel() {
 
   const handleSelect = async (idx: number) => {
     if (!session || selected !== null) return;
-    abortRef.current?.abort();
+    answerAbortRef.current?.abort();
     const ctrl = new AbortController();
-    abortRef.current = ctrl;
+    answerAbortRef.current = ctrl;
     setSelected(idx);
     setError('');
 
@@ -232,9 +240,9 @@ export function InoculationPanel() {
 
   const craftHeadline = async () => {
     if (!activeTopic.trim() || !selectedTactic) return;
-    abortRef.current?.abort();
+    craftAbortRef.current?.abort();
     const ctrl = new AbortController();
-    abortRef.current = ctrl;
+    craftAbortRef.current = ctrl;
     setActiveLoading(true);
     setCraftResult(null);
     setActiveError('');

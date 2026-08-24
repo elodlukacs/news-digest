@@ -8,7 +8,7 @@ import { Zap } from 'lucide-react';
 import { useGamification } from '../../../hooks/useGamification';
 
 export function QuizTab() {
-  const { stats, loading, completeChallenge, useRecoveryBoost } = useGamification();
+  const { stats, loading, completeChallenge, applyRecoveryBoost } = useGamification();
 
   const handleCorrect = useCallback(async () => {
     try {
@@ -20,11 +20,11 @@ export function QuizTab() {
 
   const handleRecover = useCallback(async () => {
     try {
-      await useRecoveryBoost();
+      await applyRecoveryBoost();
     } catch (e) {
       console.error('Failed to use recovery boost', e);
     }
-  }, [useRecoveryBoost]);
+  }, [applyRecoveryBoost]);
 
   return (
     <div className="space-y-6 mt-3">

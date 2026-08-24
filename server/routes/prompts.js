@@ -191,7 +191,7 @@ router.get('/', (req, res) => {
 });
 
 router.post('/custom', (req, res) => {
-  const { category, prompt, whenToUse, exampleInput } = req.body;
+  const { category, prompt, whenToUse, exampleInput } = req.body || {};
   if (!prompt || !prompt.trim()) {
     return res.status(400).json({ error: 'Prompt text is required' });
   }

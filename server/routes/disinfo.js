@@ -8,7 +8,7 @@ const router = express.Router();
 
 // POST /api/cognitive/disinfo-map — get disinfo influencer map data
 router.post('/disinfo-map', async (req, res) => {
-  const { gatewayFocus, conspiracyFocus, userId } = req.body;
+  const { gatewayFocus, conspiracyFocus, userId } = req.body || {};
 
   try {
     const disinfoPrompt = getPrompt('disinfo-map');

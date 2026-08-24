@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Brain, Check, X, Loader2, Sparkles, Flame } from 'lucide-react';
 import { API_BASE } from '../config';
 import { useGamification } from '../hooks/useGamification';
@@ -40,6 +40,10 @@ export function ChallengeQuiz({ headline, content, onClose }: ChallengeQuizProps
   const [error, setError] = useState('');
   const [streakSnapshot, setStreakSnapshot] = useState<{ antibodies: number; streak: number; alreadyCompleted: boolean } | null>(null);
   const { completeChallenge } = useGamification();
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Closing the quiz mid-request left a pending setResult on an unmounted tree.
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   const isCorrect = !!result && selected === result.technique;
   const chosen = TECHNIQUES.find((t) => t.value === selected);
@@ -49,15 +53,36 @@ export function ChallengeQuiz({ headline, content, onClose }: ChallengeQuizProps
     if (!selected || submitting) return;
     setSubmitting(true);
     setError('');
+    const startedAt = Date.now();
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     try {
       const res = await fetch(`${API_BASE}/bias-radar/decode`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ headline, content }),
+        signal: controller.signal,
       });
       if (!res.ok) throw new Error(`Lab unreachable (${res.status})`);
       const data: DecodeResult = await res.json();
       setResult(data);
+
+      // Record the guess regardless of outcome — this is the app's
+      // highest-frequency exercise and its answers used to go nowhere.
+      void fetch(`${API_BASE}/gamification/skill-event`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          module: 'challenge_quiz',
+          itemType: data.technique,
+          itemRef: headline,
+          userAnswer: selected,
+          correctAnswer: data.technique,
+          correct: selected === data.technique,
+          latencyMs: Date.now() - startedAt,
+        }),
+      }).catch(() => {});
 
       if (selected === data.technique) {
         try {
@@ -72,9 +97,10 @@ export function ChallengeQuiz({ headline, content, onClose }: ChallengeQuizProps
         }
       }
     } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') return;
       setError(e instanceof Error ? e.message : 'Something went wrong');
     } finally {
-      setSubmitting(false);
+      if (!controller.signal.aborted) setSubmitting(false);
     }
   }
 

@@ -8,7 +8,7 @@ const router = express.Router();
 
 // POST /api/compare/coverage — compare coverage across outlets
 router.post('/coverage', async (req, res) => {
-  const { url, topic, provider } = req.body;
+  const { url, topic, provider } = req.body || {};
 
   if (!url && !topic) {
     return res.status(400).json({ error: 'URL or topic required' });

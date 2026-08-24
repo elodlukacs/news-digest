@@ -1,7 +1,10 @@
-const { parser, extractImage } = require('../lib/rss');
+const { parseFeedUrl, extractImage } = require('../lib/rss');
 const { extractKeywords } = require('../lib/bias-radar/topicCluster');
 const { buildMessages } = require('../lib/promptManager');
 const { matchOutlet } = require('../lib/outletMatcher');
+const { attributeSection, buildUrlIndex } = require('../lib/attribution');
+const { recordSuccess, recordFailure } = require('../lib/feedHealth');
+const { parseJSON } = require('../lib/parseJSON');
 
 const ONE_DAY_MS = 86400000;
 
@@ -27,27 +30,6 @@ function enrichSentimentData(sentimentData) {
   });
 }
 
-function repairAndParseJSON(str) {
-  try { return JSON.parse(str); } catch {}
-
-  let fixed = str;
-  fixed = fixed.replace(/,\s*([}\]])/g, '$1');
-
-  try { return JSON.parse(fixed); } catch {}
-
-  const lastCompleteObj = fixed.lastIndexOf('}');
-  if (lastCompleteObj > 0) {
-    let truncated = fixed.slice(0, lastCompleteObj + 1);
-    truncated = truncated.replace(/,\s*$/, '');
-    const openBrackets = (truncated.match(/\[/g) || []).length - (truncated.match(/\]/g) || []).length;
-    const openBraces = (truncated.match(/\{/g) || []).length - (truncated.match(/\}/g) || []).length;
-    truncated += ']'.repeat(Math.max(0, openBrackets)) + '}'.repeat(Math.max(0, openBraces));
-    try { return JSON.parse(truncated); } catch {}
-  }
-
-  return null;
-}
-
 async function refreshCategorySummary(db, callLLM, categoryId, { provider, keyword } = {}) {
   const category = db.prepare('SELECT * FROM categories WHERE id = ?').get(categoryId);
   if (!category) throw new RefreshError('Category not found', 404);
@@ -58,7 +40,8 @@ async function refreshCategorySummary(db, callLLM, categoryId, { provider, keywo
   const feedResults = await Promise.allSettled(
     feeds.map(async (feed) => {
       try {
-        const parsed = await parser.parseURL(feed.url);
+        const parsed = await parseFeedUrl(feed.url);
+        recordSuccess(db, feed.id);
         return parsed.items.slice(0, 10).map((item) => ({
           title: item.title || '',
           description: (item.contentSnippet || item.content || '').slice(0, 3000),
@@ -70,6 +53,9 @@ async function refreshCategorySummary(db, callLLM, categoryId, { provider, keywo
         }));
       } catch (err) {
         console.warn(`Failed to fetch feed "${feed.name}" (${feed.url}):`, err.message);
+        // Persist the failure so a feed that has been dead for a week is
+        // visible in the UI instead of just quietly shrinking the digest.
+        recordFailure(db, feed.id, err.message);
         return [];
       }
     })
@@ -134,7 +120,7 @@ async function refreshCategorySummary(db, callLLM, categoryId, { provider, keywo
   }
 
   let parsedArticles;
-  const parsed = repairAndParseJSON(rawContent);
+  const parsed = parseJSON(rawContent, null);
   if (parsed) {
     if (Array.isArray(parsed)) {
       parsedArticles = parsed;
@@ -159,10 +145,15 @@ async function refreshCategorySummary(db, callLLM, categoryId, { provider, keywo
     `## [${a.title}](${a.url})\n${a.summary}`
   ).join('\n\n---\n\n');
 
+  // Attribution: index → normalized URL → exact title → fuzzy title. See
+  // lib/attribution.js for why exact-title matching alone silently dropped the
+  // source, date and image for every rewritten or translated headline.
+  const urlIndex = buildUrlIndex(allArticles);
+  const attributionStats = { index: 0, url: 0, title: 0, fuzzy: 0, none: 0 };
+
   const sentimentData = parsedArticles.map(a => {
-    const original = allArticles.find(orig =>
-      orig.link === a.url || orig.title.toLowerCase() === (a.title || '').toLowerCase()
-    );
+    const { article: original, method } = attributeSection(a, allArticles, urlIndex);
+    attributionStats[method]++;
     return {
       title: a.title,
       sentiment: ['positive', 'negative', 'neutral', 'mixed'].includes(a.sentiment) ? a.sentiment : 'neutral',
@@ -173,6 +164,15 @@ async function refreshCategorySummary(db, callLLM, categoryId, { provider, keywo
       image: original ? (original.image || '') : '',
     };
   });
+
+  if (attributionStats.none > 0) {
+    console.warn(
+      `[Summary] ${attributionStats.none}/${parsedArticles.length} sections could not be matched ` +
+      `to a source article — those lose their source badge, date and image. ` +
+      `(matched: ${attributionStats.index} by index, ${attributionStats.url} by URL, ` +
+      `${attributionStats.title} by title, ${attributionStats.fuzzy} fuzzy)`
+    );
+  }
 
   const tagSet = new Set();
   for (const s of sentimentData) {
@@ -195,12 +195,8 @@ async function refreshCategorySummary(db, callLLM, categoryId, { provider, keywo
   );
   const historyId = histResult.lastInsertRowid;
 
-  const cutoff = new Date(Date.now() - 3 * ONE_DAY_MS).toISOString().split('T')[0];
-  const oldIds = db.prepare('SELECT id FROM summary_history WHERE category_id = ? AND date_key < ?').all(categoryId, cutoff).map(r => r.id);
-  if (oldIds.length > 0) {
-    db.prepare(`DELETE FROM chat_messages WHERE summary_id IN (${oldIds.map(() => '?').join(',')})`).run(...oldIds);
-    db.prepare('DELETE FROM summary_history WHERE category_id = ? AND date_key < ?').run(categoryId, cutoff);
-  }
+  // Retention is centralised in lib/retention.js; this used to compare
+  // date_key while surprise.js compared generated_at, and the two raced.
 
   return {
     id: historyId,

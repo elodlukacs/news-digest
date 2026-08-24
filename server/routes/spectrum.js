@@ -1,4 +1,8 @@
 const express = require('express');
+const db = require('../db');
+const { callLLM } = require('../lib/llm');
+const { parseJSON } = require('../lib/parseJSON');
+const { getPrompt } = require('../lib/promptManager');
 const router = express.Router();
 
 const OUTLET_RATINGS = [
@@ -508,111 +512,82 @@ router.get('/outlet-ratings/:id', (req, res) => {
   res.json(outlet);
 });
 
-router.post('/compare', async (req, res) => {
-  const { topic, outletIds } = req.body;
-  
+// POST /api/spectrum/compare — how outlets across the spectrum cover a topic.
+//
+// This used to return a hardcoded block of invented headlines and quotes,
+// labelled `provider: 'static'`, with a summary claiming to describe real
+// coverage. Fabricated analysis is the one output a media-literacy tool must
+// never produce, so it now goes through the same LLM path as
+// POST /api/compare/coverage.
+router.post('/compare', async (req, res, next) => {
+  const { topic, outletIds, provider } = req.body || {};
+
   if (!topic && (!outletIds || !Array.isArray(outletIds))) {
     return res.status(400).json({ error: 'Topic or outletIds required' });
   }
-  
-  const outlets = outletIds && outletIds.length > 0 
+
+  const selectedOutlets = (outletIds && outletIds.length > 0
     ? OUTLET_RATINGS.filter(o => outletIds.includes(o.id))
-    : OUTLET_RATINGS.slice(0, 5);
-  
-  const selectedOutlets = outlets.slice(0, 7);
-  
-  const mockHeadlines = [
-    {
-      outlet: selectedOutlets[0]?.name || 'Unknown',
-      headline: topic ? `Breaking: ${topic} developments emerge as situation evolves` : 'Major story develops with new revelations',
-      bias: selectedOutlets[0]?.bias || 'Center',
-      keyQuote: 'This represents a significant shift in the current landscape.',
-      emphasis: ['details', 'context'],
-      omissions: ['counterarguments', 'historical precedent']
-    },
-    {
-      outlet: selectedOutlets[1]?.name || 'Unknown',
-      headline: topic ? `${topic}: Experts weigh in on implications` : 'What the latest developments mean for you',
-      bias: selectedOutlets[1]?.bias || 'Center',
-      keyQuote: 'The implications extend beyond immediate concerns.',
-      emphasis: ['expert opinions', 'analysis'],
-      omissions: ['basic facts', 'timeline']
-    },
-    {
-      outlet: selectedOutlets[2]?.name || 'Unknown',
-      headline: topic ? `The truth about ${topic}: What you need to know` : 'What they don\'t want you to know about this story',
-      bias: selectedOutlets[2]?.bias || 'Center',
-      keyQuote: 'There\'s more to this story than meets the eye.',
-      emphasis: ['controversy', 'conflict'],
-      omissions: ['nuance', 'positive aspects']
-    },
-    {
-      outlet: selectedOutlets[3]?.name || 'Unknown',
-      headline: topic ? `${topic} update: Official statements released` : 'Official response to recent developments',
-      bias: selectedOutlets[3]?.bias || 'Center',
-      keyQuote: 'We are committed to transparency and accountability.',
-      emphasis: ['official response', 'procedures'],
-      omissions: ['criticism', 'alternative views']
-    },
-    {
-      outlet: selectedOutlets[4]?.name || 'Unknown',
-      headline: topic ? `${topic} analysis: Why this matters for the future` : 'Why this story will define the next decade',
-      bias: selectedOutlets[4]?.bias || 'Center',
-      keyQuote: 'This is part of a larger pattern we\'re seeing.',
-      emphasis: ['predictions', 'trends'],
-      omissions: ['current data', 'experts disagree']
-    },
-    {
-      outlet: selectedOutlets[5]?.name || 'Unknown',
-      headline: topic ? `Report: ${topic} facts versus fiction` : 'Separating fact from fiction in today\'s news',
-      bias: selectedOutlets[5]?.bias || 'Center',
-      keyQuote: 'Let\'s look at what the evidence actually shows.',
-      emphasis: ['facts', 'evidence'],
-      omissions: ['interpretation', 'context']
-    },
-    {
-      outlet: selectedOutlets[6]?.name || 'Unknown',
-      headline: topic ? `Opinion: ${topic} is exactly what\'s wrong with America` : 'This is the real scandal that should matter to you',
-      bias: selectedOutlets[6]?.bias || 'Center',
-      keyQuote: 'This is symptomatic of deeper systemic failures.',
-      emphasis: ['outrage', 'blame'],
-      omissions: ['complexity', 'solutions']
+    : OUTLET_RATINGS.slice(0, 5)
+  ).slice(0, 7);
+
+  if (selectedOutlets.length === 0) {
+    return res.status(400).json({ error: 'No known outlets matched the given outletIds' });
+  }
+
+  try {
+    const comparePrompt = getPrompt('compare-coverage');
+    const outletList = selectedOutlets
+      .map(o => `- ${o.name} (${o.bias}, credibility ${o.credibility}/100)`)
+      .join('\n');
+
+    const result = await callLLM(
+      [
+        { role: 'system', content: comparePrompt.user_prompt },
+        {
+          role: 'user',
+          content: `Compare how these specific outlets cover the topic "${topic || 'the current news cycle'}".
+
+Outlets:
+${outletList}
+
+Return JSON with exactly these keys:
+- "coverage": array of { "outlet", "headline", "bias", "keyQuote", "emphasis": [], "omissions": [] } — one entry per outlet listed above, in that order. Only include a headline or quote if you are describing real reporting you are aware of; otherwise describe the outlet's characteristic framing and leave "keyQuote" empty.
+- "commonFacts": array of strings that all outlets agree on
+- "framingDifferences": array of { "dimension", "spectrum": [lowEnd, highEnd] }
+- "narrativeDivergenceScore": integer 0-100
+- "summary": 2-3 sentences on how the framings differ`,
+        },
+      ],
+      {
+        purpose: 'spectrum_compare',
+        temperature: 0.3,
+        response_format: { type: 'json_object' },
+        providerId: provider || null,
+        db,
+      }
+    );
+
+    const parsed = parseJSON(result.content, null);
+    if (!parsed) {
+      return res.status(502).json({ error: 'Could not parse the coverage analysis — try again' });
     }
-  ];
-  
-  const commonFacts = [
-    'The core event/development did occur',
-    'Multiple stakeholders are involved',
-    'Official responses have been issued',
-    'Further developments are expected',
-    'The story is still evolving'
-  ];
-  
-  const framingDifferences = [
-    { dimension: 'Tone', spectrum: ['Clinical/Neutral', 'Passionate/Advocacy'] },
-    { dimension: 'Focus', spectrum: ['Facts-focused', 'Opinion-focused'] },
-    { dimension: 'Scope', spectrum: ['Narrow/specific', 'Broad/systemic'] },
-    { dimension: 'Urgency', spectrum: ['Measured', 'Alarmed'] },
-    { dimension: 'Blame', spectrum: ['Multifaceted', 'Singular target'] }
-  ];
-  
-  const narrativeDivergenceScore = Math.round(
-    selectedOutlets.reduce((sum, outlet, i) => {
-      if (i === 0) return outlet.biasScore;
-      return sum + Math.abs(outlet.biasScore - selectedOutlets[i - 1].biasScore);
-    }, 0) / Math.max(selectedOutlets.length - 1, 1) * 10
-  );
-  
-  res.json({
-    topic: topic || 'Current Events',
-    outlets: selectedOutlets,
-    coverage: mockHeadlines.slice(0, selectedOutlets.length),
-    commonFacts,
-    framingDifferences,
-    narrativeDivergenceScore,
-    summary: `This analysis compares how ${selectedOutlets.length} outlets with varying editorial perspectives cover ${topic || 'the current news cycle'}. The outlets span from ${selectedOutlets[0]?.bias} to ${selectedOutlets[selectedOutlets.length - 1]?.bias}, providing a spectrum of coverage styles and editorial framings.`,
-    provider: 'static'
-  });
+
+    res.json({
+      topic: topic || 'Current Events',
+      outlets: selectedOutlets,
+      coverage: Array.isArray(parsed.coverage) ? parsed.coverage : [],
+      commonFacts: Array.isArray(parsed.commonFacts) ? parsed.commonFacts : [],
+      framingDifferences: Array.isArray(parsed.framingDifferences) ? parsed.framingDifferences : [],
+      narrativeDivergenceScore: Number.isFinite(parsed.narrativeDivergenceScore)
+        ? parsed.narrativeDivergenceScore
+        : 50,
+      summary: typeof parsed.summary === 'string' ? parsed.summary : '',
+      provider: result.provider,
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 
 module.exports = router;

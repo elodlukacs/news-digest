@@ -1,11 +1,52 @@
 const env = (name) => process.env[name];
 
+// A stalled provider connection used to hang the request forever: the fallback
+// loop only advances on a throw or a non-OK response, so with no timeout it
+// never reached the next provider and the client never got an answer.
+const REQUEST_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS) || 90_000;
+const RETRY_STATUS = new Set([408, 409, 425, 429, 500, 502, 503, 504]);
+const MAX_ATTEMPTS_PER_PROVIDER = 2;
+const RETRY_BASE_DELAY_MS = 1500;
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+class LLMError extends Error {
+  constructor(message, { statusCode = 502, detail = null } = {}) {
+    super(message);
+    this.name = 'LLMError';
+    this.statusCode = statusCode;
+    this.expose = true;
+    this.detail = detail;
+  }
+}
+
 const AI_PROVIDERS = [
   { id: 'llama', name: 'Groq', url: 'https://api.groq.com/openai/v1/chat/completions', key: () => env('GROQ_API_KEY'), model: 'openai/gpt-oss-20b' },
-  { id: 'llama8b', name: 'Groq', url: 'https://api.groq.com/openai/v1/chat/completions', key: () => env('GROQ_API_KEY'), model: 'llama-3.1-8b-instant' },
+  { id: 'llama8b', name: 'Groq', url: 'https://api.groq.com/openai/v1/chat/completions', key: () => env('GROQ_API_KEY'), model: 'qwen/qwen3.6-27b' },
   { id: 'google', name: 'Google AI Studio', url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', key: () => env('GOOGLE_API_KEY'), model: 'gemini-2.0-flash' },
   { id: 'openrouter', name: 'OpenRouter', url: 'https://openrouter.ai/api/v1/chat/completions', key: () => env('OPENROUTER_API_KEY'), model: 'meta-llama/llama-3.3-70b-instruct:free' },
 ];
+
+// Groq-hosted models whose IDs contain a slash. Without this list they'd match
+// the generic `providerId.includes('/')` branch below and get routed to
+// OpenRouter, which serves different (or no) models under the same ID.
+const GROQ_NAMESPACED_MODELS = new Set([
+  'openai/gpt-oss-120b',
+  'openai/gpt-oss-20b',
+  'openai/gpt-oss-safeguard-20b',
+  'qwen/qwen3.6-27b',
+  'groq/compound',
+  'groq/compound-mini',
+]);
+
+// Groq's thinking models default to writing their reasoning into
+// `message.content` as a <think> block, which every downstream JSON/text parser
+// here would choke on. `reasoning_format: 'hidden'` drops it server-side.
+const THINKING_MODELS = new Set(['qwen/qwen3.6-27b']);
+
+function reasoningParams(model) {
+  return THINKING_MODELS.has(model) ? { reasoning_format: 'hidden' } : {};
+}
 
 const providerQuotas = {};
 
@@ -63,7 +104,7 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
       const google = AI_PROVIDERS.find(p => p.id === 'google');
       if (!google?.key()) throw new Error('GOOGLE_API_KEY not configured');
       providers = [{ ...google, model: providerId }];
-    } else if (providerId.startsWith('openai/')) {
+    } else if (GROQ_NAMESPACED_MODELS.has(providerId)) {
       const groq = AI_PROVIDERS.find(p => p.id === 'llama');
       if (!groq?.key()) throw new Error('No matching provider configured for model: ' + providerId);
       providers = [{ ...groq, model: providerId }];
@@ -80,6 +121,7 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
   }
 
   let lastError = null;
+  let lastStatus = null;
   for (const provider of providers) {
     let resolvedModel = provider.model;
 
@@ -94,91 +136,123 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
       }
     }
 
-    try {
-      const start = Date.now();
-      console.log(`[LLM] Trying ${provider.name} (${resolvedModel}) for ${purpose}...`);
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS_PER_PROVIDER; attempt++) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+      try {
+        const start = Date.now();
+        console.log(`[LLM] Trying ${provider.name} (${resolvedModel}) for ${purpose}${attempt > 1 ? ` — retry ${attempt - 1}` : ''}...`);
 
-      const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${provider.key()}` };
-      if (provider.id === 'openrouter') {
-        headers['HTTP-Referer'] = 'https://news-reader.app';
-        headers['X-Title'] = `News Reader · ${purpose}`;
-      }
-
-      const response = await fetch(provider.url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          model: resolvedModel,
-          messages,
-          temperature,
-          max_tokens,
-          ...(response_format && { response_format }),
-        }),
-      });
-
-      const parseHeader = (name) => {
-        const v = response.headers.get(name);
-        return v !== null && v !== undefined ? parseInt(v, 10) : null;
-      };
-      const rlHeaders = {};
-      response.headers.forEach((value, key) => {
-        if (key.toLowerCase().includes('ratelimit') || key.toLowerCase().includes('rate-limit')) {
-          rlHeaders[key] = value;
+        const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${provider.key()}` };
+        if (provider.id === 'openrouter') {
+          headers['HTTP-Referer'] = 'https://news-reader.app';
+          headers['X-Title'] = `News Reader · ${purpose}`;
         }
-      });
-      if (Object.keys(rlHeaders).length > 0) {
-        console.log(`[LLM] ${provider.name} rate-limit headers:`, rlHeaders);
-      }
-      const quota = {
-        provider: provider.name,
-        model: resolvedModel,
-        limit_tokens: parseHeader('x-ratelimit-limit-tokens'),
-        remaining_tokens: parseHeader('x-ratelimit-remaining-tokens'),
-        limit_requests: parseHeader('x-ratelimit-limit-requests'),
-        remaining_requests: parseHeader('x-ratelimit-remaining-requests'),
-        reset_tokens: response.headers.get('x-ratelimit-reset-tokens') || null,
-        reset_requests: response.headers.get('x-ratelimit-reset-requests') || null,
-        updated_at: new Date().toISOString(),
-      };
-      if (quota.limit_tokens !== null || quota.limit_requests !== null ||
-          quota.remaining_tokens !== null || quota.remaining_requests !== null) {
-        providerQuotas[provider.name] = quota;
-      }
 
-      if (!response.ok) {
-        const errBody = await response.text();
-        console.warn(`[LLM] ${provider.name} failed (${response.status})`);
-        lastError = `${provider.name} API returned ${response.status}: ${errBody}`;
-        continue;
-      }
-      const data = await response.json();
-      const latency = Date.now() - start;
-      const usage = data.usage || {};
+        const response = await fetch(provider.url, {
+          method: 'POST',
+          headers,
+          signal: controller.signal,
+          body: JSON.stringify({
+            model: resolvedModel,
+            messages,
+            temperature,
+            max_tokens,
+            ...(response_format && { response_format }),
+            ...reasoningParams(resolvedModel),
+          }),
+        });
 
-      if (db) {
-        db.prepare('INSERT INTO llm_usage (provider, model, prompt_tokens, completion_tokens, total_tokens, purpose, category_id, latency_ms, created_at) VALUES (?,?,?,?,?,?,?,?,?)').run(
-          provider.name, provider.model, usage.prompt_tokens || 0, usage.completion_tokens || 0, usage.total_tokens || 0,
-          purpose, categoryId, latency, new Date().toISOString()
-        );
-      }
+        const parseHeader = (name) => {
+          const v = response.headers.get(name);
+          return v !== null && v !== undefined ? parseInt(v, 10) : null;
+        };
+        const rlHeaders = {};
+        response.headers.forEach((value, key) => {
+          if (key.toLowerCase().includes('ratelimit') || key.toLowerCase().includes('rate-limit')) {
+            rlHeaders[key] = value;
+          }
+        });
+        if (Object.keys(rlHeaders).length > 0) {
+          console.log(`[LLM] ${provider.name} rate-limit headers:`, rlHeaders);
+        }
+        const quota = {
+          provider: provider.name,
+          model: resolvedModel,
+          limit_tokens: parseHeader('x-ratelimit-limit-tokens'),
+          remaining_tokens: parseHeader('x-ratelimit-remaining-tokens'),
+          limit_requests: parseHeader('x-ratelimit-limit-requests'),
+          remaining_requests: parseHeader('x-ratelimit-remaining-requests'),
+          reset_tokens: response.headers.get('x-ratelimit-reset-tokens') || null,
+          reset_requests: response.headers.get('x-ratelimit-reset-requests') || null,
+          updated_at: new Date().toISOString(),
+        };
+        if (quota.limit_tokens !== null || quota.limit_requests !== null ||
+            quota.remaining_tokens !== null || quota.remaining_requests !== null) {
+          providerQuotas[provider.name] = quota;
+        }
 
-      let content = data.choices?.[0]?.message?.content || '';
-      if (content.includes('<thought>') && content.includes('</thought>')) {
-        content = content.replace(/<thought>[\s\S]*?<\/thought>\s*/g, '');
+        if (!response.ok) {
+          // Log the provider body, never return it: it carries model routing,
+          // org identifiers and quota metadata.
+          const errBody = await response.text().catch(() => '');
+          console.warn(`[LLM] ${provider.name} failed (${response.status}): ${errBody.slice(0, 500)}`);
+          lastStatus = response.status;
+          lastError = `${provider.name} returned ${response.status}`;
+          if (RETRY_STATUS.has(response.status) && attempt < MAX_ATTEMPTS_PER_PROVIDER) {
+            await sleep(RETRY_BASE_DELAY_MS * attempt);
+            continue;
+          }
+          break;
+        }
+        const data = await response.json();
+        const latency = Date.now() - start;
+        const usage = data.usage || {};
+
+        if (db) {
+          // resolvedModel, not provider.model — they diverge whenever the
+          // OpenRouter free-model switch fires, and the stats page was
+          // attributing usage to a model that was never called.
+          db.prepare('INSERT INTO llm_usage (provider, model, prompt_tokens, completion_tokens, total_tokens, purpose, category_id, latency_ms, created_at) VALUES (?,?,?,?,?,?,?,?,?)').run(
+            provider.name, resolvedModel, usage.prompt_tokens || 0, usage.completion_tokens || 0, usage.total_tokens || 0,
+            purpose, categoryId, latency, new Date().toISOString()
+          );
+        }
+
+        let content = data.choices?.[0]?.message?.content || '';
+        if (content.includes('<thought>') && content.includes('</thought>')) {
+          content = content.replace(/<thought>[\s\S]*?<\/thought>\s*/g, '');
+        }
+        if (!content.trim()) {
+          console.warn(`[LLM] ${provider.name} (${resolvedModel}) returned empty content`);
+          lastError = `${provider.name} returned an empty response`;
+          if (attempt < MAX_ATTEMPTS_PER_PROVIDER) {
+            await sleep(RETRY_BASE_DELAY_MS * attempt);
+            continue;
+          }
+          break;
+        }
+        console.log(`[LLM] Success: ${provider.name} (${latency}ms, ${usage.total_tokens || '?'} tokens)`);
+        return { content, provider: `${provider.name} · ${resolvedModel}`, usage };
+      } catch (err) {
+        const timedOut = err.name === 'AbortError';
+        lastError = timedOut
+          ? `${provider.name} timed out after ${Math.round(REQUEST_TIMEOUT_MS / 1000)}s`
+          : `${provider.name}: ${err.message}`;
+        console.warn(`[LLM] ${lastError}`);
+        if (attempt < MAX_ATTEMPTS_PER_PROVIDER) {
+          await sleep(RETRY_BASE_DELAY_MS * attempt);
+          continue;
+        }
+        break;
+      } finally {
+        clearTimeout(timer);
       }
-      if (!content.trim()) {
-        console.warn(`[LLM] ${provider.name} (${provider.model}) returned empty content`);
-        lastError = `${provider.name} returned empty response`;
-        continue;
-      }
-      console.log(`[LLM] Success: ${provider.name} (${latency}ms, ${usage.total_tokens || '?'} tokens)`);
-      return { content, provider: `${provider.name} · ${resolvedModel}`, usage };
-    } catch (err) {
-      console.warn(`[LLM] ${provider.name} error:`, err.message);
-      lastError = `${provider.name}: ${err.message}`;
     }
   }
-  throw new Error(lastError || 'All AI providers failed');
+  throw new LLMError(lastError || 'All AI providers failed', {
+    statusCode: lastStatus === 429 ? 429 : 502,
+  });
 }
 
-module.exports = { AI_PROVIDERS, providerQuotas, callLLM };
+module.exports = { AI_PROVIDERS, providerQuotas, callLLM, LLMError };

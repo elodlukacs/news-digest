@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Zap, Clock, BarChart3, Gauge, Timer } from 'lucide-react';
 import { API_BASE } from '../config';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
@@ -31,13 +31,15 @@ export function LlmStatsModal({ open, onClose }: Props) {
     return () => controller.abort();
   }, [open]);
 
-  // Fill in all 30 days so the chart has no gaps
+  // Fill in all 30 days so the chart has no gaps.
+  // Date.now() was read during render; pin it to when the data arrived instead.
+  const todayMs = useMemo(() => Date.now(), [stats]);
   const dailyFilled = (() => {
     if (!stats) return [];
     const map = new Map(stats.daily.map(d => [d.date, d]));
     const days: { date: string; tokens: number; calls: number }[] = [];
     for (let i = 29; i >= 0; i--) {
-      const d = new Date(Date.now() - i * 86400000);
+      const d = new Date(todayMs - i * 86400000);
       const key = d.toISOString().split('T')[0];
       days.push(map.get(key) || { date: key, tokens: 0, calls: 0 });
     }

@@ -42,7 +42,7 @@ export function useGamification() {
     return data;
   }, [refresh]);
 
-  const useRecoveryBoost = useCallback(async (): Promise<RecoveryResult> => {
+  const applyRecoveryBoost = useCallback(async (): Promise<RecoveryResult> => {
     const res = await fetch(`${API_BASE}/gamification/recovery-boost`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -56,5 +56,5 @@ export function useGamification() {
     return data;
   }, [refresh]);
 
-  return { stats, loading, refresh, completeChallenge, useRecoveryBoost };
+  return { stats, loading, refresh, completeChallenge, applyRecoveryBoost };
 }

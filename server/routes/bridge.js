@@ -21,7 +21,7 @@ const VALUES_QUIZ = [
 
 // POST /api/bridge/audit — run SOS audit
 router.post('/audit', async (req, res) => {
-  const { sources, viewpoints, userId } = req.body;
+  const { sources, viewpoints, userId } = req.body || {};
   if (!sources || !Array.isArray(sources) || sources.length === 0) {
     return res.status(400).json({ error: 'Sources array required' });
   }
@@ -58,7 +58,7 @@ router.post('/audit', async (req, res) => {
 
 // POST /api/bridge/bridge — generate bridge-building questions between two viewpoints
 router.post('/bridge', async (req, res) => {
-  const { viewA, viewB, userId } = req.body;
+  const { viewA, viewB, userId } = req.body || {};
   if (!viewA || !viewB) return res.status(400).json({ error: 'Both viewpoints required' });
 
   try {
@@ -92,7 +92,7 @@ router.get('/values', (req, res) => {
 
 // POST /api/bridge/values — submit values quiz
 router.post('/values', (req, res) => {
-  const { values, userId } = req.body;
+  const { values, userId } = req.body || {};
   if (!values || !Array.isArray(values)) return res.status(400).json({ error: 'Values array required' });
 
   const uid = (userId || 'default').toString();
@@ -117,7 +117,7 @@ const INFORMATION_DIET_PROMPT_SLUG = 'information-diet';
 
 // POST /api/bridge/information-diet — analyze user's feed sources for echo-chamber effects
 router.post('/information-diet', async (req, res) => {
-  const { sources, userId } = req.body;
+  const { sources, userId } = req.body || {};
   
   if (!sources || !Array.isArray(sources) || sources.length === 0) {
     return res.status(400).json({ error: 'Sources array required' });

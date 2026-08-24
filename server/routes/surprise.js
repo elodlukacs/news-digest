@@ -21,9 +21,6 @@ const router = express.Router();
 const EXPANDED_MIN_LENGTH = 200;
 const SUMMARY_LOOKBACK_DAYS = 1;
 const RANDOM_POOL_SIZE = 40;
-const PURGE_OLDER_THAN_DAYS = 3;
-
-let lastPurgeAt = 0;
 
 function articleKey(id) {
   return `surprise:${id}`;
@@ -170,16 +167,7 @@ function pickArticle({ excludeUrls, categoryIds } = {}) {
 }
 
 router.get('/', (req, res) => {
-  const now = Date.now();
-  if (now - lastPurgeAt > 60 * 60 * 1000) {
-    const cutoff = new Date(now - PURGE_OLDER_THAN_DAYS * 86400000).toISOString();
-    const oldIds = db.prepare('SELECT id FROM summary_history WHERE category_id > 0 AND generated_at < ?').all(cutoff).map(r => r.id);
-    if (oldIds.length > 0) {
-      db.prepare(`DELETE FROM chat_messages WHERE summary_id IN (${oldIds.map(() => '?').join(',')})`).run(...oldIds);
-      db.prepare('DELETE FROM summary_history WHERE category_id > 0 AND generated_at < ?').run(cutoff);
-    }
-    lastPurgeAt = now;
-  }
+  // Retention runs on a timer from lib/retention.js — a GET must not mutate.
 
   const excludeParam = typeof req.query.exclude === 'string' ? req.query.exclude.trim() : '';
   const excludeUrls = new Set(

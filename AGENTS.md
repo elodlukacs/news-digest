@@ -3,7 +3,9 @@
 ## Project Overview
 
 Monorepo: `server/` (Express 5 + SQLite, CommonJS) + `client/` (React 19 + TypeScript + Vite + Tailwind CSS 4).
-No shared code between packages. Frontend deploys to Vercel, backend runs locally.
+No shared code between packages. Both halves ship as Docker images to a CasaOS
+host via `.github/workflows/deploy-*.yml`; `vercel.json` also supports deploying
+the frontend to Vercel.
 
 ## Build & Run Commands
 
@@ -217,12 +219,79 @@ Pass the OBJECTIVE and PURPOSE, not just literal keywords.
 - `router.delete('/:id', validateId, ...)` for deletion, returns `{ ok: true }`
 - Error responses: `{ error: 'message' }` with appropriate HTTP status
 - Validate input early with early returns (`if (!name) return res.status(400).json(...)`)
+- **Always `const { x } = req.body || {};`** — body-parser 2 leaves `req.body`
+  undefined when the content type doesn't match, so a bare destructure turns any
+  non-JSON POST into a 500
+- Clamp any numeric query param that reaches SQL (`LIMIT`, `OFFSET`) — see
+  `clampInt` in `routes/jobs.js`
+- Throwing (or `next(err)`) is preferred over an inline `res.status(500)`: the
+  terminal handler in `middleware/errors.js` produces a consistent
+  `{ error, code }` body. Set `err.statusCode` and `err.expose = true` on errors
+  whose message is safe to show the user; anything else is logged and reported as
+  a generic 500
+
+### Security Invariants
+
+These are load-bearing — do not regress them:
+
+- **Never `fetch()` a URL that came from a client.** Use
+  `safeFetch`/`assertPublicUrl` from `lib/safeFetch.js` (protocol allowlist, DNS
+  resolution checked against loopback/RFC1918/link-local/CGNAT/ULA, redirects
+  re-validated per hop, timeout, capped body). Feed URLs go through
+  `parseFeedUrl` from `lib/rss.js` — never `parser.parseURL` directly, since
+  stored feed URLs are fetched on every refresh and their bodies end up in
+  summaries.
+- Auth is `middleware/auth.js`, applied globally in `index.js` and a no-op when
+  `API_TOKEN` is unset. CORS is an allowlist from `ALLOWED_ORIGINS`, never `*`.
+- Never return an upstream provider's error body to the client — log it and
+  return a generic message (`lib/llm.js` does this).
+- Client-side: every dynamic `href` goes through `utils/safeHref.ts`. React does
+  not block `javascript:` URLs, and feed `<link>` values are attacker-controlled.
+
+### Expensive Operations
+
+- Wrap long-running POSTs with `runExclusive` / `lockHandler` from
+  `lib/inFlight.js`. There is no scheduler and no debounce anywhere — a double
+  click otherwise runs two full feed-fetch + LLM cycles.
+- `callLLM` has a 90 s timeout (`LLM_TIMEOUT_MS`) and retries once per provider
+  on 408/409/425/429/5xx before falling through to the next provider.
+- Cache LLM output keyed on its input when the analysis is deterministic — see
+  `article_decodes` in `routes/bias-radar/decode.js`.
+
+### Shared Server Libraries
+
+Use these rather than reimplementing; each exists because the duplicated version
+had a bug.
+
+| Module | Use for |
+|---|---|
+| `lib/safeFetch.js` | Any URL that came from a client. Never plain `fetch`. |
+| `lib/rss.js` → `parseFeedUrl` | Fetching a feed. Never `parser.parseURL`. |
+| `lib/parseJSON.js` | Parsing LLM JSON. Handles fences, trailing commas, leading prose, and truncation recovery — do not write a fourth private copy. |
+| `lib/attribution.js` | Matching LLM output back to a source article. Exact-title matching alone silently drops source/date/image, because the summary prompt rewrites titles. |
+| `lib/retention.js` | Deleting expired data. One policy, on a timer — never inside a request handler. |
+| `lib/feedHealth.js` | Normalizing a feed URL (`feedKey`) and recording fetch success/failure. |
+| `lib/inFlight.js` | Bounding concurrent expensive operations. |
+| `lib/outletMatcher.js` | Source name → bias/credibility rating (memoized). |
 
 ### Database
 
 - SQLite with WAL mode, auto-creates tables on startup
 - Synchronous `db.prepare().all()/.get()/.run()` calls (better-sqlite3)
-- Use parameterized queries (`?` placeholders) — never interpolate user input
+- Use parameterized queries (`?` placeholders) — never interpolate user input.
+  The few template-literal queries (`routes/jobs.js`, `db.js`) interpolate only
+  module-level constants; keep it that way.
+- Wipe-and-repopulate must be **one** transaction (see `POST /api/jobs/fetch`) —
+  as two, a mid-way throw leaves the table empty.
+- Prompt seeding in `db.js` is guarded by `prompts.source_hash`: a code-owned
+  prompt is only overwritten while the row still matches what the code last
+  wrote, so UI edits survive restarts. Never reintroduce an unconditional
+  `ON CONFLICT(slug) DO UPDATE` — that silently reverted every user edit on each
+  deploy.
+- Aggregate in SQL (`GROUP BY`), not by loading rows and reducing in JS.
+- Every table that grows per-request needs a retention rule in `lib/retention.js`.
+- `feeds.url_key` is the normalized URL. Use it for lookups and dedupe; raw `url`
+  comparison treats http/https and tracking-param variants as different feeds.
 
 ## Preserving Existing Functionality
 
@@ -270,10 +339,23 @@ When given a new task, structure your response like this:
 
 - API base URL configured via `VITE_API_URL` (defaults to `/api`), defined in `client/src/config.ts`
 - Vite dev proxy: `/api` → `http://localhost:3001`
-- LLM provider fallback: Groq (openai/gpt-oss-20b) first → OpenRouter (minimax/minimax-m2.7), configured in `server/lib/llm.js`
+- `client/src/lib/apiFetch.ts` patches `window.fetch` once from `main.tsx`: it
+  attaches `VITE_API_TOKEN` as a bearer token and converts an HTML response to an
+  API request into an explicit error (both production hosts route unmatched paths
+  to `index.html`, so a wrong API base used to return `200 OK` with HTML)
+- Deployment is Docker → CasaOS over SSH (`.github/workflows/deploy-*.yml`
+  invoke scripts that live on the host). Vercel config in `vercel.json` still
+  works for the frontend. There is no `server/nixpacks.toml`.
+- LLM provider fallback order is defined by `AI_PROVIDERS` in `server/lib/llm.js`
+  (Groq → Groq 8b → Google AI Studio → OpenRouter), each with a 90 s timeout and
+  one retry on transient failures
 - Each summary generation triggers **two LLM calls**: main summary + enrichment (sentiment + tags)
 - Category-level `custom_prompt` and `language` fields customize LLM output
-- All widget endpoints have server-side caching (crypto 2min, releases 30min, homepage 5min, job fetch 30min debounce)
+- Widget endpoints have server-side caching (crypto 2min, releases 30min, homepage 5min)
+- No scheduler exists — every refresh is manual (auto-refresh was removed in `f60f4bd`).
+  Concurrency is bounded by `lib/inFlight.js`, not by a debounce.
+- Loading a category does **not** generate a summary. `useSummary` only reads;
+  generation is an explicit user action via the "Generate summary" button or refresh.
 - LLM JSON repair: Triple-attempt parse in summaries.js with heuristics for trailing commas/brackets
 - When adding new context to `AppOutletContext`, add it to the typed object in `App.tsx` AND to the interface in `types/routing.ts`
 - Feature folders under `features/mindgames/` follow: `component files` + `index.ts` barrel export
@@ -292,9 +374,24 @@ stats.js           — GET /api/stats/llm, GET /api/stats/trending
 widgets.js         — GET /api/widgets/{weather,rates,headlines,crypto,hackernews,releases}
 homepage.js        — GET /api/homepage, POST /api/homepage/refresh
 settings.js        — GET /api/settings, PUT /api/settings/:key
-telegram.js        — POST /api/telegram/send
+telegram.js        — POST /api/telegram/send  ⚠ implemented but NOT mounted in index.js
 discovery.js       — POST /api/discover-feed
 ```
+
+Plus, added since:
+```
+GET  /api/health                      — unauthenticated liveness probe (no DB access)
+POST /api/gamification/skill-event    — record one answer from any exercise
+GET  /api/gamification/mastery        — per-technique accuracy, weakest first
+```
+`GET /api/categories/:id/feeds` now returns a `health` object per feed
+(`lastOkAt`, `lastError`, `consecutiveFailures`, `unhealthy`, `suggestPause`).
+`GET /api/stats/trending` was removed as a duplicate of `GET /api/tags/trending`.
+
+Middleware, applied in `index.js` in this order: CORS allowlist → `express.json`
+(256 kb) → security headers → `/api/health` → global rate limit (300/min/IP) →
+auth → LLM rate limit (20/min/IP on generation routes) → routers → `notFound` →
+`errorHandler`.
 
 Cognitive routes: `narrative`, `prompts`, `disinfo`, `cognitive`, `forensics`, `inoculation`, `scientist`, `bridge`, `compare`, `spectrum`.
 Bias-radar routes: `bias-radar/` (decode, related, timeline, daily-quiz, steelman, missing-story).

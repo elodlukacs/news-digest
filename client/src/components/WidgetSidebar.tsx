@@ -3,6 +3,7 @@ import type { CryptoPrice, Weather, Rates, Headline, WeirdFactWidget, OnThisDayE
 import { formatDay } from '../utils/date';
 import { WeatherIcon, WidgetHeader } from './SharedWidgets';
 import { Badge } from './ui/badge';
+import { safeHref } from '../utils/safeHref';
 
 interface Props {
   weather: Weather | null;
@@ -142,7 +143,7 @@ export function WidgetSidebar({ weather, rates, headlines, crypto, trending, wei
             <WidgetHeader title="Headlines" />
             <div className="space-y-2.5">
               {headlines.map((h, i) => (
-                <a key={i} href={h.link} target="_blank" rel="noopener noreferrer" className="block group cursor-pointer">
+                <a key={i} href={safeHref(h.link)} target="_blank" rel="noopener noreferrer" className="block group cursor-pointer">
                   <p className="text-[13px] leading-snug text-ink group-hover:text-ink-muted transition-colors">
                     {h.title}
                   </p>
@@ -161,7 +162,7 @@ export function WidgetSidebar({ weather, rates, headlines, crypto, trending, wei
         {weirdFact && (
           <section>
             <WidgetHeader title="Weird Fact" />
-            <a href={weirdFact.link} target="_blank" rel="noopener noreferrer" className="group block px-4 py-3 cursor-pointer">
+            <a href={safeHref(weirdFact.link)} target="_blank" rel="noopener noreferrer" className="group block px-4 py-3 cursor-pointer">
               <div className="flex items-start gap-2.5">
                 <Sparkles size={16} className="text-masthead shrink-0 mt-0.5" />
                 <div>
@@ -187,7 +188,7 @@ export function WidgetSidebar({ weather, rates, headlines, crypto, trending, wei
                     <p className="text-[11px] font-bold text-masthead tracking-wider">{event.year}</p>
                     <p className="text-[12px] leading-snug text-ink">
                       {event.link ? (
-                        <a href={event.link} target="_blank" rel="noopener noreferrer" className="hover:text-ink-muted transition-colors cursor-pointer">
+                        <a href={safeHref(event.link)} target="_blank" rel="noopener noreferrer" className="hover:text-ink-muted transition-colors cursor-pointer">
                           {event.text}
                         </a>
                       ) : event.text}

@@ -7,7 +7,6 @@ import { Map, Loader2, AlertTriangle, Play, ChevronLeft, ChevronRight, TrendingU
 import { FeaturePanelHeader } from '../common';
 import { API_BASE } from '../../../config';
 import { useLlm } from '../../../contexts/LlmContext';
-import { escapeHtml } from '../../../utils/escapeHtml';
 
 interface PlatformNode {
   id: string;
@@ -131,7 +130,7 @@ export function NarrativeMapPanel() {
       const data = await res.json();
       if (!ctrl.signal.aborted) {
         setResult(data);
-        setTimeout(() => setAnimatedConnections(true), 300);
+        simTimeoutRef.current = setTimeout(() => setAnimatedConnections(true), 300);
       }
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
@@ -492,6 +491,19 @@ export function NarrativeMapPanel() {
                           onMouseLeave={() => setHoveredPlatform(null)}
                           onClick={() => isSimMode && handleSimNodeClick(platform.id)}
                           style={{ cursor: isSimMode ? 'pointer' : 'default' }}
+                          // Simulate mode was mouse-only: injecting a narrative
+                          // at a node had no keyboard path at all.
+                          {...(isSimMode && {
+                            tabIndex: 0,
+                            role: 'button',
+                            'aria-label': `Inject narrative at ${platform.name}`,
+                            onKeyDown: (e: React.KeyboardEvent<SVGGElement>) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                handleSimNodeClick(platform.id);
+                              }
+                            },
+                          })}
                         >
                           <circle
                             cx={pos.x}
@@ -512,7 +524,7 @@ export function NarrativeMapPanel() {
                             className="text-[9px] font-sans fill-ink"
                             style={{ pointerEvents: 'none' }}
                           >
-                            {escapeHtml(platform.name.length > 10 ? platform.name.slice(0, 8) + '…' : platform.name)}
+                            {platform.name.length > 10 ? platform.name.slice(0, 8) + '…' : platform.name}
                           </text>
                         </g>
                       );

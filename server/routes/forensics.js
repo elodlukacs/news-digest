@@ -8,7 +8,7 @@ const router = express.Router();
 
 // POST /api/forensics — analyze text
 router.post('/', async (req, res) => {
-  const { text, title, userId, provider } = req.body;
+  const { text, title, userId, provider } = req.body || {};
   if (!text || text.trim().length < 20) return res.status(400).json({ error: 'Text must be at least 20 characters' });
   const trimmed = text.trim().slice(0, 5000);
   const safeTitle = title ? title.trim().slice(0, 300) : '';
@@ -52,7 +52,7 @@ router.post('/', async (req, res) => {
 
 // POST /api/forensics/stream — SSE streaming analysis
 router.post('/stream', async (req, res) => {
-  const { text, title, provider } = req.body;
+  const { text, title, provider } = req.body || {};
   if (!text || text.trim().length < 20) return res.status(400).json({ error: 'Text must be at least 20 characters' });
   const trimmed = text.trim().slice(0, 5000);
   const safeTitle = title ? title.trim().slice(0, 300) : '';
@@ -111,7 +111,7 @@ router.get('/history', (req, res) => {
 });
 
 router.post('/study', async (req, res) => {
-  const { headline, userId, provider } = req.body;
+  const { headline, userId, provider } = req.body || {};
   if (!headline || headline.trim().length < 10) {
     return res.status(400).json({ error: 'Headline must be at least 10 characters' });
   }

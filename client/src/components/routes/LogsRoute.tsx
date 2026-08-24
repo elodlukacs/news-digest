@@ -31,6 +31,7 @@ function LogsRoute() {
       const data = await res.json();
       setLogs(data);
     } catch {
+      // Logs are diagnostic; a failure here should not surface as an error UI.
     } finally {
       setLoading(false);
     }

@@ -31,7 +31,7 @@ const TOPICS = [
 
 // POST /api/fallacy-dojo/generate — generate argument with fallacies
 router.post('/generate', async (req, res) => {
-  const { difficulty = 'beginner', topic, provider } = req.body;
+  const { difficulty = 'beginner', topic, provider } = req.body || {};
 
   if (!['beginner', 'intermediate', 'expert'].includes(difficulty)) {
     return res.status(400).json({ error: 'difficulty must be beginner, intermediate, or expert' });
@@ -81,7 +81,7 @@ router.post('/generate', async (req, res) => {
 
 // POST /api/fallacy-dojo/answer — check user's fallacy identification
 router.post('/answer', (req, res) => {
-  const { sessionId, userFallacies, actualFallacies, timeToIdentify } = req.body;
+  const { sessionId, userFallacies, actualFallacies, timeToIdentify } = req.body || {};
   const uid = req.body.userId || 'default';
 
   if (!sessionId || !userFallacies || !actualFallacies) {
