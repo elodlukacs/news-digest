@@ -40,7 +40,7 @@ const AI_PROVIDERS = [
     url: 'https://api.deepseek.com/v1/chat/completions',
     key: () => env('DEEPSEEK_API_KEY'),
     model: 'deepseek-v4-flash',
-    models: ['deepseek-v4-flash', 'deepseek-v4-pro', 'deepseek-chat', 'deepseek-reasoner'],
+    models: ['deepseek-v4-flash', 'deepseek-v4-pro', 'deepseek-v4-flash-vision-exp'],
   },
   {
     id: 'llama',
@@ -112,14 +112,25 @@ function resolveProvider(providerId) {
   return { provider: byProviderId('llama'), model: providerId };
 }
 
-// Groq's thinking models default to writing their reasoning into
-// `message.content` as a <think> block, which every downstream JSON/text parser
-// here would choke on. `reasoning_format: 'hidden'` drops it server-side. It is
-// a Groq-specific parameter, so it is only ever sent to Groq.
+// Provider-specific request tuning. Both entries below suppress a reasoning
+// trace, for different reasons and with different (non-portable) parameters —
+// which is why this is keyed on the provider, not just the model.
+//
+// Groq: thinking models write their reasoning into `message.content` as a
+// <think> block, which every downstream JSON/text parser here chokes on.
+// `reasoning_format: 'hidden'` drops it server-side.
+//
+// DeepSeek: V4 has thinking ON by default and bills the reasoning against
+// `max_tokens`. At our 8192 budget the model spent the whole allowance thinking
+// and returned either empty content or a JSON array truncated mid-stream
+// (`{"articles":[` and nothing more), at ~75s per call. Nothing in this app
+// needs a reasoning trace, so it is disabled outright.
 const THINKING_MODELS = new Set(['qwen/qwen3.6-27b']);
 
-function reasoningParams(provider, model) {
-  return provider.name === 'Groq' && THINKING_MODELS.has(model) ? { reasoning_format: 'hidden' } : {};
+function providerParams(provider, model) {
+  if (provider.id === 'deepseek') return { thinking: { type: 'disabled' } };
+  if (provider.name === 'Groq' && THINKING_MODELS.has(model)) return { reasoning_format: 'hidden' };
+  return {};
 }
 
 const providerQuotas = {};
@@ -216,7 +227,7 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
             temperature,
             max_tokens,
             ...(response_format && { response_format }),
-            ...reasoningParams(provider, resolvedModel),
+            ...providerParams(provider, resolvedModel),
           }),
         });
 
