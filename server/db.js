@@ -277,6 +277,12 @@ addColumnIfNotExists('feeds', 'url_key', 'TEXT');
 addColumnIfNotExists('feeds', 'last_ok_at', 'TEXT');
 addColumnIfNotExists('feeds', 'last_error', 'TEXT');
 addColumnIfNotExists('feeds', 'consecutive_failures', 'INTEGER DEFAULT 0');
+// `summaries` is the fallback read when the summary_history row has been purged
+// (SUMMARY_RETENTION_DAYS, 3 by default). It carried only the markdown, so once
+// history expired every card silently lost its source badge, bias bar,
+// credibility badge, image and sentiment ribbon.
+addColumnIfNotExists('summaries', 'sentiment_data', 'TEXT');
+addColumnIfNotExists('summaries', 'tags_data', 'TEXT');
 
 db.exec(`
   CREATE INDEX IF NOT EXISTS idx_sh_cat_date ON summary_history(category_id, date_key);

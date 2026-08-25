@@ -63,14 +63,21 @@ export function parseSummaryMarkdown(
     const trimmed = part.trim();
     if (!trimmed) continue;
 
-    const linkMatch = trimmed.match(/^##\s+\[([^\]]+)\]\(([^)]+)\)/);
+    // Greedy, and anchored to the end of the heading line: the category-summary
+    // prompt asks for `original title [source]`, so the link text itself
+    // contains `]`. A lazy `[^\]]+` matched nothing at all, which dropped the
+    // title, the URL and every sentiment_data lookup keyed off the title —
+    // source, date, image, bias and credibility. Mirrors the server-side parser
+    // in routes/surprise.js.
+    const firstLine = trimmed.split('\n')[0];
+    const linkMatch = firstLine.match(/^##\s+\[(.+)\]\(([^)]+)\)\s*$/);
     const title = linkMatch
       ? linkMatch[1]
-      : trimmed.split('\n')[0].replace(/^#+\s*/, '').replace(/\*\*/g, '');
+      : firstLine.replace(/^#+\s*/, '').replace(/\*\*/g, '');
     const url = linkMatch ? linkMatch[2] : '';
 
     let content = trimmed
-      .replace(/^##\s+\[[^\]]+\]\([^)]+\)/, '')
+      .replace(/^##\s+\[.+\]\([^)]+\)\s*\n?/, '')
       .replace(/^#+\s*/, '')
       .trim();
 

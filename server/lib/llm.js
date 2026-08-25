@@ -20,32 +20,106 @@ class LLMError extends Error {
   }
 }
 
+// Order is the fallback order. DeepSeek leads because Groq's catalogue shrank
+// to gpt-oss + qwen3.6 (Llama 3.x and Kimi were shut down on 2026-08-16), and
+// deepseek-v4-flash is a clear step up on prose quality, tone control and
+// non-English output for the same money — with near-free prompt-cache hits,
+// which matters here because every call repeats a long fixed system prompt.
+// Groq stays as the low-latency fallback: an entry with no key is filtered out,
+// so this file is safe to ship before DEEPSEEK_API_KEY is set.
+//
+// `models` is the provider's catalogue, used to route an explicit model ID back
+// to the provider that actually serves it. This used to be a chain of string
+// heuristics (`includes('/')` → OpenRouter, everything else → Groq) which
+// misrouted any new namespaced ID and sent unknown bare IDs to Groq, where they
+// 404. Adding a provider now means adding its models here, nothing more.
 const AI_PROVIDERS = [
-  { id: 'llama', name: 'Groq', url: 'https://api.groq.com/openai/v1/chat/completions', key: () => env('GROQ_API_KEY'), model: 'openai/gpt-oss-20b' },
-  { id: 'llama8b', name: 'Groq', url: 'https://api.groq.com/openai/v1/chat/completions', key: () => env('GROQ_API_KEY'), model: 'qwen/qwen3.6-27b' },
-  { id: 'google', name: 'Google AI Studio', url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', key: () => env('GOOGLE_API_KEY'), model: 'gemini-2.0-flash' },
-  { id: 'openrouter', name: 'OpenRouter', url: 'https://openrouter.ai/api/v1/chat/completions', key: () => env('OPENROUTER_API_KEY'), model: 'meta-llama/llama-3.3-70b-instruct:free' },
+  {
+    id: 'deepseek',
+    name: 'DeepSeek',
+    url: 'https://api.deepseek.com/v1/chat/completions',
+    key: () => env('DEEPSEEK_API_KEY'),
+    model: 'deepseek-v4-flash',
+    models: ['deepseek-v4-flash', 'deepseek-v4-pro', 'deepseek-chat', 'deepseek-reasoner'],
+  },
+  {
+    id: 'llama',
+    name: 'Groq',
+    url: 'https://api.groq.com/openai/v1/chat/completions',
+    key: () => env('GROQ_API_KEY'),
+    model: 'openai/gpt-oss-120b',
+    // Groq-hosted IDs that contain a slash. Without this list they'd look like
+    // OpenRouter IDs, and OpenRouter serves different (or no) models under the
+    // same name.
+    models: [
+      'openai/gpt-oss-120b',
+      'openai/gpt-oss-20b',
+      'openai/gpt-oss-safeguard-20b',
+      'qwen/qwen3.6-27b',
+      'groq/compound',
+      'groq/compound-mini',
+    ],
+  },
+  {
+    id: 'llama8b',
+    name: 'Groq',
+    url: 'https://api.groq.com/openai/v1/chat/completions',
+    key: () => env('GROQ_API_KEY'),
+    model: 'qwen/qwen3.6-27b',
+  },
+  {
+    id: 'google',
+    name: 'Google AI Studio',
+    url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+    key: () => env('GOOGLE_API_KEY'),
+    model: 'gemini-2.0-flash',
+    prefix: /^(gemini|gemma)-/,
+  },
+  {
+    id: 'openrouter',
+    name: 'OpenRouter',
+    url: 'https://openrouter.ai/api/v1/chat/completions',
+    key: () => env('OPENROUTER_API_KEY'),
+    model: 'meta-llama/llama-3.3-70b-instruct:free',
+  },
 ];
 
-// Groq-hosted models whose IDs contain a slash. Without this list they'd match
-// the generic `providerId.includes('/')` branch below and get routed to
-// OpenRouter, which serves different (or no) models under the same ID.
-const GROQ_NAMESPACED_MODELS = new Set([
-  'openai/gpt-oss-120b',
-  'openai/gpt-oss-20b',
-  'openai/gpt-oss-safeguard-20b',
-  'qwen/qwen3.6-27b',
-  'groq/compound',
-  'groq/compound-mini',
-]);
+const PROVIDER_BY_MODEL = new Map();
+for (const provider of AI_PROVIDERS) {
+  for (const model of provider.models || []) PROVIDER_BY_MODEL.set(model, provider);
+}
+
+const byProviderId = (id) => AI_PROVIDERS.find(p => p.id === id);
+
+/**
+ * Resolve a caller-supplied `providerId` — which may be one of our provider
+ * ids, or a bare model ID — to the provider that serves it.
+ */
+function resolveProvider(providerId) {
+  const preset = byProviderId(providerId);
+  if (preset) return { provider: preset, model: preset.model };
+
+  const owner = PROVIDER_BY_MODEL.get(providerId);
+  if (owner) return { provider: owner, model: providerId };
+
+  const byPrefix = AI_PROVIDERS.find(p => p.prefix && p.prefix.test(providerId));
+  if (byPrefix) return { provider: byPrefix, model: providerId };
+
+  if (providerId.includes('/')) return { provider: byProviderId('openrouter'), model: providerId };
+
+  // Bare, unrecognised ID: Groq is the only provider whose model IDs are
+  // routinely unnamespaced, so it stays the default.
+  return { provider: byProviderId('llama'), model: providerId };
+}
 
 // Groq's thinking models default to writing their reasoning into
 // `message.content` as a <think> block, which every downstream JSON/text parser
-// here would choke on. `reasoning_format: 'hidden'` drops it server-side.
+// here would choke on. `reasoning_format: 'hidden'` drops it server-side. It is
+// a Groq-specific parameter, so it is only ever sent to Groq.
 const THINKING_MODELS = new Set(['qwen/qwen3.6-27b']);
 
-function reasoningParams(model) {
-  return THINKING_MODELS.has(model) ? { reasoning_format: 'hidden' } : {};
+function reasoningParams(provider, model) {
+  return provider.name === 'Groq' && THINKING_MODELS.has(model) ? { reasoning_format: 'hidden' } : {};
 }
 
 const providerQuotas = {};
@@ -96,28 +170,11 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
   if (providers.length === 0) throw new Error('No AI API keys configured. Set GROQ_API_KEY in .env');
 
   if (providerId) {
-    const target = AI_PROVIDERS.find(p => p.id === providerId);
-    if (target) {
-      if (!target.key()) throw new Error(`API key not configured for ${target.name}. Set the required env var.`);
-      providers = [target];
-    } else if (providerId.startsWith('gemini-') || providerId.startsWith('gemma-')) {
-      const google = AI_PROVIDERS.find(p => p.id === 'google');
-      if (!google?.key()) throw new Error('GOOGLE_API_KEY not configured');
-      providers = [{ ...google, model: providerId }];
-    } else if (GROQ_NAMESPACED_MODELS.has(providerId)) {
-      const groq = AI_PROVIDERS.find(p => p.id === 'llama');
-      if (!groq?.key()) throw new Error('No matching provider configured for model: ' + providerId);
-      providers = [{ ...groq, model: providerId }];
-    } else if (providerId.includes('/')) {
-      const openrouter = AI_PROVIDERS.find(p => p.id === 'openrouter');
-      if (!openrouter?.key()) throw new Error('OPENROUTER_API_KEY not configured');
-      providers = [{ ...openrouter, model: providerId }];
-    } else {
-      // Treat any other model ID (including plain Groq model names like llama-3.1-8b-instant) as a Groq model
-      const groq = AI_PROVIDERS.find(p => p.id === 'llama');
-      if (!groq?.key()) throw new Error('No matching provider configured for model: ' + providerId);
-      providers = [{ ...groq, model: providerId }];
+    const { provider, model } = resolveProvider(providerId);
+    if (!provider?.key()) {
+      throw new Error(`API key not configured for ${provider?.name || providerId}. Set the required env var.`);
     }
+    providers = [{ ...provider, model }];
   }
 
   let lastError = null;
@@ -159,7 +216,7 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
             temperature,
             max_tokens,
             ...(response_format && { response_format }),
-            ...reasoningParams(resolvedModel),
+            ...reasoningParams(provider, resolvedModel),
           }),
         });
 

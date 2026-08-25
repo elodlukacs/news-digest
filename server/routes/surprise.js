@@ -99,14 +99,20 @@ function pickArticle({ excludeUrls, categoryIds } = {}) {
     const sections = parseSummaryMarkdown(row.summary);
     if (sections.length === 0) continue;
 
-      const fallbackByUrl = new Map();
+    // Keyed by title, not url: sentiment_data entries are written by
+    // jobs/refreshSummary.js as {title, sentiment, tags, original_content,
+    // source, pub_date, image} and have never carried a `url`, so the old
+    // url-keyed map was always empty. Whenever the articles row could not be
+    // found by link, sourceName fell back to '' and matchOutlet returned null —
+    // the home card lost its bias bar and credibility badge.
+    const fallbackByTitle = new Map();
     if (row.sentiment_data) {
       try {
         const parsed = JSON.parse(row.sentiment_data);
         if (Array.isArray(parsed)) {
           for (const entry of parsed) {
-            if (entry && entry.url) {
-              fallbackByUrl.set(String(entry.url).toLowerCase(), {
+            if (entry && entry.title) {
+              fallbackByTitle.set(String(entry.title).toLowerCase(), {
                 originalContent: entry.original_content || '',
                 source: entry.source || '',
                 pubDate: entry.pub_date || '',
@@ -132,7 +138,7 @@ function pickArticle({ excludeUrls, categoryIds } = {}) {
 
       let articleRow = section.url ? findArticleByLink.get(section.url) : null;
 
-      const fallback = section.url ? fallbackByUrl.get(section.url.toLowerCase()) : null;
+      const fallback = section.title ? fallbackByTitle.get(section.title.toLowerCase()) : null;
       const originalContent =
         (articleRow && (articleRow.body_text || articleRow.description)) ||
         (fallback && fallback.originalContent) ||

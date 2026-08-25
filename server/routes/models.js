@@ -12,6 +12,28 @@ const ALLOWED_IDS = [
   'qwen/qwen3.6-27b',
 ];
 
+// DeepSeek publishes no usable /models listing for routing purposes, and the
+// catalogue is small and stable, so it is declared here. Kept in sync with the
+// `deepseek` entry in lib/llm.js.
+const DEEPSEEK_MODELS = [
+  {
+    id: 'deepseek-v4-flash',
+    name: 'DeepSeek V4 Flash',
+    owned_by: 'DeepSeek',
+    context_window: 131072,
+    max_completion_tokens: 8192,
+    provider: 'DeepSeek',
+  },
+  {
+    id: 'deepseek-v4-pro',
+    name: 'DeepSeek V4 Pro',
+    owned_by: 'DeepSeek',
+    context_window: 131072,
+    max_completion_tokens: 8192,
+    provider: 'DeepSeek',
+  },
+];
+
 const GOOGLE_MODELS = [
   {
     id: 'gemma-4-31b-it',
@@ -100,10 +122,14 @@ async function fetchGroqModels() {
 }
 
 router.get('/', async (req, res) => {
-  const groqModels = await fetchGroqModels();
+  // Both network calls are independent; they used to run in series.
+  const [groqModels, openrouterModels] = await Promise.all([
+    fetchGroqModels(),
+    fetchOpenRouterModels(),
+  ]);
+  const deepseekModels = env('DEEPSEEK_API_KEY') ? DEEPSEEK_MODELS : [];
   const googleModels = env('GOOGLE_API_KEY') ? GOOGLE_MODELS : [];
-  const openrouterModels = await fetchOpenRouterModels();
-  res.json([...groqModels, ...googleModels, ...openrouterModels]);
+  res.json([...deepseekModels, ...groqModels, ...googleModels, ...openrouterModels]);
 });
 
 router.get('/free', async (req, res) => {

@@ -70,14 +70,20 @@ router.get('/:id/summary', validateId, (req, res) => {
     });
   }
 
+  // Fallback once the history row has been purged by retention. It used to omit
+  // sentiment_data entirely, so every card silently lost its source badge, bias
+  // bar, credibility badge, image and sentiment ribbon after three days.
   const cached = db.prepare('SELECT * FROM summaries WHERE category_id = ?').get(req.params.id);
   if (cached) {
+    const parsedSentiment = cached.sentiment_data ? JSON.parse(cached.sentiment_data) : null;
     return res.json({
       category: category.name,
       summary: cached.summary,
       article_count: cached.article_count,
       feed_count: cached.feed_count,
       generated_at: cached.generated_at,
+      sentiment_data: enrichSentimentData(parsedSentiment),
+      tags_data: cached.tags_data ? JSON.parse(cached.tags_data) : null,
     });
   }
 

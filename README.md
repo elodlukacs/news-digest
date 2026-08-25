@@ -136,9 +136,6 @@ ALLOWED_ORIGINS=        # Comma-separated browser origins allowed to call the AP
 # Timeouts
 LLM_TIMEOUT_MS=         # Per-LLM-request timeout (default 90000)
 RSS_TIMEOUT_MS=         # Per-feed fetch timeout (default 15000)
-
-# Maintenance
-PROMPT_SEED_FORCE=      # Set to 1 for one startup to overwrite locally-edited prompts
 ```
 
 **Client** (build-time only):
