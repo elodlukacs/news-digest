@@ -1,6 +1,7 @@
 {
   "topics": [
     { "id": "world", "name": "World News", "description": "International news from major global outlets" },
+    { "id": "good-news", "name": "Good News", "description": "Solutions journalism, progress, and stories that end well" },
     { "id": "politics", "name": "Politics", "description": "Political analysis and government coverage" },
     { "id": "business", "name": "Business & Finance", "description": "Markets, economy, and corporate news" },
     { "id": "tech", "name": "Technology", "description": "Tech industry, gadgets, and software" },
@@ -22,6 +23,17 @@
     { "id": "dw-top", "title": "Deutsche Welle — Top Stories", "description": "International perspective from Germany", "url": "https://rss.dw.com/rdf/rss-en-all", "site": "dw.com", "language": "en", "topic": "world" },
     { "id": "france24", "title": "France 24", "description": "International news from France", "url": "https://www.france24.com/en/rss", "site": "france24.com", "language": "en", "topic": "world" },
     { "id": "nyt-world", "title": "New York Times — World", "description": "World coverage from the NYT", "url": "https://rss.nytimes.com/services/xml/rss/nyt/World.xml", "site": "nytimes.com", "language": "en", "topic": "world" },
+
+    { "id": "positive-news", "title": "Positive News", "description": "Constructive journalism magazine — progress, not just problems", "url": "https://www.positive.news/feed/", "site": "positive.news", "language": "en", "topic": "good-news" },
+    { "id": "good-news-network", "title": "Good News Network", "description": "Daily uplifting stories from around the world", "url": "https://www.goodnewsnetwork.org/feed/", "site": "goodnewsnetwork.org", "language": "en", "topic": "good-news" },
+    { "id": "reasons-to-be-cheerful", "title": "Reasons to be Cheerful", "description": "David Byrne's magazine of things that are working", "url": "https://reasonstobecheerful.world/feed/", "site": "reasonstobecheerful.world", "language": "en", "topic": "good-news" },
+    { "id": "optimist-daily", "title": "The Optimist Daily", "description": "Solutions-focused stories, published every weekday", "url": "https://www.optimistdaily.com/feed/", "site": "optimistdaily.com", "language": "en", "topic": "good-news" },
+    { "id": "squirrel-news", "title": "Squirrel News", "description": "Curated constructive reporting from international outlets", "url": "https://squirrel-news.net/feed/", "site": "squirrel-news.net", "language": "en", "topic": "good-news" },
+    { "id": "nice-news", "title": "Nice News", "description": "A daily digest of genuinely good headlines", "url": "https://nicenews.com/feed/", "site": "nicenews.com", "language": "en", "topic": "good-news" },
+    { "id": "progress-network", "title": "The Progress Network", "description": "Long-view reporting on human progress", "url": "https://theprogressnetwork.org/feed/", "site": "theprogressnetwork.org", "language": "en", "topic": "good-news" },
+    { "id": "happy-eco-news", "title": "Happy Eco News", "description": "Environmental wins and climate solutions", "url": "https://happyeconews.com/feed/", "site": "happyeconews.com", "language": "en", "topic": "good-news" },
+    { "id": "anthropocene", "title": "Anthropocene Magazine", "description": "Science-backed solutions for a sustainable planet", "url": "https://www.anthropocenemagazine.org/feed/", "site": "anthropocenemagazine.org", "language": "en", "topic": "good-news" },
+    { "id": "solutions-journalism", "title": "The Whole Story", "description": "Solutions Journalism Network — what works and why", "url": "https://thewholestory.solutionsjournalism.org/feed", "site": "solutionsjournalism.org", "language": "en", "topic": "good-news" },
 
     { "id": "politico", "title": "Politico", "description": "US politics and policy", "url": "https://www.politico.com/rss/politicopicks.xml", "site": "politico.com", "language": "en", "topic": "politics" },
     { "id": "the-hill", "title": "The Hill", "description": "Congress, campaigns, and policy", "url": "https://thehill.com/news/feed/", "site": "thehill.com", "language": "en", "topic": "politics" },
