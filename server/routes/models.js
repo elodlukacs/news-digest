@@ -17,8 +17,8 @@ const ALLOWED_IDS = [
 // `deepseek` entry in lib/llm.js.
 const DEEPSEEK_MODELS = [
   {
-    id: 'deepseek-v4-flash',
-    name: 'DeepSeek V4 Flash',
+    id: 'deepseek-flash',
+    name: 'DeepSeek V4.1 Flash',
     owned_by: 'DeepSeek',
     context_window: 1000000,
     max_completion_tokens: 8192,

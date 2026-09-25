@@ -22,7 +22,7 @@ class LLMError extends Error {
 
 // Order is the fallback order. DeepSeek leads because Groq's catalogue shrank
 // to gpt-oss + qwen3.6 (Llama 3.x and Kimi were shut down on 2026-08-16), and
-// deepseek-v4-flash is a clear step up on prose quality, tone control and
+// deepseek-flash (V4.1 Flash) is a clear step up on prose quality, tone control and
 // non-English output for the same money — with near-free prompt-cache hits,
 // which matters here because every call repeats a long fixed system prompt.
 // Groq stays as the low-latency fallback: an entry with no key is filtered out,
@@ -39,8 +39,10 @@ const AI_PROVIDERS = [
     name: 'DeepSeek',
     url: 'https://api.deepseek.com/v1/chat/completions',
     key: () => env('DEEPSEEK_API_KEY'),
-    model: 'deepseek-v4-flash',
-    models: ['deepseek-v4-flash', 'deepseek-v4-pro', 'deepseek-v4-flash-vision-exp'],
+    model: 'deepseek-flash',
+    // The two v4-flash names are retired aliases that DeepSeek routes to V4.1
+    // Flash; kept so a stored/explicit ID still resolves to this provider.
+    models: ['deepseek-flash', 'deepseek-v4-pro', 'deepseek-v4-flash', 'deepseek-v4-flash-vision-exp'],
   },
   {
     id: 'llama',
