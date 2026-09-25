@@ -78,6 +78,14 @@ export interface ChatMessage {
   created_at: string;
 }
 
+/** What the server could obtain for an article: the extracted page, full feed text, or only the teaser. */
+export type ArticleSourceKind = 'page' | 'feed' | 'excerpt';
+
+export type ArticleContextStatus =
+  | { state: 'loading' }
+  | { state: 'ready'; source: ArticleSourceKind; briefing: boolean }
+  | { state: 'failed' };
+
 export interface ProviderQuota {
   provider: string;
   model: string;

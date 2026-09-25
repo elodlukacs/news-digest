@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { MessageCircle, Send } from 'lucide-react';
+import { CircleAlert, CircleCheck, LoaderCircle, MessageCircle, Send } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import type { ChatMessage } from '../types';
+import type { ArticleContextStatus, ChatMessage } from '../types';
 import { Drawer, DrawerContent, DrawerTitle } from './ui/drawer';
 import { Sheet, SheetContent, SheetTitle } from './ui/sheet';
 import { useMediaQuery } from '../hooks/useMediaQuery';
@@ -14,6 +14,8 @@ interface ArticleChatPopupProps {
   messages: ChatMessage[];
   sending: boolean;
   onSend: (text: string) => void;
+  /** Omit for chats that aren't grounded in the original article. */
+  contextStatus?: ArticleContextStatus | null;
 }
 
 export function ArticleChatPopup({
@@ -24,6 +26,7 @@ export function ArticleChatPopup({
   messages,
   sending,
   onSend,
+  contextStatus = null,
 }: ArticleChatPopupProps) {
   const isDesktop = useMediaQuery('(min-width: 768px)');
 
@@ -35,6 +38,7 @@ export function ArticleChatPopup({
       messages={messages}
       sending={sending}
       onSend={onSend}
+      contextStatus={contextStatus}
     />
   );
 
@@ -70,9 +74,46 @@ interface ChatBodyProps {
   messages: ChatMessage[];
   sending: boolean;
   onSend: (text: string) => void;
+  contextStatus: ArticleContextStatus | null;
 }
 
-function ChatBody({ isDesktop, headline, sourceName, messages, sending, onSend }: ChatBodyProps) {
+const SUMMARY_SUGGESTIONS = ['What are the key takeaways?', 'Who is affected?', 'Why does this matter?'];
+const CONTEXT_SUGGESTIONS = ["What's the background?", 'What are the arguments for and against?', 'How do other outlets report it?'];
+
+function ContextStatusLine({ status }: { status: ArticleContextStatus }) {
+  if (status.state === 'loading') {
+    return (
+      <p className="flex items-center gap-1.5 text-[11px] text-ink-muted mt-2">
+        <LoaderCircle size={12} className="motion-safe:animate-spin shrink-0" aria-hidden />
+        Reading the original article and wider coverage…
+      </p>
+    );
+  }
+  if (status.state === 'failed') {
+    return (
+      <p className="flex items-center gap-1.5 text-[11px] text-ink-muted mt-2">
+        <CircleAlert size={12} className="shrink-0" aria-hidden />
+        Context unavailable. Answers use the summary only.
+      </p>
+    );
+  }
+  const hasArticle = status.source !== 'excerpt';
+  const loaded = [hasArticle && 'original article', status.briefing && 'background and other coverage']
+    .filter(Boolean)
+    .join(', ');
+  return (
+    <p className="flex items-start gap-1.5 text-[11px] leading-snug text-ink-muted mt-2">
+      <CircleCheck size={12} className="text-masthead shrink-0 mt-px" aria-hidden />
+      <span>
+        <span className="font-medium text-ink">Context loaded</span>
+        {loaded ? `: ${loaded}.` : '.'}
+        {!hasArticle && " The original page couldn't be read, so the article itself is only the feed excerpt."}
+      </span>
+    </p>
+  );
+}
+
+function ChatBody({ isDesktop, headline, sourceName, messages, sending, onSend, contextStatus }: ChatBodyProps) {
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -126,6 +167,11 @@ function ChatBody({ isDesktop, headline, sourceName, messages, sending, onSend }
           {headline}
         </p>
         <p className="text-[11px] text-ink-muted mt-0.5">{sourceName}</p>
+        {contextStatus && (
+          <div role="status" aria-live="polite">
+            <ContextStatusLine status={contextStatus} />
+          </div>
+        )}
       </div>
 
       <div
@@ -141,10 +187,12 @@ function ChatBody({ isDesktop, headline, sourceName, messages, sending, onSend }
               <MessageCircle size={20} className="text-masthead" />
             </div>
             <p className="text-sm font-serif text-ink-muted italic leading-relaxed max-w-[260px]">
-              Ask a question about this article and get an AI-powered answer based on the summary context.
+              {contextStatus
+                ? 'Ask anything about this story. Answers draw on the original article, other outlets\u2019 coverage and background on the issue.'
+                : 'Ask a question about this article and get an AI-powered answer based on the summary context.'}
             </p>
             <div className="flex flex-wrap gap-2 mt-5 justify-center">
-              {['What are the key takeaways?', 'Who is affected?', 'Why does this matter?'].map((q) => (
+              {(contextStatus ? CONTEXT_SUGGESTIONS : SUMMARY_SUGGESTIONS).map((q) => (
                 <button
                   key={q}
                   onClick={() => { setInput(q); inputRef.current?.focus(); }}

@@ -14,6 +14,9 @@
 const SUMMARY_RETENTION_DAYS = Number(process.env.SUMMARY_RETENTION_DAYS) || 3;
 const BRIEFING_RETENTION_DAYS = Number(process.env.BRIEFING_RETENTION_DAYS) || 30;
 const LLM_USAGE_RETENTION_DAYS = Number(process.env.LLM_USAGE_RETENTION_DAYS) || 90;
+// Extracted article text and background briefings for article chat. Summaries
+// (and so their chat entry points) are gone after SUMMARY_RETENTION_DAYS.
+const ARTICLE_CACHE_RETENTION_DAYS = Number(process.env.ARTICLE_CACHE_RETENTION_DAYS) || 7;
 
 const DAY_MS = 86400000;
 const isoDaysAgo = (days) => new Date(Date.now() - days * DAY_MS).toISOString();
@@ -26,6 +29,7 @@ function purgeExpired(db) {
   const summaryCutoff = isoDaysAgo(SUMMARY_RETENTION_DAYS);
   const briefingCutoff = isoDaysAgo(BRIEFING_RETENTION_DAYS);
   const usageCutoff = isoDaysAgo(LLM_USAGE_RETENTION_DAYS);
+  const articleCacheCutoff = isoDaysAgo(ARTICLE_CACHE_RETENTION_DAYS);
 
   return db.transaction(() => {
     // Category summaries (category_id > 0) and briefings (category_id = 0) have
@@ -51,7 +55,11 @@ function purgeExpired(db) {
 
     const usageDeleted = db.prepare('DELETE FROM llm_usage WHERE created_at < ?').run(usageCutoff).changes;
 
-    return { summaries: expired.length, chatMessages: chatDeleted, llmUsage: usageDeleted };
+    const articleCacheDeleted =
+      db.prepare('DELETE FROM article_sources WHERE created_at < ?').run(articleCacheCutoff).changes +
+      db.prepare('DELETE FROM article_contexts WHERE created_at < ?').run(articleCacheCutoff).changes;
+
+    return { summaries: expired.length, chatMessages: chatDeleted, llmUsage: usageDeleted, articleCache: articleCacheDeleted };
   })();
 }
 
@@ -63,10 +71,11 @@ function startRetention(db, { intervalMs = 6 * 60 * 60 * 1000 } = {}) {
   const run = () => {
     try {
       const result = purgeExpired(db);
-      if (result.summaries || result.chatMessages || result.llmUsage) {
+      if (result.summaries || result.chatMessages || result.llmUsage || result.articleCache) {
         console.log(
           `[retention] purged ${result.summaries} summaries, ` +
-          `${result.chatMessages} chat messages, ${result.llmUsage} usage rows`
+          `${result.chatMessages} chat messages, ${result.llmUsage} usage rows, ` +
+          `${result.articleCache} article cache rows`
         );
       }
     } catch (err) {
