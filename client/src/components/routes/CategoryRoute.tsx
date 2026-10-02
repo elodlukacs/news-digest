@@ -32,11 +32,13 @@ export function CategoryRoute() {
 
   const handleRefresh = useCallback(async (keyword?: string) => {
     const result = await refresh(keyword);
+    // Even when the request was cancelled (category or snapshot switch), the
+    // server may have finished and written a new archive entry.
+    refreshHistory();
     if (!result) return;
     // Point the archive at the new entry; leaving an older snapshot selected
     // kept it highlighted, and clicking it again did nothing.
     if (selectedSnapshotId !== null) setSelectedSnapshotId(result.id ?? null);
-    refreshHistory();
   }, [refresh, refreshHistory, selectedSnapshotId, setSelectedSnapshotId]);
 
   const handleClearFilter = useCallback(() => {

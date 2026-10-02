@@ -28,13 +28,19 @@ export function useSummary(
   snapshotId?: number | null,
   providerId: string = 'openai/gpt-oss-20b',
 ) {
-  const [summary, setSummary] = useState<Summary | null>(null);
+  // Tagged with the category it belongs to, so a category switch shows nothing
+  // (not the previous category's cards) from the very first render.
+  const [shown, setShown] = useState<{ categoryId: number | null; data: Summary | null }>({ categoryId: null, data: null });
+  const summary = shown.categoryId === categoryId ? shown.data : null;
+  const setSummary = useCallback(
+    (data: Summary | null) => setShown({ categoryId, data }),
+    [categoryId],
+  );
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorStatus, setErrorStatus] = useState<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const shownCategoryRef = useRef<number | null>(null);
 
   // One request at a time. Whoever aborts the previous request also clears its
   // busy flags: the aborted request's own `finally` skips them, so aborting a
@@ -59,14 +65,8 @@ export function useSummary(
   }, []);
 
   useEffect(() => {
-    // A different category must not show the previous one's cards while its
-    // own summary loads (or after that load fails).
-    if (shownCategoryRef.current !== categoryId) {
-      shownCategoryRef.current = categoryId;
-      setSummary(null);
-    }
-    if (!categoryId) return;
     const controller = startRequest();
+    if (!categoryId) return;
 
     const load = async () => {
       setLoading(true);
@@ -91,7 +91,7 @@ export function useSummary(
     return () => controller.abort();
     // providerId is deliberately excluded: it only affects refresh(), and
     // including it made switching models reload (and previously regenerate).
-  }, [categoryId, snapshotId, startRequest, fail]);
+  }, [categoryId, snapshotId, startRequest, fail, setSummary]);
 
   /**
    * Generate a new summary, optionally filtered. Resolves to it, or null.
@@ -120,7 +120,7 @@ export function useSummary(
     } finally {
       if (!controller.signal.aborted) setRefreshing(false);
     }
-  }, [categoryId, providerId, startRequest, fail]);
+  }, [categoryId, providerId, startRequest, fail, setSummary]);
 
   /** Show the category's latest unfiltered summary (used to clear a filter). */
   const loadLatest = useCallback(async () => {
@@ -135,7 +135,7 @@ export function useSummary(
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  }, [categoryId, startRequest, fail]);
+  }, [categoryId, startRequest, fail, setSummary]);
 
   return { summary, loading, refreshing, error, errorStatus, refresh, loadLatest };
 }

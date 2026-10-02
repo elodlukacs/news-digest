@@ -61,6 +61,9 @@ function enrichSentimentData(sentimentData) {
 }
 
 async function refreshCategorySummary(db, callLLM, categoryId, { provider, keyword } = {}) {
+  if (keyword != null && typeof keyword !== 'string') {
+    throw new RefreshError('Filter keyword must be text', 400);
+  }
   const keywordTrim = keyword?.trim() || '';
   if (keywordTrim && !isSearchableKeyword(keywordTrim)) {
     throw new RefreshError('Filter keyword must contain letters or numbers', 400);

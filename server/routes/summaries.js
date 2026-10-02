@@ -69,8 +69,9 @@ router.get('/:id/summary', validateId, (req, res) => {
   res.json({ category: category.name, summary: null });
 });
 
+// 50, not 30: filtered snapshots are listed too and would push digests off.
 router.get('/:id/history', validateId, (req, res) => {
-  const rows = db.prepare('SELECT id, date_key, generated_at, keyword FROM summary_history WHERE category_id = ? ORDER BY generated_at DESC LIMIT 30').all(req.params.id);
+  const rows = db.prepare('SELECT id, date_key, generated_at, keyword FROM summary_history WHERE category_id = ? ORDER BY generated_at DESC LIMIT 50').all(req.params.id);
   res.json(rows);
 });
 

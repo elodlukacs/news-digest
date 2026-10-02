@@ -116,11 +116,13 @@ router.post('/fetch', async (req, res) => {
     // the insert loop left the table empty, and a concurrent GET /api/jobs
     // between them saw zero rows.
     //
-    // Only sources that answered are wiped: a source with a transient error
-    // used to lose every job until the next good fetch. Rows from sources that
+    // Only sources that answered in full are wiped: a source with a transient
+    // error used to lose every job until the next good fetch. Rows from sources that
     // no longer exist are cleared too. AI results are kept for jobs that are
     // still here — re-fetching used to erase them all and force a paid re-curate.
-    const okNames = JSON.stringify(okSources.map(s => s.name));
+    // A partial source (later page failed) or one that returned nothing may
+    // still have live jobs we did not see this time; upsert, don't wipe.
+    const okNames = JSON.stringify(okSources.filter(s => !s.partial && s.count > 0).map(s => s.name));
     const allNames = JSON.stringify(sources.map(s => s.name));
     db.transaction(() => {
       db.prepare(`
@@ -164,7 +166,11 @@ router.post('/ai-filter', async (req, res) => {
     if (jobs.length === 0) return res.json({ filtered: 0, total: 0 });
 
     console.log(`[Jobs] AI filtering ${jobs.length} jobs...`);
-    const { results, classifiedIds, failedBatches, totalBatches } = await filterJobsWithAI(jobs, callLLM, provider || null);
+    // One curate at a time: a double click used to run two full paid passes.
+    const { results, classifiedIds, failedBatches, totalBatches } = await runExclusive(
+      'jobs:ai-filter',
+      () => filterJobsWithAI(jobs, callLLM, provider || null)
+    );
 
     // Every batch failed (provider outage, unparseable output): keep the
     // previous results. This used to wipe them and report success.

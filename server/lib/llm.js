@@ -6,6 +6,10 @@ const env = (name) => process.env[name];
 const REQUEST_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS) || 90_000;
 const RETRY_STATUS = new Set([408, 409, 425, 429, 500, 502, 503, 504]);
 const MAX_ATTEMPTS_PER_PROVIDER = 2;
+// Whole-call budget across the fallback chain. Without it, a requested model
+// plus the full chain could run 5 providers × 2 attempts × 90 s ≈ 15 min while
+// the client (and the refresh lock) waited.
+const TOTAL_BUDGET_MS = Number(process.env.LLM_TOTAL_BUDGET_MS) || 180_000;
 const RETRY_BASE_DELAY_MS = 1500;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -178,7 +182,13 @@ async function getOpenRouterFreeModel(apiKey, currentModel) {
   }
 }
 
-async function callLLM(messages, { purpose = 'unknown', categoryId = null, temperature = 0.3, max_tokens = 8192, providerId = null, response_format = null, db } = {}) {
+/**
+ * `providerId` is tried first, then the rest of the chain. Pass
+ * `exclusive: true` to use only that provider (e.g. a caller that must stay on
+ * a cheap model rather than fall through to a paid one).
+ */
+async function callLLM(messages, { purpose = 'unknown', categoryId = null, temperature = 0.3, max_tokens = 8192, providerId = null, exclusive = false, response_format = null, db } = {}) {
+  const startedAt = Date.now();
   let providers = AI_PROVIDERS.filter(p => p.key());
   if (providers.length === 0) throw new Error('No AI API keys configured. Set GROQ_API_KEY in .env');
 
@@ -189,8 +199,12 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
   if (providerId) {
     const { provider, model } = resolveProvider(providerId);
     if (provider?.key()) {
-      const rest = providers.filter((p) => !(p.id === provider.id && p.model === model));
+      // Same endpoint + model counts as the same provider (llama and llama8b
+      // share Groq's URL and key), or a 429 would be retried on it again.
+      const rest = exclusive ? [] : providers.filter((p) => !(p.url === provider.url && p.model === model));
       providers = [{ ...provider, model, preferred: true }, ...rest];
+    } else if (exclusive) {
+      throw new LLMError(`API key not configured for ${provider?.name || providerId}`, { statusCode: 503 });
     } else {
       console.warn(`[LLM] No API key for ${provider?.name || providerId} (requested ${providerId}) — using the default chain`);
     }
@@ -215,8 +229,10 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
     }
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS_PER_PROVIDER; attempt++) {
+      const remaining = TOTAL_BUDGET_MS - (Date.now() - startedAt);
+      if (remaining < 5000) break;
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+      const timer = setTimeout(() => controller.abort(), Math.min(REQUEST_TIMEOUT_MS, remaining));
       try {
         const start = Date.now();
         console.log(`[LLM] Trying ${provider.name} (${resolvedModel}) for ${purpose}${attempt > 1 ? ` — retry ${attempt - 1}` : ''}...`);
@@ -304,6 +320,9 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
         if (!content.trim()) {
           console.warn(`[LLM] ${provider.name} (${resolvedModel}) returned empty content`);
           lastError = `${provider.name} returned an empty response`;
+          // lastStatus describes lastError; a stale 429 from an earlier provider
+          // made a timeout or empty reply surface as "rate limited".
+          lastStatus = null;
           if (attempt < MAX_ATTEMPTS_PER_PROVIDER) {
             await sleep(RETRY_BASE_DELAY_MS * attempt);
             continue;
@@ -317,6 +336,7 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
         lastError = timedOut
           ? `${provider.name} timed out after ${Math.round(REQUEST_TIMEOUT_MS / 1000)}s`
           : `${provider.name}: ${err.message}`;
+        lastStatus = null;
         console.warn(`[LLM] ${lastError}`);
         if (attempt < MAX_ATTEMPTS_PER_PROVIDER) {
           await sleep(RETRY_BASE_DELAY_MS * attempt);
@@ -327,6 +347,9 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
         clearTimeout(timer);
       }
     }
+  }
+  if (Date.now() - startedAt >= TOTAL_BUDGET_MS - 5000) {
+    console.warn(`[LLM] ${purpose}: gave up after the ${Math.round(TOTAL_BUDGET_MS / 1000)}s budget`);
   }
   throw new LLMError(lastError || 'All AI providers failed', {
     statusCode: lastStatus === 429 ? 429 : 502,

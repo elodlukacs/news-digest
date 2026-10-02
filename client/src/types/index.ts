@@ -184,6 +184,8 @@ export interface SourceFetchResult {
   name: string;
   count: number;
   error: string | null;
+  /** A later page failed: earlier pages were kept and older jobs were not wiped. */
+  partial?: boolean;
 }
 
 export interface FetchReport {

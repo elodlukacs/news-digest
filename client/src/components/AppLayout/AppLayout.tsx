@@ -47,6 +47,8 @@ export function AppLayout() {
   // A stored model the server no longer lists (retired, or its key removed)
   // would be requested on every call. Fall back to one that exists; the
   // server still falls through its provider chain if that one fails too.
+  // Not persisted: if the model list was only partly loaded, a reload restores
+  // the stored choice.
   const effectiveLlm = useMemo(() => {
     if (modelsLoading || models.length === 0 || models.some((m) => m.id === selectedLlm)) return selectedLlm;
     return models.some((m) => m.id === defaultModel) ? defaultModel : models[0].id;

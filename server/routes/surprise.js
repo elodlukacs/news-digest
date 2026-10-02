@@ -239,6 +239,8 @@ router.post('/elaborate', async (req, res) => {
       db,
       purpose: 'surprise-elaborate',
       providerId: 'llama8b',
+      // Cheap model only: falling through the chain would reach paid providers.
+      exclusive: true,
       max_tokens: 2000,
       temperature: 0.5,
     });
@@ -306,6 +308,8 @@ router.post('/chat', async (req, res) => {
       db,
       purpose: 'surprise-chat',
       providerId: 'llama8b',
+      // Cheap model only: falling through the chain would reach paid providers.
+      exclusive: true,
       max_tokens: 1024,
       temperature: 0.5,
     });

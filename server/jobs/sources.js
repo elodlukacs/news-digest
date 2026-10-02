@@ -16,6 +16,19 @@ const {
 } = require('./profile');
 const { fetchCompaniesATS } = require('./sources-ats');
 
+/**
+ * Thrown when a paginated source fails after some pages succeeded. It carries
+ * the jobs already parsed: they are kept, but the source is reported as
+ * partial so the re-fetch does not wipe its older jobs (the missing pages may
+ * still hold them).
+ */
+class PartialFetchError extends Error {
+  constructor(message, jobs) {
+    super(message);
+    this.partialJobs = jobs;
+  }
+}
+
 // ─── RemoteOK ───────────────────────────────────────────────
 
 async function fetchRemoteOK(signal) {
@@ -115,8 +128,7 @@ async function fetchHimalayas(signal) {
     // the source then reported 0 jobs and the re-fetch deleted its old ones.
     if (!resp.ok) {
       if (page === 0) throw new Error(`Himalayas returned ${resp.status}`);
-      console.warn(`[Jobs] Himalayas page ${page + 1} returned ${resp.status} — keeping ${allJobs.length} jobs from earlier pages`);
-      break;
+      throw new PartialFetchError(`Himalayas page ${page + 1} returned ${resp.status}`, allJobs);
     }
 
     const data = await resp.json();
@@ -166,8 +178,7 @@ async function fetchRemotive(signal) {
     const resp = await fetchWithTimeout(`https://remotive.com/api/remote-jobs?${params}`, signal);
     if (!resp.ok) {
       if (out.length === 0) throw new Error(`Remotive returned ${resp.status}`);
-      console.warn(`[Jobs] Remotive search "${keyword}" returned ${resp.status} — keeping ${out.length} jobs from earlier searches`);
-      break;
+      throw new PartialFetchError(`Remotive search "${keyword}" returned ${resp.status}`, out);
     }
     const data = await resp.json();
     for (const raw of (data.jobs || [])) {
@@ -203,8 +214,7 @@ async function fetchArbeitnow(signal) {
     const resp = await fetchWithTimeout(`https://www.arbeitnow.com/api/job-board-api?page=${page}`, signal);
     if (!resp.ok) {
       if (i === 0) throw new Error(`Arbeitnow returned ${resp.status}`);
-      console.warn(`[Jobs] Arbeitnow page ${page} returned ${resp.status} — keeping ${allJobs.length} jobs from earlier pages`);
-      break;
+      throw new PartialFetchError(`Arbeitnow page ${page} returned ${resp.status}`, allJobs);
     }
 
     const data = await resp.json();
@@ -687,9 +697,13 @@ async function fetchAllSources(signal) {
     ALL_SOURCES.map(async ({ name, fn }) => {
       try {
         const jobs = await fn(signal);
-        return { name, jobs, error: null };
+        return { name, jobs, error: null, partial: false };
       } catch (error) {
-        return { name, jobs: [], error: error.message };
+        if (error instanceof PartialFetchError) {
+          console.warn(`[Jobs] ${name}: ${error.message} — keeping ${error.partialJobs.length} jobs from earlier pages`);
+          return { name, jobs: error.partialJobs, error: null, partial: true };
+        }
+        return { name, jobs: [], error: error.message, partial: false };
       }
     })
   );
@@ -699,7 +713,7 @@ async function fetchAllSources(signal) {
 
   for (const result of results) {
     const val = result.status === 'fulfilled' ? result.value : { name: 'unknown', jobs: [], error: result.reason?.message };
-    sourceResults.push({ name: val.name, count: val.jobs.length, error: val.error });
+    sourceResults.push({ name: val.name, count: val.jobs.length, error: val.error, partial: !!val.partial });
     allJobs.push(...val.jobs);
   }
 

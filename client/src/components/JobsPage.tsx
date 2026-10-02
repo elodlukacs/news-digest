@@ -139,12 +139,18 @@ export function JobsPage({
                   </Tooltip>
                 );
               }
-              const tone = s.count === 0
-                ? 'bg-stone-100 text-stone-600 dark:bg-stone-800/50 dark:text-stone-400'
-                : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300';
+              const tone = s.partial
+                ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300'
+                : s.count === 0
+                  ? 'bg-stone-100 text-stone-600 dark:bg-stone-800/50 dark:text-stone-400'
+                  : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300';
               return (
-                <span key={s.name} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${tone}`}>
-                  {label} · {s.count}
+                <span
+                  key={s.name}
+                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${tone}`}
+                  title={s.partial ? 'Some pages failed — kept what was fetched, older jobs not removed' : undefined}
+                >
+                  {label} · {s.count}{s.partial ? ' · partial' : ''}
                 </span>
               );
             })}
