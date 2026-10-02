@@ -1,7 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const { parseFeedUrl, extractImage } = require('../lib/rss');
-const { callLLM: rawCallLLM } = require('../lib/llm');
+const { callLLM: rawCallLLM, LLMError } = require('../lib/llm');
 const validateId = require('../middleware/validateId');
 const { refreshCategorySummary, enrichSentimentData, RefreshError } = require('../jobs/refreshSummary');
 const { runExclusive } = require('../lib/inFlight');
@@ -10,65 +10,43 @@ const router = express.Router();
 
 const callLLM = (messages, opts) => rawCallLLM(messages, { ...opts, db });
 
+function historyResponse(category, hist) {
+  const parsedSentiment = hist.sentiment_data ? JSON.parse(hist.sentiment_data) : null;
+  return {
+    id: hist.id,
+    category: category.name,
+    summary: hist.summary,
+    article_count: hist.article_count,
+    feed_count: hist.feed_count,
+    generated_at: hist.generated_at,
+    provider: hist.provider,
+    sentiment_data: enrichSentimentData(parsedSentiment),
+    tags_data: hist.tags_data ? JSON.parse(hist.tags_data) : null,
+    keyword: hist.keyword || null,
+  };
+}
+
 router.get('/:id/summary', validateId, (req, res) => {
   const category = db.prepare('SELECT * FROM categories WHERE id = ?').get(req.params.id);
   if (!category) return res.status(404).json({ error: 'Category not found' });
 
   const { date, summary_id } = req.query;
 
+  // An explicit snapshot may be a filtered one — the archive lists those too.
   if (summary_id) {
     const hist = db.prepare('SELECT * FROM summary_history WHERE id = ? AND category_id = ?').get(summary_id, req.params.id);
-    if (hist) {
-      const parsedSentiment = hist.sentiment_data ? JSON.parse(hist.sentiment_data) : null;
-      return res.json({
-        id: hist.id,
-        category: category.name,
-        summary: hist.summary,
-        article_count: hist.article_count,
-        feed_count: hist.feed_count,
-        generated_at: hist.generated_at,
-        provider: hist.provider,
-        sentiment_data: enrichSentimentData(parsedSentiment),
-        tags_data: hist.tags_data ? JSON.parse(hist.tags_data) : null,
-      });
-    }
-    return res.json({ category: category.name, summary: null });
+    return res.json(hist ? historyResponse(category, hist) : { category: category.name, summary: null });
   }
 
+  // "Latest" and by-date reads mean the category's digest: a filtered run is a
+  // view of one story and used to replace it until the next plain refresh.
   if (date) {
-    const hist = db.prepare('SELECT * FROM summary_history WHERE category_id = ? AND date_key = ? ORDER BY generated_at DESC LIMIT 1').get(req.params.id, date);
-    if (hist) {
-      const parsedSentiment = hist.sentiment_data ? JSON.parse(hist.sentiment_data) : null;
-      return res.json({
-        id: hist.id,
-        category: category.name,
-        summary: hist.summary,
-        article_count: hist.article_count,
-        feed_count: hist.feed_count,
-        generated_at: hist.generated_at,
-        provider: hist.provider,
-        sentiment_data: enrichSentimentData(parsedSentiment),
-        tags_data: hist.tags_data ? JSON.parse(hist.tags_data) : null,
-      });
-    }
-    return res.json({ category: category.name, summary: null });
+    const hist = db.prepare('SELECT * FROM summary_history WHERE category_id = ? AND date_key = ? AND keyword IS NULL ORDER BY generated_at DESC LIMIT 1').get(req.params.id, date);
+    return res.json(hist ? historyResponse(category, hist) : { category: category.name, summary: null });
   }
 
-  const latest = db.prepare('SELECT * FROM summary_history WHERE category_id = ? ORDER BY generated_at DESC LIMIT 1').get(req.params.id);
-  if (latest) {
-    const parsedSentiment = latest.sentiment_data ? JSON.parse(latest.sentiment_data) : null;
-    return res.json({
-      id: latest.id,
-      category: category.name,
-      summary: latest.summary,
-      article_count: latest.article_count,
-      feed_count: latest.feed_count,
-      generated_at: latest.generated_at,
-      provider: latest.provider,
-      sentiment_data: enrichSentimentData(parsedSentiment),
-      tags_data: latest.tags_data ? JSON.parse(latest.tags_data) : null,
-    });
-  }
+  const latest = db.prepare('SELECT * FROM summary_history WHERE category_id = ? AND keyword IS NULL ORDER BY generated_at DESC LIMIT 1').get(req.params.id);
+  if (latest) return res.json(historyResponse(category, latest));
 
   // Fallback once the history row has been purged by retention. It used to omit
   // sentiment_data entirely, so every card silently lost its source badge, bias
@@ -84,6 +62,7 @@ router.get('/:id/summary', validateId, (req, res) => {
       generated_at: cached.generated_at,
       sentiment_data: enrichSentimentData(parsedSentiment),
       tags_data: cached.tags_data ? JSON.parse(cached.tags_data) : null,
+      keyword: null,
     });
   }
 
@@ -91,7 +70,7 @@ router.get('/:id/summary', validateId, (req, res) => {
 });
 
 router.get('/:id/history', validateId, (req, res) => {
-  const rows = db.prepare('SELECT id, date_key, generated_at FROM summary_history WHERE category_id = ? ORDER BY date_key DESC LIMIT 30').all(req.params.id);
+  const rows = db.prepare('SELECT id, date_key, generated_at, keyword FROM summary_history WHERE category_id = ? ORDER BY generated_at DESC LIMIT 30').all(req.params.id);
   res.json(rows);
 });
 
@@ -109,6 +88,14 @@ router.post('/:id/refresh', validateId, async (req, res) => {
   } catch (err) {
     if (err instanceof RefreshError) {
       return res.status(err.statusCode).json({ error: err.message });
+    }
+    // Keep the provider's status: a 429 used to become a 500, so the client
+    // could never tell "rate limited, wait" from "broken".
+    if (err instanceof LLMError) {
+      return res.status(err.statusCode).json({
+        error: err.message,
+        code: err.statusCode === 429 ? 'rate_limited' : 'llm_failed',
+      });
     }
     console.error('Summary error:', err);
     res.status(500).json({ error: err.message || 'Failed to generate summary' });

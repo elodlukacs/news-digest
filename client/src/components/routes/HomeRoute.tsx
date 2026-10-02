@@ -144,6 +144,10 @@ export function HomeRoute() {
     if (abortRef.current) abortRef.current.abort();
     elaborateAbortRef.current?.abort();
     chatAbortRef.current?.abort();
+    // The aborted requests skip their own `finally` resets, which left
+    // "Expanding the story…" and the chat spinner stuck on every later article.
+    setElaborating(false);
+    setChatSending(false);
     const controller = new AbortController();
     abortRef.current = controller;
 

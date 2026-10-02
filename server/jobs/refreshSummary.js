@@ -180,9 +180,17 @@ async function refreshCategorySummary(db, callLLM, categoryId, { provider, keywo
     } else {
       parsedArticles = parsed.items || parsed.data || [];
     }
+    if (!Array.isArray(parsedArticles)) parsedArticles = [];
+    // A section without a title or body renders as an empty card; drop it.
+    parsedArticles = parsedArticles.filter(
+      (a) => a && typeof a === 'object' && typeof a.title === 'string' && a.title.trim() && typeof a.summary === 'string' && a.summary.trim()
+    );
+    // Nothing usable: fail before any write. Saving it used to replace the
+    // previous good summary with a blank page and add an empty archive entry.
     if (parsedArticles.length === 0) {
-      console.warn('[Summary] Parsed JSON has no articles. Keys:', Object.keys(parsed || {}));
+      console.warn('[Summary] Parsed JSON has no usable articles. Keys:', Object.keys(parsed || {}));
       console.warn('[Summary] Raw content (first 1000 chars):', rawContent.slice(0, 1000));
+      throw new RefreshError('The AI returned no usable articles. Please try again.', 502);
     }
   } else {
     console.error('[Summary] Could not parse or repair LLM JSON response');
@@ -232,7 +240,8 @@ async function refreshCategorySummary(db, callLLM, categoryId, { provider, keywo
   // sentiment_data/tags_data are stored here as well as in summary_history:
   // this row is what the API falls back to once history is purged, and without
   // them the cards lose their source, bias, credibility, image and sentiment.
-  db.prepare(`
+  // A filtered run is not the category's digest, so it never lands here.
+  if (!keywordTrim) db.prepare(`
     INSERT INTO summaries (category_id, summary, article_count, feed_count, generated_at, sentiment_data, tags_data)
     VALUES (?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(category_id) DO UPDATE SET
@@ -244,8 +253,8 @@ async function refreshCategorySummary(db, callLLM, categoryId, { provider, keywo
       tags_data = excluded.tags_data
   `).run(categoryId, summary, allArticles.length, feeds.length, generated_at, JSON.stringify(sentimentData), JSON.stringify(tagsData));
 
-  const histResult = db.prepare('INSERT INTO summary_history (category_id, summary, article_count, feed_count, provider, sentiment_data, tags_data, date_key, generated_at) VALUES (?,?,?,?,?,?,?,?,?)').run(
-    categoryId, summary, allArticles.length, feeds.length, result.provider, JSON.stringify(sentimentData), JSON.stringify(tagsData), dateKey, generated_at
+  const histResult = db.prepare('INSERT INTO summary_history (category_id, summary, article_count, feed_count, provider, sentiment_data, tags_data, date_key, generated_at, keyword) VALUES (?,?,?,?,?,?,?,?,?,?)').run(
+    categoryId, summary, allArticles.length, feeds.length, result.provider, JSON.stringify(sentimentData), JSON.stringify(tagsData), dateKey, generated_at, keywordTrim || null
   );
   const historyId = histResult.lastInsertRowid;
 
@@ -262,6 +271,7 @@ async function refreshCategorySummary(db, callLLM, categoryId, { provider, keywo
     provider: result.provider,
     sentiment_data: enrichSentimentData(sentimentData),
     tags_data: tagsData,
+    keyword: keywordTrim || null,
   };
 }
 

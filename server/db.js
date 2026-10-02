@@ -289,6 +289,9 @@ addColumnIfNotExists('categories', 'custom_prompt', "TEXT DEFAULT ''");
 addColumnIfNotExists('categories', 'language', "TEXT DEFAULT 'English'");
 addColumnIfNotExists('articles', 'topic_id', "TEXT DEFAULT ''");
 addColumnIfNotExists('prompts', 'source_hash', 'TEXT');
+// Set on a filtered refresh. Those rows are a view of one story, not the
+// category's digest, so every "latest summary" reader must skip them.
+addColumnIfNotExists('summary_history', 'keyword', 'TEXT');
 // Normalized form of feeds.url — the Explore page compared raw URLs with exact
 // string equality, so an http/https or ?format= variant of a feed you already
 // had showed as unsubscribed and re-adding created a duplicate.

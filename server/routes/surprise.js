@@ -74,6 +74,7 @@ function pickArticle({ excludeUrls, categoryIds } = {}) {
     LEFT JOIN categories c ON c.id = sh.category_id
     WHERE sh.generated_at > datetime('now', ?)
       AND sh.category_id > 0
+      AND sh.keyword IS NULL
       AND sh.summary IS NOT NULL
       ${categoryClause}
     ORDER BY sh.generated_at DESC

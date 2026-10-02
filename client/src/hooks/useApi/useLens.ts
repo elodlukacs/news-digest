@@ -37,7 +37,12 @@ export function useLens(categoryId: number | null, providerId: string) {
     }
   }, [categoryId, providerId]);
 
+  // Also cancels a running lens: otherwise its result (and the "Thinking…"
+  // state) carried over to whichever category the user switched to.
   const clear = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setLoading(false);
     setContent(null);
     setLensName(null);
     setError(null);

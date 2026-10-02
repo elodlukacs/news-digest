@@ -19,7 +19,7 @@ the user can't diagnose · **P2** wrong but noticeable / limited scope · **P3**
 
 ## P0 — fix first
 
-### 1. A filtered summary replaces the category's real digest ✔
+### 1. A filtered summary replaces the category's real digest ✔ — ✅ FIXED
 `jobs/refreshSummary.js:235-249`, `routes/summaries.js:57-71`, `useSummary.ts:92-110`, `CategoryRoute.tsx:67`, `routes/briefing.js:28-45`
 
 Filter "flydubai", press ✕ → the flydubai-only digest stays. Reload → it is shown
@@ -31,7 +31,7 @@ the newest row, and Clear filter only re-reads it.
 **Fix:** add `summary_history.keyword`; don't upsert `summaries` for keyword runs;
 exclude keyword rows from latest/briefing/surprise/tags; badge them in the archive.
 
-### 2. Changing category (or clearing the filter) during a refresh locks the page ✔
+### 2. Changing category (or clearing the filter) during a refresh locks the page ✔ — ✅ FIXED
 `useSummary.ts:16-20, 57-59, 87-88`; `SummaryView.tsx:247-255, 279-287`
 
 Load, refresh and loadLatest share one `abortRef`. The aborted refresh's
@@ -43,7 +43,7 @@ Same on Home: "I want to know more" and chat stick after "Next story"
 **Fix:** whoever aborts resets the flags (or use a request-id guard instead of
 `signal.aborted`); disable ✕ while busy.
 
-### 3. Per-category state leaks into the next category
+### 3. Per-category state leaks into the next category — ✅ FIXED
 `CategoryRoute.tsx:14-33`, `SummaryView.tsx:91-121`, `useSummary.ts:16-42`, `useLens.ts:40-44`
 
 The route component isn't remounted on `:categoryName` change:
@@ -57,7 +57,7 @@ The route component isn't remounted on `:categoryName` change:
 **Fix:** `key={categoryId}` on the route content / `SummaryView`; reset
 `selectedSnapshotId`, `setSummary(null)` on change; `lens.clear()` aborts.
 
-### 4. Choosing a model disables the provider fallback chain ✔
+### 4. Choosing a model disables the provider fallback chain ✔ — ✅ FIXED
 `lib/llm.js:185-191`, `AppLayout.tsx:25-27, 99`
 
 Every UI request sends `provider: selectedLlm` (default `openai/gpt-oss-120b`),
@@ -71,7 +71,7 @@ bypasses `handleLlmChange` ✔.
 add "Auto" as default); validate the stored model against `/api/models`; pass
 `handleLlmChange`.
 
-### 5. Refresh/filter errors are replaced by a generic message
+### 5. Refresh/filter errors are replaced by a generic message — ✅ FIXED
 `useSummary.ts:73-86`, `parseRateLimitError.ts:9-11`
 
 With any archived summary, every refresh failure becomes "Refresh failed —
@@ -82,7 +82,7 @@ opens — it also ignores `code: 'rate_limited'`) and validation errors are lost
 **Fix:** keep `e.message`; skip the archive fallback on 4xx; clear the keyword on
 failure; detect rate limits by status/`code`.
 
-### 6. Empty/odd LLM output is saved as a blank summary
+### 6. Empty/odd LLM output is saved as a blank summary — ✅ FIXED
 `refreshSummary.js:171-195, 235-249`
 
 `{"stories":[…]}`, `{"articles":[]}` or a single object → warning only, then an
@@ -91,7 +91,7 @@ no error; reload says "No summary yet"; archive gains an empty entry.
 
 **Fix:** throw `RefreshError` before any write when no valid sections parse.
 
-### 7. Jobs: data silently lost
+### 7. Jobs: data silently lost — ✅ FIXED
 - **Saved jobs vanish after 7 days** — the recency filter also applies to
   `saved=true` and the saved count (`routes/jobs.js:35, 61`) ✔.
 - **One failing source wipes its jobs** — re-fetch deletes everything not saved,

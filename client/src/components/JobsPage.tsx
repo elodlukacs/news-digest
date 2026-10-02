@@ -25,6 +25,7 @@ interface Props {
   fetching: boolean;
   aiFiltering: boolean;
   lastFetchReport: FetchReport | null;
+  actionError: string | null;
   fetchJobs: () => void;
   saveJob: (id: string) => void;
   unsaveJob: (id: string) => void;
@@ -55,7 +56,7 @@ const WORK_TYPE_LABELS: Record<string, string> = {
 
 export function JobsPage({
   jobs, total, counts, sources, sourceCounts, filters, updateFilters,
-  page, setPage, loading, fetching, aiFiltering, lastFetchReport,
+  page, setPage, loading, fetching, aiFiltering, lastFetchReport, actionError,
   fetchJobs, saveJob, unsaveJob, aiFilter, selectedLlm,
 }: Props) {
   const PER_PAGE = 100;
@@ -101,6 +102,15 @@ export function JobsPage({
           </div>
         </div>
       </div>
+
+      {actionError && (
+        <div
+          role="alert"
+          className="mb-4 rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300"
+        >
+          {actionError}
+        </div>
+      )}
 
       {lastFetchReport && (
         <div className="mb-4 rounded-lg border border-rule bg-paper-dark/40 px-3 py-2">

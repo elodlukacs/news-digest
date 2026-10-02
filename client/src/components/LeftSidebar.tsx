@@ -39,6 +39,14 @@ export function LeftSidebar({ dates, selectedSnapshotId, onSelectSnapshot, showH
                       {new Date(entry.generated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   )}
+                  {entry.keyword && (
+                    <span
+                      className="text-[10px] ml-1.5 italic opacity-70 truncate min-w-0"
+                      title={`Filtered: ${entry.keyword}`}
+                    >
+                      “{entry.keyword}”
+                    </span>
+                  )}
                 </button>
               ))}
             </div>

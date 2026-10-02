@@ -50,6 +50,8 @@ export interface Summary {
   provider?: string;
   sentiment_data?: SentimentSection[];
   tags_data?: string[];
+  /** Set when this summary was generated with a filter keyword. */
+  keyword?: string | null;
 }
 
 export interface SentimentSection {
@@ -69,6 +71,8 @@ export interface HistoryEntry {
   id: number;
   date_key: string;
   generated_at: string;
+  /** Filter keyword, for snapshots generated from a filtered refresh. */
+  keyword?: string | null;
 }
 
 export interface ChatMessage {

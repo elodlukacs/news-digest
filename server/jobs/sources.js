@@ -111,7 +111,13 @@ async function fetchHimalayas(signal) {
   for (let page = 0; page < 10; page++) {
     if (signal?.aborted) break;
     const resp = await fetchWithTimeout(`https://himalayas.app/jobs/api?limit=100&offset=${offset}`, signal);
-    if (!resp.ok) throw new Error(`Himalayas returned ${resp.status}`);
+    // A failure on a later page used to throw away every page already parsed;
+    // the source then reported 0 jobs and the re-fetch deleted its old ones.
+    if (!resp.ok) {
+      if (page === 0) throw new Error(`Himalayas returned ${resp.status}`);
+      console.warn(`[Jobs] Himalayas page ${page + 1} returned ${resp.status} — keeping ${allJobs.length} jobs from earlier pages`);
+      break;
+    }
 
     const data = await resp.json();
     if (!data.jobs || data.jobs.length === 0) break;
@@ -158,7 +164,11 @@ async function fetchRemotive(signal) {
     if (signal?.aborted) break;
     const params = new URLSearchParams({ search: keyword, limit: '50' });
     const resp = await fetchWithTimeout(`https://remotive.com/api/remote-jobs?${params}`, signal);
-    if (!resp.ok) throw new Error(`Remotive returned ${resp.status}`);
+    if (!resp.ok) {
+      if (out.length === 0) throw new Error(`Remotive returned ${resp.status}`);
+      console.warn(`[Jobs] Remotive search "${keyword}" returned ${resp.status} — keeping ${out.length} jobs from earlier searches`);
+      break;
+    }
     const data = await resp.json();
     for (const raw of (data.jobs || [])) {
       if (!matchesRole(raw.title)) continue;
@@ -191,7 +201,11 @@ async function fetchArbeitnow(signal) {
   for (let i = 0; i < 20; i++) {
     if (signal?.aborted) break;
     const resp = await fetchWithTimeout(`https://www.arbeitnow.com/api/job-board-api?page=${page}`, signal);
-    if (!resp.ok) throw new Error(`Arbeitnow returned ${resp.status}`);
+    if (!resp.ok) {
+      if (i === 0) throw new Error(`Arbeitnow returned ${resp.status}`);
+      console.warn(`[Jobs] Arbeitnow page ${page} returned ${resp.status} — keeping ${allJobs.length} jobs from earlier pages`);
+      break;
+    }
 
     const data = await resp.json();
     if (!data.data || data.data.length === 0) break;

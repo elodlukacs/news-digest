@@ -182,12 +182,18 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
   let providers = AI_PROVIDERS.filter(p => p.key());
   if (providers.length === 0) throw new Error('No AI API keys configured. Set GROQ_API_KEY in .env');
 
+  // The requested model is a preference, not a pin: try it first, then fall
+  // through the rest of the chain. Pinning it meant the UI — which always sends
+  // the navbar model — turned off fallback for every user-initiated call, so a
+  // single Groq 429 failed summaries, chat and MindGames even with other keys set.
   if (providerId) {
     const { provider, model } = resolveProvider(providerId);
-    if (!provider?.key()) {
-      throw new Error(`API key not configured for ${provider?.name || providerId}. Set the required env var.`);
+    if (provider?.key()) {
+      const rest = providers.filter((p) => !(p.id === provider.id && p.model === model));
+      providers = [{ ...provider, model, preferred: true }, ...rest];
+    } else {
+      console.warn(`[LLM] No API key for ${provider?.name || providerId} (requested ${providerId}) — using the default chain`);
     }
-    providers = [{ ...provider, model }];
   }
 
   let lastError = null;
@@ -195,7 +201,9 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
   for (const provider of providers) {
     let resolvedModel = provider.model;
 
-    if (provider.id === 'openrouter' && !providerId?.includes('/')) {
+    // An explicitly requested OpenRouter model is used as-is; the default entry
+    // is swapped for a currently-free model.
+    if (provider.id === 'openrouter' && !(provider.preferred && providerId.includes('/'))) {
       const apiKey = provider.key();
       if (apiKey) {
         const checked = await getOpenRouterFreeModel(apiKey, provider.model);
