@@ -6,11 +6,36 @@ const { attributeSection, buildUrlIndex } = require('../lib/attribution');
 const { recordSuccess, recordFailure } = require('../lib/feedHealth');
 const { parseJSON } = require('../lib/parseJSON');
 const { selectArticles, isSearchableKeyword } = require('../lib/articleTriage');
+const { searchGoogleNews } = require('../lib/bias-radar/newsSearch');
 
 const ONE_DAY_MS = 86400000;
 // Upper bound per feed, not a selection rule: lib/articleTriage.js picks what
 // the summary covers. This only guards against a feed that dumps its archive.
 const MAX_ITEMS_PER_FEED = 60;
+// A filter keyword also searches Google News, so a story the category's own
+// feeds barely cover still gets a full set of articles. NEWS_SEARCH=off disables it.
+const NEWS_SEARCH_ENABLED = process.env.NEWS_SEARCH !== 'off';
+const NEWS_SEARCH_LIMIT = 40;
+
+/** Google News results for the keyword, shaped like feed items. Never throws. */
+async function searchKeywordCoverage(keyword, language) {
+  if (!keyword || !NEWS_SEARCH_ENABLED) return [];
+  try {
+    const results = await searchGoogleNews(keyword, language, { limit: NEWS_SEARCH_LIMIT, when: '7d' });
+    return results.map((r) => ({
+      title: r.title || '',
+      description: r.excerpt || '',
+      contentEncoded: '',
+      link: r.url,
+      pubDate: r.publishedAt || '',
+      source: r.source || 'Google News',
+      image: '',
+    }));
+  } catch (err) {
+    console.warn(`[Summary] Google News search for "${keyword}" failed:`, err.message);
+    return [];
+  }
+}
 
 class RefreshError extends Error {
   constructor(message, statusCode) {
@@ -46,6 +71,7 @@ async function refreshCategorySummary(db, callLLM, categoryId, { provider, keywo
   const feeds = db.prepare('SELECT * FROM feeds WHERE category_id = ?').all(categoryId);
   if (feeds.length === 0) throw new RefreshError('No feeds in this category', 400);
 
+  const searchResultsPromise = searchKeywordCoverage(keywordTrim, category.language || 'English');
   const feedResults = await Promise.allSettled(
     feeds.map(async (feed) => {
       try {
@@ -70,9 +96,12 @@ async function refreshCategorySummary(db, callLLM, categoryId, { provider, keywo
     })
   );
 
-  const fetched = feedResults
-    .filter((r) => r.status === 'fulfilled')
-    .flatMap((r) => r.value);
+  // Feed items first: on a duplicate, dedupe keeps the first copy, and feed
+  // items carry images and full descriptions that search results lack.
+  const fetched = [
+    ...feedResults.filter((r) => r.status === 'fulfilled').flatMap((r) => r.value),
+    ...(await searchResultsPromise),
+  ];
 
   if (fetched.length === 0) {
     throw new RefreshError('Could not fetch any articles from the feeds', 400);

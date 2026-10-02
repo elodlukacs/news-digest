@@ -417,6 +417,7 @@ Cognitive: `forensic_analyses`, `inoculation_sessions`, `inoculation_headlines`,
 - `OPENROUTER_API_KEY` — required for LLM fallback (OpenRouter/MiniMax)
 - `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` — optional, send-to-Telegram feature
 - `TMDB_API_KEY` — optional, movie/TV releases widget
+- `NEWS_SEARCH` — set to `off` to stop a summary filter keyword from also searching Google News (`searchGoogleNews` in `lib/bias-radar/newsSearch.js`, merged into the triage pool)
 - `DB_PATH` — path to SQLite (default: `./newsreader.db`). Set to a Railway volume path for persistence
 - `PORT` — defaults to 3001
 
