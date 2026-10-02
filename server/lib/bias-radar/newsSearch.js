@@ -114,7 +114,12 @@ async function searchGDELT(title, language = 'English') {
   return [];
 }
 
-async function searchGoogleNews(title, language = 'English') {
+/**
+ * @param {object} [opts]
+ * @param {number} [opts.limit=10] max results
+ * @param {string} [opts.when] Google News recency operator, e.g. '7d'
+ */
+async function searchGoogleNews(title, language = 'English', { limit = 10, when } = {}) {
   if (!title) return [];
 
   const [exactQuery, orQuery] = buildSmartQuery(title);
@@ -126,7 +131,8 @@ async function searchGoogleNews(title, language = 'English') {
     if (!query) continue;
 
     try {
-      const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=${langConfig.hl}&gl=${langConfig.gl}`;
+      const q = when ? `${query} when:${when}` : query;
+      const url = `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=${langConfig.hl}&gl=${langConfig.gl}`;
       const parsed = await parseFeedUrl(url);
 
       if (!parsed.items || parsed.items.length === 0) {
@@ -137,7 +143,7 @@ async function searchGoogleNews(title, language = 'English') {
       console.debug('[GoogleNews] Got', parsed.items.length, 'items for query:', query);
 
       return parsed.items
-        .slice(0, 10)
+        .slice(0, limit)
         .filter((item) => item.link)
         .map((item) => {
           // Google News titles are "Article Title - Publisher Name"
