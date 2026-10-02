@@ -30,6 +30,7 @@ async function searchKeywordCoverage(keyword, language) {
       pubDate: r.publishedAt || '',
       source: r.source || 'Google News',
       image: '',
+      fromSearch: true,
     }));
   } catch (err) {
     console.warn(`[Summary] Google News search for "${keyword}" failed:`, err.message);
@@ -145,8 +146,10 @@ async function refreshCategorySummary(db, callLLM, categoryId, { provider, keywo
   // information", which folded every article on a filtered story into one card.
   // This section is code-built, so it reaches DBs whose prompt predates it.
   const orderingSection = '\nThe articles are ordered by importance. Lead with the first story; a major story outranks routine news.\n';
+  const feedNames = [...new Set(feeds.map((f) => f.name))].join(', ');
   const keywordSection = keywordTrim
-    ? `\nFocus only on news related to: "${keywordTrim}". This overrides the article limit above: include up to 12 articles, each covering a distinct development or angle of this story.\n`
+    ? `\nFocus only on news related to: "${keywordTrim}". This overrides the article limit above: include up to 12 articles, each covering a distinct development or angle of this story.` +
+      ` Prefer articles from this category's own sources (${feedNames}); use other outlets only for developments those sources do not cover.\n`
     : '';
   const customPromptSection = (customPrompt ? `\nAdditional instructions:\n${customPrompt}\n` : '') + orderingSection + keywordSection;
 
