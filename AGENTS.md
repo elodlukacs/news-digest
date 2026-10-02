@@ -272,6 +272,7 @@ had a bug.
 | `lib/retention.js` | Deleting expired data. One policy, on a timer — never inside a request handler. |
 | `lib/feedHealth.js` | Normalizing a feed URL (`feedKey`) and recording fetch success/failure. |
 | `lib/inFlight.js` | Bounding concurrent expensive operations. |
+| `lib/articleTriage.js` → `selectArticles` | Choosing which feed items a summary covers. Never `slice` a feed or filter after capping — that hid breaking stories and starved keyword searches. |
 | `lib/outletMatcher.js` | Source name → bias/credibility rating (memoized). |
 
 ### Database
@@ -349,7 +350,11 @@ When given a new task, structure your response like this:
 - LLM provider fallback order is defined by `AI_PROVIDERS` in `server/lib/llm.js`
   (Groq → Groq 8b → Google AI Studio → OpenRouter), each with a 90 s timeout and
   one retry on transient failures
-- Each summary generation triggers **two LLM calls**: main summary + enrichment (sentiment + tags)
+- Each summary generation triggers **two LLM calls**: main summary + enrichment (sentiment + tags),
+  plus a headline-only **triage** call (`category-triage` prompt, `lib/articleTriage.js`) when more
+  than 30 articles survive dedupe, the age window (48 h, or 7 days with a filter keyword) and the
+  keyword match. Feeds are read in full (up to 60 items each); triage, not feed order, decides what the
+  summary covers. If triage fails it falls back to a coverage + recency ranking.
 - Category-level `custom_prompt` and `language` fields customize LLM output
 - Widget endpoints have server-side caching (crypto 2min, releases 30min, homepage 5min)
 - No scheduler exists — every refresh is manual (auto-refresh was removed in `f60f4bd`).

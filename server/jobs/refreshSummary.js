@@ -5,8 +5,12 @@ const { matchOutlet } = require('../lib/outletMatcher');
 const { attributeSection, buildUrlIndex } = require('../lib/attribution');
 const { recordSuccess, recordFailure } = require('../lib/feedHealth');
 const { parseJSON } = require('../lib/parseJSON');
+const { selectArticles, isSearchableKeyword } = require('../lib/articleTriage');
 
 const ONE_DAY_MS = 86400000;
+// Upper bound per feed, not a selection rule: lib/articleTriage.js picks what
+// the summary covers. This only guards against a feed that dumps its archive.
+const MAX_ITEMS_PER_FEED = 60;
 
 class RefreshError extends Error {
   constructor(message, statusCode) {
@@ -31,6 +35,11 @@ function enrichSentimentData(sentimentData) {
 }
 
 async function refreshCategorySummary(db, callLLM, categoryId, { provider, keyword } = {}) {
+  const keywordTrim = keyword?.trim() || '';
+  if (keywordTrim && !isSearchableKeyword(keywordTrim)) {
+    throw new RefreshError('Filter keyword must contain letters or numbers', 400);
+  }
+
   const category = db.prepare('SELECT * FROM categories WHERE id = ?').get(categoryId);
   if (!category) throw new RefreshError('Category not found', 404);
 
@@ -42,7 +51,7 @@ async function refreshCategorySummary(db, callLLM, categoryId, { provider, keywo
       try {
         const parsed = await parseFeedUrl(feed.url);
         recordSuccess(db, feed.id);
-        return parsed.items.slice(0, 10).map((item) => ({
+        return parsed.items.slice(0, MAX_ITEMS_PER_FEED).map((item) => ({
           title: item.title || '',
           description: (item.contentSnippet || item.content || '').slice(0, 3000),
           contentEncoded: (item['content:encoded'] || '').slice(0, 5000),
@@ -61,26 +70,28 @@ async function refreshCategorySummary(db, callLLM, categoryId, { provider, keywo
     })
   );
 
-  const keywordTrim = keyword?.trim() || '';
-
-  let allArticles = feedResults
+  const fetched = feedResults
     .filter((r) => r.status === 'fulfilled')
-    .flatMap((r) => r.value)
-    .sort((a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime())
-    .slice(0, 30);
+    .flatMap((r) => r.value);
 
-  if (keywordTrim) {
-    const kw = keywordTrim.toLowerCase();
-    allArticles = allArticles.filter(
-      (a) => a.title.toLowerCase().includes(kw) || a.description.toLowerCase().includes(kw)
-    );
-    if (allArticles.length === 0) {
-      throw new RefreshError(`No articles found matching "${keywordTrim}"`, 400);
-    }
+  if (fetched.length === 0) {
+    throw new RefreshError('Could not fetch any articles from the feeds', 400);
   }
 
+  const { articles: allArticles, poolSize, method } = await selectArticles(callLLM, fetched, {
+    category,
+    keyword: keywordTrim,
+    provider,
+  });
+  console.log(`[Summary] ${category.name}: ${fetched.length} fetched, ${poolSize} in pool, ${allArticles.length} selected (${method})`);
+
   if (allArticles.length === 0) {
-    throw new RefreshError('Could not fetch any articles from the feeds', 400);
+    throw new RefreshError(
+      keywordTrim
+        ? `No articles found matching "${keywordTrim}"`
+        : 'No recent articles in the feeds',
+      400
+    );
   }
 
   const now = new Date().toISOString();
@@ -101,8 +112,14 @@ async function refreshCategorySummary(db, callLLM, categoryId, { provider, keywo
 
   const customPrompt = category.custom_prompt?.trim();
   const lang = category.language || 'English';
-  const keywordSection = keywordTrim ? `\nFocus only on news related to: "${keywordTrim}"\n` : '';
-  const customPromptSection = (customPrompt ? `\nAdditional instructions:\n${customPrompt}\n` : '') + keywordSection;
+  // The stored category-summary prompt caps output at 8 and says "never repeat
+  // information", which folded every article on a filtered story into one card.
+  // This section is code-built, so it reaches DBs whose prompt predates it.
+  const orderingSection = '\nThe articles are ordered by importance. Lead with the first story; a major story outranks routine news.\n';
+  const keywordSection = keywordTrim
+    ? `\nFocus only on news related to: "${keywordTrim}". This overrides the article limit above: include up to 12 articles, each covering a distinct development or angle of this story.\n`
+    : '';
+  const customPromptSection = (customPrompt ? `\nAdditional instructions:\n${customPrompt}\n` : '') + orderingSection + keywordSection;
 
   const messages = buildMessages('category-summary', {
     category: category.name,
