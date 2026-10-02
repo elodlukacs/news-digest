@@ -30,6 +30,7 @@ async function searchKeywordCoverage(keyword, language) {
       pubDate: r.publishedAt || '',
       source: r.source || 'Google News',
       image: '',
+      fromSearch: true,
     }));
   } catch (err) {
     console.warn(`[Summary] Google News search for "${keyword}" failed:`, err.message);
@@ -60,6 +61,9 @@ function enrichSentimentData(sentimentData) {
 }
 
 async function refreshCategorySummary(db, callLLM, categoryId, { provider, keyword } = {}) {
+  if (keyword != null && typeof keyword !== 'string') {
+    throw new RefreshError('Filter keyword must be text', 400);
+  }
   const keywordTrim = keyword?.trim() || '';
   if (keywordTrim && !isSearchableKeyword(keywordTrim)) {
     throw new RefreshError('Filter keyword must contain letters or numbers', 400);
@@ -145,8 +149,10 @@ async function refreshCategorySummary(db, callLLM, categoryId, { provider, keywo
   // information", which folded every article on a filtered story into one card.
   // This section is code-built, so it reaches DBs whose prompt predates it.
   const orderingSection = '\nThe articles are ordered by importance. Lead with the first story; a major story outranks routine news.\n';
+  const feedNames = [...new Set(feeds.map((f) => f.name))].join(', ');
   const keywordSection = keywordTrim
-    ? `\nFocus only on news related to: "${keywordTrim}". This overrides the article limit above: include up to 12 articles, each covering a distinct development or angle of this story.\n`
+    ? `\nFocus only on news related to: "${keywordTrim}". This overrides the article limit above: include up to 12 articles, each covering a distinct development or angle of this story.` +
+      ` Prefer articles from this category's own sources (${feedNames}); use other outlets only for developments those sources do not cover.\n`
     : '';
   const customPromptSection = (customPrompt ? `\nAdditional instructions:\n${customPrompt}\n` : '') + orderingSection + keywordSection;
 
@@ -177,9 +183,17 @@ async function refreshCategorySummary(db, callLLM, categoryId, { provider, keywo
     } else {
       parsedArticles = parsed.items || parsed.data || [];
     }
+    if (!Array.isArray(parsedArticles)) parsedArticles = [];
+    // A section without a title or body renders as an empty card; drop it.
+    parsedArticles = parsedArticles.filter(
+      (a) => a && typeof a === 'object' && typeof a.title === 'string' && a.title.trim() && typeof a.summary === 'string' && a.summary.trim()
+    );
+    // Nothing usable: fail before any write. Saving it used to replace the
+    // previous good summary with a blank page and add an empty archive entry.
     if (parsedArticles.length === 0) {
-      console.warn('[Summary] Parsed JSON has no articles. Keys:', Object.keys(parsed || {}));
+      console.warn('[Summary] Parsed JSON has no usable articles. Keys:', Object.keys(parsed || {}));
       console.warn('[Summary] Raw content (first 1000 chars):', rawContent.slice(0, 1000));
+      throw new RefreshError('The AI returned no usable articles. Please try again.', 502);
     }
   } else {
     console.error('[Summary] Could not parse or repair LLM JSON response');
@@ -229,7 +243,8 @@ async function refreshCategorySummary(db, callLLM, categoryId, { provider, keywo
   // sentiment_data/tags_data are stored here as well as in summary_history:
   // this row is what the API falls back to once history is purged, and without
   // them the cards lose their source, bias, credibility, image and sentiment.
-  db.prepare(`
+  // A filtered run is not the category's digest, so it never lands here.
+  if (!keywordTrim) db.prepare(`
     INSERT INTO summaries (category_id, summary, article_count, feed_count, generated_at, sentiment_data, tags_data)
     VALUES (?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(category_id) DO UPDATE SET
@@ -241,8 +256,8 @@ async function refreshCategorySummary(db, callLLM, categoryId, { provider, keywo
       tags_data = excluded.tags_data
   `).run(categoryId, summary, allArticles.length, feeds.length, generated_at, JSON.stringify(sentimentData), JSON.stringify(tagsData));
 
-  const histResult = db.prepare('INSERT INTO summary_history (category_id, summary, article_count, feed_count, provider, sentiment_data, tags_data, date_key, generated_at) VALUES (?,?,?,?,?,?,?,?,?)').run(
-    categoryId, summary, allArticles.length, feeds.length, result.provider, JSON.stringify(sentimentData), JSON.stringify(tagsData), dateKey, generated_at
+  const histResult = db.prepare('INSERT INTO summary_history (category_id, summary, article_count, feed_count, provider, sentiment_data, tags_data, date_key, generated_at, keyword) VALUES (?,?,?,?,?,?,?,?,?,?)').run(
+    categoryId, summary, allArticles.length, feeds.length, result.provider, JSON.stringify(sentimentData), JSON.stringify(tagsData), dateKey, generated_at, keywordTrim || null
   );
   const historyId = histResult.lastInsertRowid;
 
@@ -259,6 +274,7 @@ async function refreshCategorySummary(db, callLLM, categoryId, { provider, keywo
     provider: result.provider,
     sentiment_data: enrichSentimentData(sentimentData),
     tags_data: tagsData,
+    keyword: keywordTrim || null,
   };
 }
 

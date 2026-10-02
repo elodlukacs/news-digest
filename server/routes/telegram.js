@@ -29,7 +29,7 @@ router.post('/send', async (req, res) => {
     if (!cat) return res.status(404).json({ error: 'Category not found' });
 
     row = db.prepare(
-      "SELECT summary, article_count, feed_count, generated_at FROM summary_history WHERE category_id = ? ORDER BY generated_at DESC LIMIT 1"
+      "SELECT summary, article_count, feed_count, generated_at FROM summary_history WHERE category_id = ? AND keyword IS NULL ORDER BY generated_at DESC LIMIT 1"
     ).get(categoryId);
   }
   if (!row) return res.status(404).json({ error: 'No summary found for this category' });

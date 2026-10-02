@@ -47,7 +47,9 @@ interface Props {
   loading: boolean;
   refreshing: boolean;
   error: string | null;
-  onRefresh: (keyword?: string) => void;
+  /** HTTP status of the failed request, when there was one (429 → rate-limit dialog). */
+  errorStatus?: number | null;
+  onRefresh: (keyword?: string) => void | Promise<void>;
   onClearFilter?: () => void;
   onManageFeeds: () => void;
   onDelete: () => void;
@@ -71,6 +73,7 @@ export function SummaryView({
   loading,
   refreshing,
   error,
+  errorStatus = null,
   onRefresh,
   onClearFilter,
   onManageFeeds,
@@ -89,18 +92,18 @@ export function SummaryView({
   const [rateLimitDismissed, setRateLimitDismissed] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [keyword, setKeyword] = useState('');
-  const [activeKeyword, setActiveKeyword] = useState('');
+  // Derived from what is on screen, not from what was last typed: a failed
+  // filter used to leave the chip "active" over the unfiltered digest.
+  const activeKeyword = summary?.keyword ?? '';
   const [showScrollTop, setShowScrollTop] = useState(false);
 
   const handleFilterRefresh = () => {
     const kw = keyword.trim();
-    setActiveKeyword(kw);
     onRefresh(kw || undefined);
   };
 
   const handleClearFilter = () => {
     setKeyword('');
-    setActiveKeyword('');
     if (onClearFilter) onClearFilter();
     else onRefresh(undefined);
   };
@@ -156,7 +159,7 @@ export function SummaryView({
   };
 
   const busy = loading || refreshing;
-  const rateLimitInfo = error ? parseRateLimitError(error) : null;
+  const rateLimitInfo = error ? parseRateLimitError(error, errorStatus) : null;
 
   const sections = useMemo(() => {
     return summary ? parseSummaryMarkdown(summary.summary, summary.sentiment_data) : [];
@@ -189,6 +192,12 @@ export function SummaryView({
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-paper-dark border border-rule text-[11px] font-medium text-ink-muted">
                 <Zap size={10} />
                 {summary.provider}
+              </span>
+            )}
+            {summary.keyword && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-masthead/10 border border-masthead/30 text-[11px] font-medium text-masthead">
+                <Filter size={10} />
+                Filtered: “{summary.keyword}”
               </span>
             )}
           </div>
@@ -237,7 +246,8 @@ export function SummaryView({
             {activeKeyword && (
               <button
                 onClick={handleClearFilter}
-                className="px-3 text-ink-muted hover:text-accent transition-colors cursor-pointer"
+                disabled={busy}
+                className="px-3 text-ink-muted hover:text-accent disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 aria-label="Clear filter"
               >
                 <X size={14} />
@@ -280,7 +290,8 @@ export function SummaryView({
             {activeKeyword && (
               <button
                 onClick={handleClearFilter}
-                className="inline-flex items-center justify-center px-2 text-ink-muted hover:text-accent transition-colors cursor-pointer"
+                disabled={busy}
+                className="inline-flex items-center justify-center px-2 text-ink-muted hover:text-accent disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 aria-label="Clear filter"
               >
                 <X size={12} />
@@ -440,6 +451,7 @@ export function SummaryView({
       {error && !rateLimitDismissed && rateLimitInfo?.isRateLimit && (
         <RateLimitDialog
           error={error}
+          status={errorStatus}
           open={true}
           onClose={() => setRateLimitDismissed(true)}
         />
@@ -448,7 +460,7 @@ export function SummaryView({
       {error && !rateLimitInfo?.isRateLimit && (
         <Alert variant="destructive" className="mt-8">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Failed to load summary</AlertTitle>
+          <AlertTitle>{summary ? 'Couldn’t update — showing the previous summary' : 'Failed to load summary'}</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}

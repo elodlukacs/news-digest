@@ -24,6 +24,9 @@ export function useJobs() {
   const [fetching, setFetching] = useState(false);
   const [aiFiltering, setAiFiltering] = useState(false);
   const [lastFetchReport, setLastFetchReport] = useState<FetchReport | null>(null);
+  // Fetch / AI-curate failures. Both were silent: a 502 "all sources failed"
+  // (which carries the per-source report) or a failed curate just did nothing.
+  const [actionError, setActionError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const saveAbortRef = useRef<AbortController | null>(null);
 
@@ -73,19 +76,23 @@ export function useJobs() {
 
   const fetchJobs = useCallback(async () => {
     setFetching(true);
+    setActionError(null);
     try {
       const res = await fetch(`${BASE}/jobs/fetch`, { method: 'POST' });
-      if (res.ok) {
-        const body = await res.json();
+      const body = await res.json().catch(() => ({}));
+      if (Array.isArray(body.sources)) {
         setLastFetchReport({
           fetched: body.fetched ?? 0,
-          sources: Array.isArray(body.sources) ? body.sources : [],
+          sources: body.sources,
           finishedAt: Date.now(),
         });
       }
+      if (!res.ok) setActionError(body.error || `Fetching jobs failed (${res.status})`);
       await fetchList(filters, 1);
       setPage(1);
-    } catch { /* silent */ } finally {
+    } catch (e: unknown) {
+      setActionError(e instanceof Error ? e.message : 'Fetching jobs failed');
+    } finally {
       setFetching(false);
     }
   }, [filters, fetchList]);
@@ -148,14 +155,23 @@ export function useJobs() {
 
   const aiFilter = useCallback(async (providerId?: string) => {
     setAiFiltering(true);
+    setActionError(null);
     try {
-      await fetch(`${BASE}/jobs/ai-filter`, {
+      const res = await fetch(`${BASE}/jobs/ai-filter`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ provider: providerId }),
       });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setActionError(body.error || `AI curation failed (${res.status})`);
+      } else if (body.failedBatches > 0) {
+        setActionError(`AI curation finished with ${body.failedBatches} of ${body.totalBatches} batches failed — those jobs keep their previous result`);
+      }
       await fetchList(filters, page);
-    } catch { /* silent */ } finally {
+    } catch (e: unknown) {
+      setActionError(e instanceof Error ? e.message : 'AI curation failed');
+    } finally {
       setAiFiltering(false);
     }
   }, [filters, page, fetchList]);
@@ -163,7 +179,7 @@ export function useJobs() {
   return {
     jobs, total, counts, sources, countries, sourceCounts,
     filters, updateFilters, page, setPage,
-    loading, fetching, aiFiltering, lastFetchReport,
+    loading, fetching, aiFiltering, lastFetchReport, actionError,
     fetchJobs, saveJob, unsaveJob, aiFilter,
     refresh: () => fetchList(filters, page),
   };

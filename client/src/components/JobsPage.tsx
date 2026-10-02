@@ -25,6 +25,7 @@ interface Props {
   fetching: boolean;
   aiFiltering: boolean;
   lastFetchReport: FetchReport | null;
+  actionError: string | null;
   fetchJobs: () => void;
   saveJob: (id: string) => void;
   unsaveJob: (id: string) => void;
@@ -55,7 +56,7 @@ const WORK_TYPE_LABELS: Record<string, string> = {
 
 export function JobsPage({
   jobs, total, counts, sources, sourceCounts, filters, updateFilters,
-  page, setPage, loading, fetching, aiFiltering, lastFetchReport,
+  page, setPage, loading, fetching, aiFiltering, lastFetchReport, actionError,
   fetchJobs, saveJob, unsaveJob, aiFilter, selectedLlm,
 }: Props) {
   const PER_PAGE = 100;
@@ -102,6 +103,15 @@ export function JobsPage({
         </div>
       </div>
 
+      {actionError && (
+        <div
+          role="alert"
+          className="mb-4 rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300"
+        >
+          {actionError}
+        </div>
+      )}
+
       {lastFetchReport && (
         <div className="mb-4 rounded-lg border border-rule bg-paper-dark/40 px-3 py-2">
           <div className="flex items-center justify-between gap-2 mb-1.5">
@@ -129,12 +139,18 @@ export function JobsPage({
                   </Tooltip>
                 );
               }
-              const tone = s.count === 0
-                ? 'bg-stone-100 text-stone-600 dark:bg-stone-800/50 dark:text-stone-400'
-                : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300';
+              const tone = s.partial
+                ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300'
+                : s.count === 0
+                  ? 'bg-stone-100 text-stone-600 dark:bg-stone-800/50 dark:text-stone-400'
+                  : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300';
               return (
-                <span key={s.name} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${tone}`}>
-                  {label} · {s.count}
+                <span
+                  key={s.name}
+                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${tone}`}
+                  title={s.partial ? 'Some pages failed — kept what was fetched, older jobs not removed' : undefined}
+                >
+                  {label} · {s.count}{s.partial ? ' · partial' : ''}
                 </span>
               );
             })}

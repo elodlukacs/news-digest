@@ -225,10 +225,19 @@ async function selectArticles(callLLM, rawArticles, { category, keyword, provide
 
   const poolSize = pool.length;
   if (poolSize <= SUMMARY_POOL) {
-    return { articles: pool, poolSize, method: 'all' };
+    return { articles: ownSourcesFirst(pool), poolSize, method: 'all' };
   }
 
-  const candidates = pool.slice(0, MAX_TRIAGE_CANDIDATES);
+  // The category's own feeds always make the cut. Search results (Google News)
+  // are many outlets on one story, so on coverage alone they outrank and
+  // crowd out the handful of matching feed items the user actually subscribed to.
+  const hasSearch = pool.some((a) => a.fromSearch);
+  const own = hasSearch ? pool.filter((a) => !a.fromSearch) : pool;
+  // Enough feed matches on their own: search results would only displace them.
+  const ranked = hasSearch && own.length >= SUMMARY_POOL ? own : pool;
+  const reserved = hasSearch && own.length < SUMMARY_POOL ? own : [];
+
+  const candidates = ranked.slice(0, MAX_TRIAGE_CANDIDATES);
   try {
     const picked = await withTimeout(
       triageWithLLM(callLLM, candidates, { category, keyword, provider, now }),
@@ -236,15 +245,37 @@ async function selectArticles(callLLM, rawArticles, { category, keyword, provide
     );
     // A model that returns a handful of ids would starve the summary; top up from the heuristic ranking.
     if (picked.length >= SUMMARY_POOL / 2) {
-      const chosen = new Set(picked);
-      const topUp = candidates.filter((a) => !chosen.has(a)).slice(0, SUMMARY_POOL - picked.length);
-      return { articles: [...picked, ...topUp], poolSize, method: 'llm' };
+      return { articles: fillWithReserved(picked, reserved, ranked), poolSize, method: 'llm' };
     }
     console.warn(`[Triage] Only ${picked.length} usable ids returned — using heuristic ranking`);
   } catch (err) {
     console.warn('[Triage] LLM ranking failed, using heuristic ranking:', err.message);
   }
-  return { articles: candidates.slice(0, SUMMARY_POOL), poolSize, method: 'heuristic' };
+  return { articles: fillWithReserved([], reserved, ranked), poolSize, method: 'heuristic' };
+}
+
+/** Stable partition: feed items before search results, each keeping its ranking. */
+function ownSourcesFirst(articles) {
+  return [...articles.filter((a) => !a.fromSearch), ...articles.filter((a) => a.fromSearch)];
+}
+
+/**
+ * Keep every reserved (own-feed) item, fill the remaining slots in `picked`
+ * order, top up from `rest` (already heuristic-ranked), and keep the picked
+ * order so the summary still leads with the most important story.
+ */
+function fillWithReserved(picked, reserved, rest) {
+  const reservedSet = new Set(reserved);
+  const extras = [];
+  for (const a of [...picked, ...rest]) {
+    if (reserved.length + extras.length >= SUMMARY_POOL) break;
+    if (!reservedSet.has(a) && !extras.includes(a)) extras.push(a);
+  }
+  const keep = new Set([...reserved, ...extras]);
+  const ordered = picked.filter((a) => keep.has(a));
+  const placed = new Set(ordered);
+  for (const a of [...reserved, ...extras]) if (!placed.has(a)) ordered.push(a);
+  return reserved.length ? ownSourcesFirst(ordered) : ordered;
 }
 
 module.exports = { selectArticles, matchesKeyword, isSearchableKeyword, SUMMARY_POOL };

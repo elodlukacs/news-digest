@@ -42,7 +42,17 @@ export function AppLayout() {
   const navigate = useNavigate();
 
   const { feeds, addFeed, deleteFeed } = useFeeds(managingId);
-  const { models, loading: modelsLoading } = useModels();
+  const { models, loading: modelsLoading, defaultModel } = useModels();
+
+  // A stored model the server no longer lists (retired, or its key removed)
+  // would be requested on every call. Fall back to one that exists; the
+  // server still falls through its provider chain if that one fails too.
+  // Not persisted: if the model list was only partly loaded, a reload restores
+  // the stored choice.
+  const effectiveLlm = useMemo(() => {
+    if (modelsLoading || models.length === 0 || models.some((m) => m.id === selectedLlm)) return selectedLlm;
+    return models.some((m) => m.id === defaultModel) ? defaultModel : models[0].id;
+  }, [models, modelsLoading, selectedLlm, defaultModel]);
 
   const managingCategory = categories.find((c: Category) => c.id === managingId);
 
@@ -66,7 +76,7 @@ export function AppLayout() {
   // useOutletContext consumer and churned the dep arrays downstream of it.
   const outletContext: AppOutletContext = useMemo(() => ({
     categories,
-    selectedLlm,
+    selectedLlm: effectiveLlm,
     onLlmChange: handleLlmChange,
     onManageFeeds: handleManageFeeds,
     addCategory: handleAddCategory,
@@ -75,7 +85,7 @@ export function AppLayout() {
     articleFontSize,
     onFontSizeChange: handleFontSizeChange,
   }), [
-    categories, selectedLlm, handleLlmChange, handleManageFeeds, handleAddCategory,
+    categories, effectiveLlm, handleLlmChange, handleManageFeeds, handleAddCategory,
     handleDeleteCategory, handleSelectCategory, articleFontSize, handleFontSizeChange,
   ]);
 
@@ -85,7 +95,7 @@ export function AppLayout() {
   });
 
   return (
-    <LlmProvider value={selectedLlm}>
+    <LlmProvider value={effectiveLlm}>
     <TooltipProvider>
       <div className="min-h-screen bg-paper" ref={containerRef}>
         <PullToRefreshIndicator pulling={pulling} pullProgress={pullProgress} />
@@ -95,8 +105,8 @@ export function AppLayout() {
           theme={theme}
           onThemeChange={(t) => setTheme(t as Theme)}
           onShowStats={() => setShowStats(true)}
-          selectedLlm={selectedLlm}
-          onLlmChange={setSelectedLlm}
+          selectedLlm={effectiveLlm}
+          onLlmChange={handleLlmChange}
           models={models}
           modelsLoading={modelsLoading}
           articleFontSize={articleFontSize}

@@ -32,8 +32,10 @@ router.get('/', (req, res) => {
   const conditions = [];
   const params = {};
 
-  conditions.push(recentJobFilter('j'));
-  if (saved === 'true') { conditions.push('sj.job_id IS NOT NULL'); }
+  // Saved jobs are exempt from the recency window: a job saved last week
+  // vanished from the Saved tab (and its count) while still in the table.
+  if (saved === 'true') conditions.push('sj.job_id IS NOT NULL');
+  else conditions.push(recentJobFilter('j'));
   if (source) { conditions.push('j.source = @source'); params.source = source; }
   if (workType) { conditions.push('j.work_type = @workType'); params.workType = workType; }
   if (search) { conditions.push('(LOWER(j.title) LIKE @search OR LOWER(j.company) LIKE @search)'); params.search = `%${search.toLowerCase()}%`; }
@@ -58,7 +60,7 @@ router.get('/', (req, res) => {
   const counts = { total: 0, new: 0, saved: 0 };
   const countRows = db.prepare(`SELECT status, COUNT(*) as count FROM jobs WHERE ${recentFilter} GROUP BY status`).all();
   for (const r of countRows) { counts.total += r.count; counts[r.status] = r.count; }
-  counts.saved = db.prepare(`SELECT COUNT(*) as count FROM saved_jobs WHERE job_id IN (SELECT id FROM jobs WHERE ${recentFilter})`).get().count;
+  counts.saved = db.prepare('SELECT COUNT(*) as count FROM saved_jobs WHERE job_id IN (SELECT id FROM jobs)').get().count;
   const aiCount = db.prepare(`SELECT COUNT(*) as count FROM ai_filtered_jobs WHERE job_id IN (SELECT id FROM jobs WHERE ${recentFilter})`).get();
 
   const sources = db.prepare(`SELECT DISTINCT source FROM jobs WHERE source != '' AND ${recentFilter} ORDER BY source`).all().map(r => r.source);
@@ -113,10 +115,23 @@ router.post('/fetch', async (req, res) => {
     // Wipe and repopulate in ONE transaction. As two transactions, a throw in
     // the insert loop left the table empty, and a concurrent GET /api/jobs
     // between them saw zero rows.
+    //
+    // Only sources that answered in full are wiped: a source with a transient
+    // error used to lose every job until the next good fetch. Rows from sources that
+    // no longer exist are cleared too. AI results are kept for jobs that are
+    // still here — re-fetching used to erase them all and force a paid re-curate.
+    // A partial source (later page failed) or one that returned nothing may
+    // still have live jobs we did not see this time; upsert, don't wipe.
+    const okNames = JSON.stringify(okSources.filter(s => !s.partial && s.count > 0).map(s => s.name));
+    const allNames = JSON.stringify(sources.map(s => s.name));
     db.transaction(() => {
-      db.prepare('DELETE FROM ai_filtered_jobs').run();
-      db.prepare('DELETE FROM jobs WHERE id NOT IN (SELECT job_id FROM saved_jobs)').run();
+      db.prepare(`
+        DELETE FROM jobs
+        WHERE id NOT IN (SELECT job_id FROM saved_jobs)
+          AND (source IN (SELECT value FROM json_each(?)) OR source NOT IN (SELECT value FROM json_each(?)))
+      `).run(okNames, allNames);
       for (const job of jobs) stmt.run({ ...job, createdAt: now });
+      db.prepare('DELETE FROM ai_filtered_jobs WHERE job_id NOT IN (SELECT id FROM jobs)').run();
     })();
 
     console.log(`[Jobs] Fetched ${jobs.length} jobs from ${okSources.length} sources`);
@@ -151,17 +166,28 @@ router.post('/ai-filter', async (req, res) => {
     if (jobs.length === 0) return res.json({ filtered: 0, total: 0 });
 
     console.log(`[Jobs] AI filtering ${jobs.length} jobs...`);
-    const results = await filterJobsWithAI(jobs, callLLM, provider || null);
+    // One curate at a time: a double click used to run two full paid passes.
+    const { results, classifiedIds, failedBatches, totalBatches } = await runExclusive(
+      'jobs:ai-filter',
+      () => filterJobsWithAI(jobs, callLLM, provider || null)
+    );
 
+    // Every batch failed (provider outage, unparseable output): keep the
+    // previous results. This used to wipe them and report success.
+    if (failedBatches === totalBatches) {
+      return res.status(502).json({ error: 'AI filtering failed — previous results kept', code: 'ai_filter_failed' });
+    }
+
+    // Replace results only for the jobs the model actually classified.
     const now = new Date().toISOString();
     db.transaction(() => {
-      db.prepare('DELETE FROM ai_filtered_jobs').run();
+      db.prepare('DELETE FROM ai_filtered_jobs WHERE job_id IN (SELECT value FROM json_each(?))').run(JSON.stringify(classifiedIds));
       const stmt = db.prepare('INSERT OR IGNORE INTO ai_filtered_jobs (job_id, remote, filtered_at) VALUES (?, ?, ?)');
       for (const r of results) stmt.run(r.id, r.remote, now);
     })();
 
-    console.log(`[Jobs] AI filter matched ${results.length}/${jobs.length} jobs`);
-    res.json({ filtered: results.length, total: jobs.length });
+    console.log(`[Jobs] AI filter matched ${results.length}/${jobs.length} jobs (${failedBatches}/${totalBatches} batches failed)`);
+    res.json({ filtered: results.length, total: jobs.length, failedBatches, totalBatches });
   } catch (error) {
     console.error('[Jobs] AI filter error:', error.message);
     res.status(500).json({ error: error.message });

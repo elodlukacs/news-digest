@@ -4,12 +4,13 @@ import { parseRateLimitError } from '../utils/parseRateLimitError';
 
 interface RateLimitDialogProps {
   error: string;
+  status?: number | null;
   open: boolean;
   onClose: () => void;
 }
 
-export function RateLimitDialog({ error, open, onClose }: RateLimitDialogProps) {
-  const info = parseRateLimitError(error);
+export function RateLimitDialog({ error, status, open, onClose }: RateLimitDialogProps) {
+  const info = parseRateLimitError(error, status);
   const usagePercent = info.used && info.limit ? Math.round((info.used / info.limit) * 100) : null;
 
   return (

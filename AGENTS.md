@@ -356,6 +356,10 @@ When given a new task, structure your response like this:
   keyword match. Feeds are read in full (up to 60 items each); triage, not feed order, decides what the
   summary covers. If triage fails it falls back to a coverage + recency ranking.
 - Category-level `custom_prompt` and `language` fields customize LLM output
+- A keyword-filtered refresh is stored in `summary_history` with `keyword` set and never
+  written to `summaries`. Every reader of a category's "latest" summary (GET `/summary`
+  without `summary_id`, briefing reuse, surprise, tags, telegram) must filter
+  `keyword IS NULL` — otherwise a filtered run replaces the category's digest
 - Widget endpoints have server-side caching (crypto 2min, releases 30min, homepage 5min)
 - No scheduler exists — every refresh is manual (auto-refresh was removed in `f60f4bd`).
   Concurrency is bounded by `lib/inFlight.js`, not by a debounce.
@@ -426,7 +430,7 @@ Cognitive: `forensic_analyses`, `inoculation_sessions`, `inoculation_headlines`,
 
 ### Key Patterns
 
-- **Provider fallback**: Iterate `AI_PROVIDERS` with try/catch, respects `providerId` parameter, rate limit headers captured into `providerQuotas`
+- **Provider fallback**: Iterate `AI_PROVIDERS` with try/catch; a `providerId` is tried **first**, then the rest of the chain (it used to pin a single provider, and the UI always sends one, so fallback never ran). Rate limit headers captured into `providerQuotas`
 - **Widget data flow**: Single `useWidgets()` in App.tsx, passed as props to both sidebars (avoids double-fetching)
 - **AbortController**: `useSummary` and `useJobs` cancel in-flight requests on category/source switch
 - **Chat**: Pessimistic UI — user message added immediately, server returns assistant response with summary context

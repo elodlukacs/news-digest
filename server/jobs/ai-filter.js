@@ -14,8 +14,17 @@ function buildPromptVariables(jobs) {
   };
 }
 
+/**
+ * @returns {Promise<{ results: {id, remote}[], classifiedIds: string[], failedBatches: number, totalBatches: number }>}
+ *   `classifiedIds` lists every job in a batch the model answered, so the
+ *   caller can replace exactly those rows. Failed batches used to be logged
+ *   and dropped, and the route then wiped all earlier results.
+ */
 async function filterJobsWithAI(jobs, callLLM, providerId) {
   const allResults = [];
+  const classifiedIds = [];
+  let failedBatches = 0;
+  const totalBatches = Math.ceil(jobs.length / BATCH_SIZE);
 
   for (let i = 0; i < jobs.length; i += BATCH_SIZE) {
     const batch = jobs.slice(i, i + BATCH_SIZE);
@@ -77,15 +86,18 @@ async function filterJobsWithAI(jobs, callLLM, providerId) {
           id: r.id,
           remote: ['yes', 'no', 'possible'].includes(r.remote) ? r.remote : 'possible',
         })));
+        classifiedIds.push(...batchIds);
       } else {
+        failedBatches++;
         console.warn(`Batch ${Math.floor(i / BATCH_SIZE) + 1}: Could not parse response as JSON. Content preview: ${text.slice(0, 200)}`);
       }
     } catch (error) {
-      console.error(`Failed to parse AI response for batch ${Math.floor(i / BATCH_SIZE) + 1}:`, error.message);
+      failedBatches++;
+      console.error(`AI filter batch ${Math.floor(i / BATCH_SIZE) + 1} failed:`, error.message);
     }
   }
 
-  return allResults;
+  return { results: allResults, classifiedIds, failedBatches, totalBatches };
 }
 
 module.exports = { filterJobsWithAI };

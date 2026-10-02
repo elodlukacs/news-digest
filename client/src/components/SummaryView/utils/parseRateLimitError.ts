@@ -6,8 +6,9 @@ export interface RateLimitInfo {
   limit?: number;
 }
 
-export function parseRateLimitError(error: string): RateLimitInfo {
-  if (!error.includes('429') && !error.includes('rate_limit')) {
+/** `status` is the HTTP status when known: the server's own 429 messages don't contain "429". */
+export function parseRateLimitError(error: string, status?: number | null): RateLimitInfo {
+  if (status !== 429 && !error.includes('429') && !error.includes('rate_limit')) {
     return { isRateLimit: false };
   }
   const rawTimeMatch = error.match(/try again in ([\d.]+m)?([\d.]+s)?/i);

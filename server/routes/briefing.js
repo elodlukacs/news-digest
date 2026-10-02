@@ -29,7 +29,7 @@ function getFreshSummaries(categories) {
   const stmt = db.prepare(`
     SELECT summary, sentiment_data, generated_at
     FROM summary_history
-    WHERE category_id = ? AND generated_at >= ?
+    WHERE category_id = ? AND generated_at >= ? AND keyword IS NULL
     ORDER BY generated_at DESC LIMIT 1
   `);
   const cutoff = new Date(Date.now() - FRESH_SUMMARY_MS).toISOString();

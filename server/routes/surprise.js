@@ -74,6 +74,7 @@ function pickArticle({ excludeUrls, categoryIds } = {}) {
     LEFT JOIN categories c ON c.id = sh.category_id
     WHERE sh.generated_at > datetime('now', ?)
       AND sh.category_id > 0
+      AND sh.keyword IS NULL
       AND sh.summary IS NOT NULL
       ${categoryClause}
     ORDER BY sh.generated_at DESC
@@ -238,6 +239,8 @@ router.post('/elaborate', async (req, res) => {
       db,
       purpose: 'surprise-elaborate',
       providerId: 'llama8b',
+      // Cheap model only: falling through the chain would reach paid providers.
+      exclusive: true,
       max_tokens: 2000,
       temperature: 0.5,
     });
@@ -305,6 +308,8 @@ router.post('/chat', async (req, res) => {
       db,
       purpose: 'surprise-chat',
       providerId: 'llama8b',
+      // Cheap model only: falling through the chain would reach paid providers.
+      exclusive: true,
       max_tokens: 1024,
       temperature: 0.5,
     });
