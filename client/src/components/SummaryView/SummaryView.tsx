@@ -176,7 +176,7 @@ export function SummaryView({
           >
             <MoreVertical size={20} />
           </button>
-          <h2 className="font-serif text-3xl md:text-4xl font-bold text-masthead tracking-tight">{categoryName}</h2>
+          <h1 className="font-serif text-3xl md:text-4xl font-bold text-masthead tracking-tight">{categoryName}</h1>
         </div>
         {summary && (
           <div className="flex flex-wrap items-center gap-1.5 mt-2">

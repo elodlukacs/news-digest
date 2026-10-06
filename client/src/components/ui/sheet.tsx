@@ -49,12 +49,15 @@ const sheetVariants = cva(
 
 interface SheetContentProps
   extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>,
-    VariantProps<typeof sheetVariants> {}
+    VariantProps<typeof sheetVariants> {
+  /** Extra classes for the close button, e.g. a safe-area offset on a full-height sheet. */
+  closeClassName?: string
+}
 
 const SheetContent = React.forwardRef<
   React.ComponentRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({ side = "right", className, children, ...props }, ref) => (
+>(({ side = "right", className, closeClassName, children, ...props }, ref) => (
   <SheetPortal>
     <SheetOverlay />
     <SheetPrimitive.Content
@@ -62,7 +65,7 @@ const SheetContent = React.forwardRef<
       className={cn(sheetVariants({ side }), className)}
       {...props}
     >
-      <SheetPrimitive.Close className="absolute right-3 top-3 z-50 flex items-center justify-center h-10 w-10 rounded-full bg-ink/60 text-white opacity-90 ring-offset-paper transition-all hover:opacity-100 hover:bg-ink/80 focus:outline-none focus:ring-2 focus:ring-masthead focus:ring-offset-2 disabled:pointer-events-none cursor-pointer shadow-lg">
+      <SheetPrimitive.Close className={cn("absolute right-3 top-3 z-50 flex items-center justify-center h-10 w-10 rounded-full bg-ink/60 text-white opacity-90 ring-offset-paper transition-all hover:opacity-100 hover:bg-ink/80 focus:outline-none focus:ring-2 focus:ring-masthead focus:ring-offset-2 disabled:pointer-events-none cursor-pointer shadow-lg", closeClassName)}>
         <X className="h-5 w-5" />
         <span className="sr-only">Close</span>
       </SheetPrimitive.Close>

@@ -64,6 +64,7 @@ function LogsRoute() {
 
   return (
     <div className="min-h-screen bg-black p-4">
+      <h1 className="sr-only">LLM call logs</h1>
       <div className="text-green-500 font-mono text-sm mb-2">
        days:{' '}
         <input

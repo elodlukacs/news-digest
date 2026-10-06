@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useOutletContext, useSearchParams } from 'react-router-dom';
-import { RotateCw } from 'lucide-react';
+import { ArrowLeft, RotateCw } from 'lucide-react';
 
 import { ArticleChatPopup } from '../ArticleChatPopup';
 import { Skeleton } from '../ui/skeleton';
@@ -54,6 +54,15 @@ export function ResearchRoute() {
     }
   }, [research, setSearchParams]);
 
+  // Back to the search page with the recent list. Also cancels a research
+  // still running, so its result does not pop up afterwards.
+  const goBack = useCallback(() => {
+    clear();
+    setResearching(false);
+    setChatOpen(false);
+    if (paramId) setSearchParams({});
+  }, [clear, paramId, setSearchParams]);
+
   const empty = !result && !loading && !error;
 
   return (
@@ -79,7 +88,15 @@ export function ResearchRoute() {
         </div>
       ) : (
         <div className="max-w-[1400px]">
-          <div className="pt-8">
+          <button
+            type="button"
+            onClick={goBack}
+            className="mt-5 -ml-1.5 inline-flex items-center gap-1 rounded-md px-1.5 py-1 font-[family-name:var(--font-widget)] text-[14px] font-medium text-ink-muted hover:text-ink transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-masthead"
+          >
+            <ArrowLeft size={16} aria-hidden />
+            Back to search
+          </button>
+          <div className="pt-4">
             <ResearchSearchForm
               key={result?.id ?? pendingTopic}
               size="compact"
