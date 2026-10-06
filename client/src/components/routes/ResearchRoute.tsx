@@ -57,13 +57,14 @@ export function ResearchRoute() {
   const empty = !result && !loading && !error;
 
   return (
-    <div className="max-w-[860px] mx-auto px-4 sm:px-6 pb-24">
+    // Same container as the masthead, so the page lines up with the logo and nav.
+    <div className="max-w-[1600px] mx-auto px-4 md:px-6 pb-24">
       {empty ? (
-        <div className="min-h-[68vh] flex flex-col justify-center pt-10">
-          <h1 className="font-serif text-[34px] leading-[1.1] sm:text-[48px] md:text-[56px] font-black text-ink tracking-[-0.025em] max-w-[16ch]">
+        <div className="min-h-[68vh] max-w-[1040px] flex flex-col justify-center pt-10">
+          <h1 className="font-serif text-[34px] leading-[1.1] sm:text-[48px] md:text-[60px] xl:text-[68px] font-black text-ink tracking-[-0.025em] max-w-[18ch]">
             What do you want to understand today?
           </h1>
-          <p className="mt-5 max-w-[56ch] font-[family-name:var(--font-body)] text-[17px] leading-[1.7] text-ink-light">
+          <p className="mt-5 max-w-[60ch] font-[family-name:var(--font-body)] text-[17px] md:text-[19px] leading-[1.7] text-ink-light">
             Name a story, conflict or crisis. You get the background, what set it off, how it escalated and
             where it stands now, drawn from news outlets around the world.
           </p>
@@ -77,7 +78,7 @@ export function ResearchRoute() {
           />
         </div>
       ) : (
-        <>
+        <div className="max-w-[1400px]">
           <div className="pt-8">
             <ResearchSearchForm
               key={result?.id ?? pendingTopic}
@@ -90,7 +91,7 @@ export function ResearchRoute() {
 
           {loading && researching && <ResearchProgress topic={pendingTopic} />}
           {loading && !researching && (
-            <div className="pt-10 space-y-4 max-w-[66ch]" aria-busy>
+            <div className="pt-10 space-y-4 max-w-[760px]" aria-busy>
               <Skeleton className="w-4/5 h-10" />
               <Skeleton className="w-40 h-3" />
               <Skeleton className="w-full h-4 mt-8" />
@@ -124,7 +125,7 @@ export function ResearchRoute() {
               onResearchAgain={() => submit(result.topic, true)}
             />
           )}
-        </>
+        </div>
       )}
 
       {result && (

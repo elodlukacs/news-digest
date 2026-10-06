@@ -63,10 +63,14 @@ for (const path of [
   '/api/inoculation', '/api/scientist', '/api/bridge', '/api/cognitive',
   '/api/bias-radar', '/api/bias-mirror', '/api/fallacy-dojo', '/api/conspiracy-anatomy',
   '/api/source-lab', '/api/propaganda-timeline', '/api/manipulator',
-  '/api/homepage/surprise', '/api/discover-feed', '/api/research',
+  '/api/homepage/surprise', '/api/discover-feed',
 ]) {
   app.use(path, llmLimit);
 }
+// Research reads (saved results, recent list, chat history) are cheap and
+// happen on every page load; only the two LLM calls count against the bucket.
+app.post('/api/research', llmLimit);
+app.post('/api/research/:id/chat', llmLimit);
 
 // Routers
 app.use('/api/categories', require('./routes/categories'));
