@@ -63,7 +63,7 @@ for (const path of [
   '/api/inoculation', '/api/scientist', '/api/bridge', '/api/cognitive',
   '/api/bias-radar', '/api/bias-mirror', '/api/fallacy-dojo', '/api/conspiracy-anatomy',
   '/api/source-lab', '/api/propaganda-timeline', '/api/manipulator',
-  '/api/homepage/surprise', '/api/discover-feed',
+  '/api/homepage/surprise', '/api/discover-feed', '/api/research',
 ]) {
   app.use(path, llmLimit);
 }
@@ -83,6 +83,7 @@ app.use('/api/stats', require('./routes/stats'));
 app.use('/api/models', require('./routes/models'));
 app.use('/api/widgets', require('./routes/widgets'));
 app.use('/api/homepage/surprise', require('./routes/surprise'));
+app.use('/api/research', require('./routes/research'));
 app.use('/api/jobs', require('./routes/jobs'));
 app.use('/api/bias-radar/decode', require('./routes/bias-radar/decode'));
 app.use('/api/bias-radar/related', require('./routes/bias-radar/related'));

@@ -106,7 +106,7 @@ function clearSeenUrls() {
 
 /* ─── Component ─── */
 
-export function HomeRoute() {
+export function BreakRoute() {
   const { articleFontSize, categories } = useOutletContext<AppOutletContext>();
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>(() =>
     getStoredCategoryIds(),

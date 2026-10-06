@@ -7,7 +7,8 @@ import {
   ReleasesRoute,
   MindGamesRoute,
   PromptManagerRoute,
-  HomeRoute,
+  BreakRoute,
+  ResearchRoute,
   LogsRoute,
   ExploreFeedsRoute,
   MindGamesOverviewRoute,
@@ -22,7 +23,8 @@ function App() {
   return (
     <Routes>
       <Route element={<AppLayout />}>
-        <Route index element={<HomeRoute />} />
+        <Route index element={<ResearchRoute />} />
+        <Route path="break" element={<BreakRoute />} />
         <Route path="category/:categoryName" element={<CategoryRoute />} />
         <Route path="briefing" element={<BriefingRoute />} />
         <Route path="explore" element={<ExploreFeedsRoute />} />

@@ -36,6 +36,9 @@ const LANGUAGE_CONFIGS = {
   Japanese: { hl: 'ja', gl: 'JP' },
 };
 
+// NEWS_SEARCH=off stops summaries and topic research from searching Google News.
+const NEWS_SEARCH_ENABLED = process.env.NEWS_SEARCH !== 'off';
+
 function getLanguageConfig(language) {
   return LANGUAGE_CONFIGS[language] || LANGUAGE_CONFIGS['English'];
 }
@@ -118,14 +121,16 @@ async function searchGDELT(title, language = 'English') {
  * @param {object} [opts]
  * @param {number} [opts.limit=10] max results
  * @param {string} [opts.when] Google News recency operator, e.g. '7d'
+ * @param {{hl: string, gl: string}} [opts.edition] Google News edition to
+ *   search instead of the one `language` maps to (e.g. the UK edition)
  */
-async function searchGoogleNews(title, language = 'English', { limit = 10, when } = {}) {
+async function searchGoogleNews(title, language = 'English', { limit = 10, when, edition } = {}) {
   if (!title) return [];
 
   const [exactQuery, orQuery] = buildSmartQuery(title);
   // Try full title first (Google News handles natural language well), then keyword queries
   const queriesToTry = [title, exactQuery, orQuery].filter(Boolean);
-  const langConfig = getLanguageConfig(language);
+  const langConfig = edition || getLanguageConfig(language);
 
   for (const query of queriesToTry) {
     if (!query) continue;
@@ -265,4 +270,5 @@ module.exports = {
   searchAllSources,
   extractKeywords,
   getLanguageConfig,
+  NEWS_SEARCH_ENABLED,
 };

@@ -390,6 +390,9 @@ discovery.js       — POST /api/discover-feed
 Plus, added since:
 ```
 GET  /api/health                      — unauthenticated liveness probe (no DB access)
+POST /api/research                    — homepage topic research (plan → Google News/GDELT/Wikipedia + feeds of categories with `include_in_research` → narrative), cached 6 h per opted-in set
+GET  /api/research/recent, GET|DELETE /api/research/:id, GET|POST /api/research/:id/chat
+PUT  /api/categories/:id/research      — `{ include: boolean }`, the "Include in research" checkbox
 POST /api/gamification/skill-event    — record one answer from any exercise
 GET  /api/gamification/mastery        — per-technique accuracy, weakest first
 ```
@@ -421,7 +424,7 @@ Cognitive: `forensic_analyses`, `inoculation_sessions`, `inoculation_headlines`,
 - `OPENROUTER_API_KEY` — required for LLM fallback (OpenRouter/MiniMax)
 - `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` — optional, send-to-Telegram feature
 - `TMDB_API_KEY` — optional, movie/TV releases widget
-- `NEWS_SEARCH` — set to `off` to stop a summary filter keyword from also searching Google News (`searchGoogleNews` in `lib/bias-radar/newsSearch.js`, merged into the triage pool)
+- `NEWS_SEARCH` — set to `off` to stop Google News searches: a summary filter keyword's search (merged into the triage pool) and homepage topic research's (US/UK/India editions, links decoded to article URLs by `lib/googleNewsLinks.js`). Flag is `NEWS_SEARCH_ENABLED` in `lib/bias-radar/newsSearch.js`
 - `DB_PATH` — path to SQLite (default: `./newsreader.db`). Set to a Railway volume path for persistence
 - `PORT` — defaults to 3001
 

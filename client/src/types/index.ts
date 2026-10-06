@@ -508,3 +508,35 @@ export interface SpectrumComparison {
   summary: string;
   provider: string;
 }
+
+/** One numbered source behind a topic research narrative; `[n]` citations point here. */
+export interface ResearchSource {
+  n: number;
+  kind: 'wiki' | 'news';
+  title: string;
+  source: string;
+  url: string;
+  publishedAt: string;
+  excerpt: string;
+  biasRating: string | null;
+}
+
+export interface TopicResearch {
+  id: number;
+  topic: string;
+  language: string;
+  headline: string;
+  narrative: string;
+  sources: ResearchSource[];
+  provider: string | null;
+  created_at: string;
+  cached: boolean;
+}
+
+export interface RecentResearch {
+  id: number;
+  topic: string;
+  headline: string;
+  language: string;
+  created_at: string;
+}

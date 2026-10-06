@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Plus, X, Coffee, AlignJustify, Home, Film, Brain, Briefcase, BarChart2, Shield, MessageSquareCode, ChevronDown, ChevronLeft, ChevronRight, Check, Zap, Minus, Compass } from 'lucide-react';
+import { Plus, X, Coffee, AlignJustify, Home, Film, Brain, Briefcase, BarChart2, Shield, MessageSquareCode, ChevronDown, ChevronLeft, ChevronRight, Check, Zap, Minus, Compass, Shuffle } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -72,6 +72,7 @@ export function NavigationBar({
   const showCognitive = path.startsWith('/mindgames');
   const showPrompts = path === '/prompts';
   const showExplore = path === '/explore';
+  const showBreak = path === '/break';
 
   const handleAdd = async () => {
     if (!newName.trim()) return;
@@ -121,6 +122,7 @@ export function NavigationBar({
   const cognitiveAndClose = () => { navigate('/mindgames'); setDrawerOpen(false); };
   const promptsAndClose = () => { navigate('/prompts'); setDrawerOpen(false); };
   const exploreAndClose = () => { navigate('/explore'); setDrawerOpen(false); };
+  const breakAndClose = () => { navigate('/break'); setDrawerOpen(false); };
   const homeAndClose = () => { navigate('/'); setDrawerOpen(false); };
 
   const todayShort = new Date().toLocaleDateString('en-US', {
@@ -129,7 +131,7 @@ export function NavigationBar({
     year: 'numeric',
   });
 
-  const currentLabel = showJobs ? 'Jobs' : showReleases ? 'Releases' : showBriefing ? 'Briefing' : showCognitive ? 'MindGames' : showPrompts ? 'Prompts' : showExplore ? 'Explore' : activeCategoryId ? (categories.find(c => c.id === activeCategoryId)?.name) : 'Home';
+  const currentLabel = showJobs ? 'Jobs' : showReleases ? 'Releases' : showBriefing ? 'Briefing' : showCognitive ? 'MindGames' : showPrompts ? 'Prompts' : showExplore ? 'Explore' : showBreak ? 'Break' : activeCategoryId ? (categories.find(c => c.id === activeCategoryId)?.name) : 'Home';
 
   return (
     <>
@@ -355,6 +357,8 @@ export function NavigationBar({
               <NavDivider />
               <NavBox label="Explore" icon={<Compass size={13} />} active={showExplore} onClick={() => navigate('/explore')} compact />
               <NavDivider />
+              <NavBox label="Break" icon={<Shuffle size={13} />} active={showBreak} onClick={() => navigate('/break')} compact />
+              <NavDivider />
               <NavBox label="Releases" icon={<Film size={13} />} active={showReleases} onClick={() => navigate('/releases')} compact />
               <NavDivider />
               <NavBox label="Jobs" icon={<Briefcase size={13} />} active={showJobs} onClick={() => navigate('/jobs')} compact />
@@ -409,6 +413,7 @@ export function NavigationBar({
               <DrawerItem label="Home" icon={<Zap size={14} />} active={isHome} onClick={homeAndClose} />
               <DrawerItem label="Morning Briefing" icon={<Coffee size={14} />} active={showBriefing} onClick={briefingAndClose} />
               <DrawerItem label="Explore Feeds" icon={<Compass size={14} />} active={showExplore} onClick={exploreAndClose} />
+              <DrawerItem label="Take a Break" icon={<Shuffle size={14} />} active={showBreak} onClick={breakAndClose} />
               <DrawerItem label="Releases" icon={<Film size={14} />} active={showReleases} onClick={releasesAndClose} />
               <DrawerItem label="Jobs" icon={<Briefcase size={14} />} active={showJobs} onClick={jobsAndClose} />
               <DrawerItem label="MindGames" icon={<Shield size={14} />} active={showCognitive} onClick={cognitiveAndClose} />
