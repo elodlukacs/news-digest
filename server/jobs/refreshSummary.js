@@ -6,7 +6,7 @@ const { attributeSection, buildUrlIndex } = require('../lib/attribution');
 const { recordSuccess, recordFailure } = require('../lib/feedHealth');
 const { parseJSON } = require('../lib/parseJSON');
 const { selectArticles, isSearchableKeyword } = require('../lib/articleTriage');
-const { searchGoogleNews } = require('../lib/bias-radar/newsSearch');
+const { searchGoogleNews, NEWS_SEARCH_ENABLED } = require('../lib/bias-radar/newsSearch');
 
 const ONE_DAY_MS = 86400000;
 // Upper bound per feed, not a selection rule: lib/articleTriage.js picks what
@@ -14,7 +14,6 @@ const ONE_DAY_MS = 86400000;
 const MAX_ITEMS_PER_FEED = 60;
 // A filter keyword also searches Google News, so a story the category's own
 // feeds barely cover still gets a full set of articles. NEWS_SEARCH=off disables it.
-const NEWS_SEARCH_ENABLED = process.env.NEWS_SEARCH !== 'off';
 const NEWS_SEARCH_LIMIT = 40;
 
 /** Google News results for the keyword, shaped like feed items. Never throws. */

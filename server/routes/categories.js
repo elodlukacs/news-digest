@@ -60,6 +60,14 @@ router.put('/:id/language', validateId, (req, res) => {
   res.json({ ok: true });
 });
 
+router.put('/:id/research', validateId, (req, res) => {
+  const { include } = req.body || {};
+  if (typeof include !== 'boolean') return res.status(400).json({ error: 'include must be true or false' });
+  const result = db.prepare('UPDATE categories SET include_in_research = ? WHERE id = ?').run(include ? 1 : 0, req.params.id);
+  if (result.changes === 0) return res.status(404).json({ error: 'Category not found' });
+  res.json({ ok: true });
+});
+
 router.put('/:id/order', validateId, (req, res) => {
   const id = parseInt(req.params.id);
   const { afterId } = req.body || {};

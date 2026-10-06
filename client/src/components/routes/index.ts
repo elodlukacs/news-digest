@@ -4,7 +4,8 @@ export { JobsRoute } from './JobsRoute';
 export { ReleasesRoute } from './ReleasesRoute';
 export { MindGamesRoute } from './MindGamesRoute';
 export { PromptManagerRoute } from './PromptManagerRoute';
-export { HomeRoute } from './HomeRoute';
+export { BreakRoute } from './BreakRoute';
+export { ResearchRoute } from './ResearchRoute';
 export { LogsRoute } from './LogsRoute';
 export { ExploreFeedsRoute } from './ExploreFeedsRoute';
 export {

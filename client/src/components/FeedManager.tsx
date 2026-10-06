@@ -41,6 +41,10 @@ export function FeedManager({ categoryId, categoryName, feeds, categories, onAdd
   const [promptSaved, setPromptSaved] = useState(false);
   const [language, setLanguage] = useState('English');
   const [langSaved, setLangSaved] = useState(false);
+  // null until the category has loaded, so the checkbox never flashes the wrong state.
+  const [includeInResearch, setIncludeInResearch] = useState<boolean | null>(null);
+  const [researchSaving, setResearchSaving] = useState(false);
+  const [researchError, setResearchError] = useState<string | null>(null);
   const [discoverUrl, setDiscoverUrl] = useState('');
   const [discovering, setDiscovering] = useState(false);
   const [discovered, setDiscovered] = useState<{ title: string; url: string }[]>([]);
@@ -81,6 +85,7 @@ export function FeedManager({ categoryId, categoryName, feeds, categories, onAdd
         const data = await r.json();
         setPrompt(data.custom_prompt || '');
         setLanguage(data.language || 'English');
+        setIncludeInResearch(Boolean(data.include_in_research));
       })
       .catch(() => {});
     return () => controller.abort();
@@ -121,6 +126,26 @@ export function FeedManager({ categoryId, categoryName, feeds, categories, onAdd
       langTimerRef.current = setTimeout(() => setLangSaved(false), 2000);
     } catch {
       // silent
+    }
+  };
+
+  const handleToggleResearch = async (include: boolean) => {
+    setIncludeInResearch(include);
+    setResearchSaving(true);
+    setResearchError(null);
+    try {
+      const res = await fetch(`${API_BASE}/categories/${categoryId}/research`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ include }),
+      });
+      if (!res.ok) throw new Error(`Server returned ${res.status}`);
+    } catch (e) {
+      console.error('Failed to save research setting:', e);
+      setIncludeInResearch(!include);
+      setResearchError('Couldn’t save this setting. Try again.');
+    } finally {
+      setResearchSaving(false);
     }
   };
 
@@ -231,6 +256,28 @@ export function FeedManager({ categoryId, categoryName, feeds, categories, onAdd
           </TabsContent>
 
           <TabsContent value="sources" className="mt-0">
+            <div className="px-4 pt-4">
+              <label
+                htmlFor={`include-in-research-${categoryId}`}
+                className={`flex items-start gap-3 rounded-md border border-rule px-3 py-3 ${includeInResearch === null ? 'opacity-60' : 'cursor-pointer hover:border-ink/30'}`}
+              >
+                <input
+                  id={`include-in-research-${categoryId}`}
+                  type="checkbox"
+                  checked={includeInResearch ?? false}
+                  disabled={includeInResearch === null || researchSaving}
+                  onChange={(e) => handleToggleResearch(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-masthead cursor-pointer disabled:cursor-not-allowed"
+                />
+                <span className="min-w-0">
+                  <span className="block text-sm font-medium text-ink">Include in research</span>
+                  <span className="block mt-0.5 text-xs text-ink-muted leading-relaxed">
+                    Homepage research also searches this category’s sources, alongside news outlets worldwide.
+                  </span>
+                </span>
+              </label>
+              {researchError && <p className="mt-1.5 text-[11px] text-accent">{researchError}</p>}
+            </div>
             <div className="p-4 space-y-1">
               {feeds.length === 0 && (
                 <div className="text-center py-8 text-ink-muted">

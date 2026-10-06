@@ -9,3 +9,4 @@ export { useStudyAnalysis } from './useStudyAnalysis';
 export { useJobs, DEFAULT_FILTERS } from './useJobs';
 export { useInformationDiet } from './useInformationDiet';
 export { useExploreFeeds } from './useExploreFeeds';
+export { useTopicResearch, useResearchChat } from './useTopicResearch';

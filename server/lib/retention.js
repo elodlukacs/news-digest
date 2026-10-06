@@ -17,6 +17,8 @@ const LLM_USAGE_RETENTION_DAYS = Number(process.env.LLM_USAGE_RETENTION_DAYS) ||
 // Extracted article text and background briefings for article chat. Summaries
 // (and so their chat entry points) are gone after SUMMARY_RETENTION_DAYS.
 const ARTICLE_CACHE_RETENTION_DAYS = Number(process.env.ARTICLE_CACHE_RETENTION_DAYS) || 7;
+// Homepage topic research; its follow-up chat goes with it (ON DELETE CASCADE).
+const RESEARCH_RETENTION_DAYS = Number(process.env.RESEARCH_RETENTION_DAYS) || 30;
 
 const DAY_MS = 86400000;
 const isoDaysAgo = (days) => new Date(Date.now() - days * DAY_MS).toISOString();
@@ -30,6 +32,7 @@ function purgeExpired(db) {
   const briefingCutoff = isoDaysAgo(BRIEFING_RETENTION_DAYS);
   const usageCutoff = isoDaysAgo(LLM_USAGE_RETENTION_DAYS);
   const articleCacheCutoff = isoDaysAgo(ARTICLE_CACHE_RETENTION_DAYS);
+  const researchCutoff = isoDaysAgo(RESEARCH_RETENTION_DAYS);
 
   return db.transaction(() => {
     // Category summaries (category_id > 0) and briefings (category_id = 0) have
@@ -59,7 +62,11 @@ function purgeExpired(db) {
       db.prepare('DELETE FROM article_sources WHERE created_at < ?').run(articleCacheCutoff).changes +
       db.prepare('DELETE FROM article_contexts WHERE created_at < ?').run(articleCacheCutoff).changes;
 
-    return { summaries: expired.length, chatMessages: chatDeleted, llmUsage: usageDeleted, articleCache: articleCacheDeleted };
+    const researchDeleted = db.prepare('DELETE FROM topic_research WHERE created_at < ?').run(researchCutoff).changes;
+    // Decoded Google News links only serve research sources, so they share its lifetime.
+    db.prepare('DELETE FROM gnews_links WHERE created_at < ?').run(researchCutoff);
+
+    return { summaries: expired.length, chatMessages: chatDeleted, llmUsage: usageDeleted, articleCache: articleCacheDeleted, research: researchDeleted };
   })();
 }
 
@@ -71,11 +78,11 @@ function startRetention(db, { intervalMs = 6 * 60 * 60 * 1000 } = {}) {
   const run = () => {
     try {
       const result = purgeExpired(db);
-      if (result.summaries || result.chatMessages || result.llmUsage || result.articleCache) {
+      if (result.summaries || result.chatMessages || result.llmUsage || result.articleCache || result.research) {
         console.log(
           `[retention] purged ${result.summaries} summaries, ` +
           `${result.chatMessages} chat messages, ${result.llmUsage} usage rows, ` +
-          `${result.articleCache} article cache rows`
+          `${result.articleCache} article cache rows, ${result.research} research results`
         );
       }
     } catch (err) {
