@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { MessageCircle, RotateCw, ExternalLink } from 'lucide-react';
 
 import { BiasBar } from '@/components/BiasBar';
@@ -85,7 +85,7 @@ export function ResearchArticle({ research, fontSize, onAskFollowUp, onResearchA
   return (
     <article className="pt-8 lg:grid lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] lg:gap-x-12 xl:gap-x-20">
       <div className="min-w-0">
-        <h1 className="font-serif text-[28px] leading-[1.15] sm:text-[36px] md:text-[44px] xl:text-[50px] font-black text-ink tracking-[-0.02em] max-w-[24ch]">
+        <h1 className="font-serif text-[24px] leading-[1.2] font-bold sm:text-[32px] md:text-[44px] md:leading-[1.15] md:font-black xl:text-[50px] text-ink tracking-[-0.02em] max-w-[24ch]">
           {research.headline}
         </h1>
 
@@ -98,8 +98,13 @@ export function ResearchArticle({ research, fontSize, onAskFollowUp, onResearchA
         <div className="mt-8 font-[family-name:var(--font-body)] text-ink-light">
           {lede && (
             <p
-              className="font-serif text-ink font-medium max-w-[66ch]"
-              style={{ fontSize: `${Math.round(fontSize * 1.18)}px`, lineHeight: 1.6 }}
+              // On phones the opening paragraph matches the body (as summaries
+              // do); from md up it is set larger in the headline face.
+              className="max-w-[66ch] text-ink font-[family-name:var(--font-body)] text-[length:var(--body-size)] leading-[1.8] md:font-serif md:font-medium md:text-[length:var(--lede-size)] md:leading-[1.6]"
+              style={{
+                '--body-size': `${fontSize}px`,
+                '--lede-size': `${Math.round(fontSize * 1.18)}px`,
+              } as CSSProperties}
             >
               <CitedText text={lede} maxN={maxN} onCite={cite} />
             </p>
