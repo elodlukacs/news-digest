@@ -47,7 +47,7 @@ export function ResearchProgress({ topic }: { topic: string }) {
           </li>
         ))}
       </ol>
-      <div className="mt-10 space-y-3 max-w-[66ch]" aria-hidden>
+      <div className="mt-10 space-y-3 max-w-[760px]" aria-hidden>
         <Skeleton className="w-full h-4" />
         <Skeleton className="w-full h-4" />
         <Skeleton className="w-11/12 h-4" />

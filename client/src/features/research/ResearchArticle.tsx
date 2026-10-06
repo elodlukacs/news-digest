@@ -68,7 +68,9 @@ export function ResearchArticle({ research, fontSize, onAskFollowUp, onResearchA
     const el = document.getElementById(`research-source-${n}`);
     if (!el) return;
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+    // On wide screens the list is a sticky side column: scroll it, not the page.
+    const sideColumn = window.matchMedia('(min-width: 1024px)').matches;
+    el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: sideColumn ? 'nearest' : 'center' });
     setHighlighted(n);
     if (highlightTimer.current) clearTimeout(highlightTimer.current);
     highlightTimer.current = setTimeout(() => setHighlighted(null), HIGHLIGHT_MS);
@@ -81,55 +83,60 @@ export function ResearchArticle({ research, fontSize, onAskFollowUp, onResearchA
   const [lede, ...body] = paragraphs;
 
   return (
-    <article className="pt-8">
-      <h1 className="font-serif text-[28px] leading-[1.15] sm:text-[36px] md:text-[42px] font-black text-ink tracking-[-0.02em] max-w-[22ch] sm:max-w-[26ch]">
-        {research.headline}
-      </h1>
+    <article className="pt-8 lg:grid lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] lg:gap-x-12 xl:gap-x-20">
+      <div className="min-w-0">
+        <h1 className="font-serif text-[28px] leading-[1.15] sm:text-[36px] md:text-[44px] xl:text-[50px] font-black text-ink tracking-[-0.02em] max-w-[24ch]">
+          {research.headline}
+        </h1>
 
-      <p className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 font-[family-name:var(--font-widget)] text-[13px] text-ink-muted">
-        <span>Researched {timeAgo(research.created_at)}</span>
-        <span aria-hidden className="w-1 h-1 rounded-full bg-ink-muted/40" />
-        <span>{coverage.length} news reports, {background.length} background articles</span>
-      </p>
+        <p className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 font-[family-name:var(--font-widget)] text-[13px] text-ink-muted">
+          <span>Researched {timeAgo(research.created_at)}</span>
+          <span aria-hidden className="w-1 h-1 rounded-full bg-ink-muted/40" />
+          <span>{coverage.length} news reports, {background.length} background articles</span>
+        </p>
 
-      <div className="mt-8 max-w-[66ch] font-[family-name:var(--font-body)] text-ink-light">
-        {lede && (
-          <p
-            className="font-serif text-ink font-medium"
-            style={{ fontSize: `${Math.round(fontSize * 1.18)}px`, lineHeight: 1.6 }}
+        <div className="mt-8 font-[family-name:var(--font-body)] text-ink-light">
+          {lede && (
+            <p
+              className="font-serif text-ink font-medium max-w-[66ch]"
+              style={{ fontSize: `${Math.round(fontSize * 1.18)}px`, lineHeight: 1.6 }}
+            >
+              <CitedText text={lede} maxN={maxN} onCite={cite} />
+            </p>
+          )}
+          <div className="mt-5 space-y-5 max-w-[78ch]" style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}>
+            {body.map((p, i) => (
+              <p key={i}><CitedText text={p} maxN={maxN} onCite={cite} /></p>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-8 flex flex-wrap items-center gap-3 font-[family-name:var(--font-widget)]">
+          <button
+            type="button"
+            onClick={onAskFollowUp}
+            className="inline-flex items-center gap-2 rounded-md bg-masthead text-paper px-4 py-2 text-[14px] font-semibold hover:bg-masthead/90 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-masthead focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
           >
-            <CitedText text={lede} maxN={maxN} onCite={cite} />
-          </p>
-        )}
-        <div className="mt-5 space-y-5" style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}>
-          {body.map((p, i) => (
-            <p key={i}><CitedText text={p} maxN={maxN} onCite={cite} /></p>
-          ))}
+            <MessageCircle size={15} />
+            Ask a follow-up
+          </button>
+          <button
+            type="button"
+            onClick={onResearchAgain}
+            className="inline-flex items-center gap-2 rounded-md border border-rule px-4 py-2 text-[14px] font-medium text-ink-light hover:text-ink hover:border-ink-muted transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-masthead"
+          >
+            <RotateCw size={14} />
+            Research again with the latest news
+          </button>
         </div>
       </div>
 
-      <div className="mt-8 flex flex-wrap items-center gap-3 font-[family-name:var(--font-widget)]">
-        <button
-          type="button"
-          onClick={onAskFollowUp}
-          className="inline-flex items-center gap-2 rounded-md bg-masthead text-paper px-4 py-2 text-[14px] font-semibold hover:bg-masthead/90 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-masthead focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
-        >
-          <MessageCircle size={15} />
-          Ask a follow-up
-        </button>
-        <button
-          type="button"
-          onClick={onResearchAgain}
-          className="inline-flex items-center gap-2 rounded-md border border-rule px-4 py-2 text-[14px] font-medium text-ink-light hover:text-ink hover:border-ink-muted transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-masthead"
-        >
-          <RotateCw size={14} />
-          Research again with the latest news
-        </button>
-      </div>
-
-      <section aria-labelledby="research-sources-heading" className="mt-14 pt-6 border-t border-rule max-w-[80ch]">
+      <section
+        aria-labelledby="research-sources-heading"
+        className="mt-14 pt-6 border-t border-rule lg:mt-0 lg:pt-0 lg:border-t-0 lg:border-l lg:pl-6 xl:pl-8 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:overscroll-contain"
+      >
         <h2 id="research-sources-heading" className="font-serif text-[20px] font-bold text-ink">
-          Sources
+          Sources <span className="font-[family-name:var(--font-widget)] text-[13px] font-normal text-ink-muted">{maxN}</span>
         </h2>
         {background.length > 0 && (
           <SourceGroup title="Background" sources={background} highlighted={highlighted} />
