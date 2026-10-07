@@ -26,7 +26,7 @@ const isAbort = (e: unknown) => e instanceof DOMException && e.name === 'AbortEr
 export function useSummary(
   categoryId: number | null,
   snapshotId?: number | null,
-  providerId: string = 'openai/gpt-oss-20b',
+  providerId: string = 'deepseek-flash',
 ) {
   // Tagged with the category it belongs to, so a category switch shows nothing
   // (not the previous category's cards) from the very first render.

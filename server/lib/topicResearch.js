@@ -75,9 +75,9 @@ const EXCERPT_CHARS = 280;
 // A fixed target holds length better than a range; the prompt allows fewer
 // when the sources are thin.
 const TARGET_SENTENCES = 12;
-// gpt-oss on Groq counts its hidden reasoning against max_tokens: at 3500 it
-// spent 3225 thinking and the answer was cut off mid-timeline. The visible
-// reply (timeline + 12 sentences) is ~1k tokens.
+// The visible reply (timeline + 12 sentences) is ~1k tokens. The headroom is
+// for reasoning models, which count hidden thinking against max_tokens: on
+// gpt-oss a 3500 limit left the answer cut off mid-timeline.
 const WRITER_MAX_TOKENS = 8000;
 // Words too common to show that a sentence and a source are about the same thing.
 const MATCH_STOPWORDS = new Set([
@@ -153,8 +153,8 @@ async function planResearch(callLLM, db, topic, provider) {
         // rest of the chain is the fallback.
         providerId: provider,
         temperature: 0.2,
-        // Reasoning models (qwen3.6, gpt-oss) spend part of this thinking; at
-        // 600 they returned empty content.
+        // Headroom for reasoning models, which spend part of this thinking;
+        // at 600 they returned empty content.
         max_tokens: 3000,
       }),
       PLAN_TIMEOUT_MS,

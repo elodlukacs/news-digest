@@ -208,7 +208,7 @@ router.get('/last-updated', (req, res) => {
 });
 
 router.post('/elaborate', async (req, res) => {
-  const { article_id, title, content, source } = req.body || {};
+  const { article_id, title, content, source, provider } = req.body || {};
   if (!title || !content) {
     return res.status(400).json({ error: 'title and content are required' });
   }
@@ -238,9 +238,7 @@ router.post('/elaborate', async (req, res) => {
     const result = await callLLM(messages, {
       db,
       purpose: 'surprise-elaborate',
-      providerId: 'llama8b',
-      // Cheap model only: falling through the chain would reach paid providers.
-      exclusive: true,
+      providerId: typeof provider === 'string' && provider ? provider : null,
       max_tokens: 2000,
       temperature: 0.5,
     });
@@ -278,7 +276,7 @@ router.get('/chat/:articleId', (req, res) => {
 });
 
 router.post('/chat', async (req, res) => {
-  const { article_id, title, content, message } = req.body || {};
+  const { article_id, title, content, message, provider } = req.body || {};
   if (!article_id || !title || !message) {
     return res.status(400).json({ error: 'article_id, title, and message required' });
   }
@@ -307,9 +305,7 @@ router.post('/chat', async (req, res) => {
     const result = await callLLM(messages, {
       db,
       purpose: 'surprise-chat',
-      providerId: 'llama8b',
-      // Cheap model only: falling through the chain would reach paid providers.
-      exclusive: true,
+      providerId: typeof provider === 'string' && provider ? provider : null,
       max_tokens: 1024,
       temperature: 0.5,
     });

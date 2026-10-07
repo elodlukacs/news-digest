@@ -7,7 +7,7 @@ export function useArticleChat(
   articleTitle: string | null,
   articleContent: string | null,
   articleUrl: string | null,
-  providerId: string = 'openai/gpt-oss-20b',
+  providerId: string = 'deepseek-flash',
 ) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [contextStatus, setContextStatus] = useState<ArticleContextStatus | null>(null);

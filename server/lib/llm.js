@@ -24,19 +24,15 @@ class LLMError extends Error {
   }
 }
 
-// Order is the fallback order. DeepSeek leads because Groq's catalogue shrank
-// to gpt-oss + qwen3.6 (Llama 3.x and Kimi were shut down on 2026-08-16), and
-// deepseek-flash (V4.1 Flash) is a clear step up on prose quality, tone control and
-// non-English output for the same money — with near-free prompt-cache hits,
-// which matters here because every call repeats a long fixed system prompt.
-// Groq stays as the low-latency fallback: an entry with no key is filtered out,
-// so this file is safe to ship before DEEPSEEK_API_KEY is set.
+// DeepSeek is the only provider (2026-10, owner's decision): one bill, one set
+// of logs on platform.deepseek.com, and deepseek-flash (V4.1 Flash) has the
+// best prose, tone control and non-English output of what was available, with
+// near-free prompt-cache hits on our long fixed system prompts. Groq, Google
+// AI Studio and OpenRouter used to follow as fallbacks; they were removed, so a
+// DeepSeek outage now fails the call instead of silently switching vendor.
 //
-// `models` is the provider's catalogue, used to route an explicit model ID back
-// to the provider that actually serves it. This used to be a chain of string
-// heuristics (`includes('/')` → OpenRouter, everything else → Groq) which
-// misrouted any new namespaced ID and sent unknown bare IDs to Groq, where they
-// 404. Adding a provider now means adding its models here, nothing more.
+// `models` is the catalogue, used to route an explicit model ID. Adding a
+// provider again means adding an entry with its models here.
 const AI_PROVIDERS = [
   {
     id: 'deepseek',
@@ -48,46 +44,6 @@ const AI_PROVIDERS = [
     // Flash; kept so a stored/explicit ID still resolves to this provider.
     models: ['deepseek-flash', 'deepseek-v4-pro', 'deepseek-v4-flash', 'deepseek-v4-flash-vision-exp'],
   },
-  {
-    id: 'llama',
-    name: 'Groq',
-    url: 'https://api.groq.com/openai/v1/chat/completions',
-    key: () => env('GROQ_API_KEY'),
-    model: 'openai/gpt-oss-120b',
-    // Groq-hosted IDs that contain a slash. Without this list they'd look like
-    // OpenRouter IDs, and OpenRouter serves different (or no) models under the
-    // same name.
-    models: [
-      'openai/gpt-oss-120b',
-      'openai/gpt-oss-20b',
-      'openai/gpt-oss-safeguard-20b',
-      'qwen/qwen3.6-27b',
-      'groq/compound',
-      'groq/compound-mini',
-    ],
-  },
-  {
-    id: 'llama8b',
-    name: 'Groq',
-    url: 'https://api.groq.com/openai/v1/chat/completions',
-    key: () => env('GROQ_API_KEY'),
-    model: 'qwen/qwen3.6-27b',
-  },
-  {
-    id: 'google',
-    name: 'Google AI Studio',
-    url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-    key: () => env('GOOGLE_API_KEY'),
-    model: 'gemini-2.0-flash',
-    prefix: /^(gemini|gemma)-/,
-  },
-  {
-    id: 'openrouter',
-    name: 'OpenRouter',
-    url: 'https://openrouter.ai/api/v1/chat/completions',
-    key: () => env('OPENROUTER_API_KEY'),
-    model: 'meta-llama/llama-3.3-70b-instruct:free',
-  },
 ];
 
 const PROVIDER_BY_MODEL = new Map();
@@ -98,8 +54,10 @@ for (const provider of AI_PROVIDERS) {
 const byProviderId = (id) => AI_PROVIDERS.find(p => p.id === id);
 
 /**
- * Resolve a caller-supplied `providerId` — which may be one of our provider
- * ids, or a bare model ID — to the provider that serves it.
+ * Resolve a caller-supplied `providerId` — one of our provider ids, or a model
+ * ID — to the provider that serves it. An ID nobody serves any more (e.g. a
+ * Groq model still stored in a browser's localStorage) gets the default
+ * provider and model rather than an error.
  */
 function resolveProvider(providerId) {
   const preset = byProviderId(providerId);
@@ -108,99 +66,39 @@ function resolveProvider(providerId) {
   const owner = PROVIDER_BY_MODEL.get(providerId);
   if (owner) return { provider: owner, model: providerId };
 
-  const byPrefix = AI_PROVIDERS.find(p => p.prefix && p.prefix.test(providerId));
-  if (byPrefix) return { provider: byPrefix, model: providerId };
-
-  if (providerId.includes('/')) return { provider: byProviderId('openrouter'), model: providerId };
-
-  // Bare, unrecognised ID: Groq is the only provider whose model IDs are
-  // routinely unnamespaced, so it stays the default.
-  return { provider: byProviderId('llama'), model: providerId };
+  console.warn(`[LLM] Unknown model "${providerId}" — using ${AI_PROVIDERS[0].model}`);
+  return { provider: AI_PROVIDERS[0], model: AI_PROVIDERS[0].model };
 }
 
-// Provider-specific request tuning. Both entries below suppress a reasoning
-// trace, for different reasons and with different (non-portable) parameters —
-// which is why this is keyed on the provider, not just the model.
-//
-// Groq: thinking models write their reasoning into `message.content` as a
-// <think> block, which every downstream JSON/text parser here chokes on.
-// `reasoning_format: 'hidden'` drops it server-side.
-//
-// DeepSeek: V4 has thinking ON by default and bills the reasoning against
+// DeepSeek V4 has thinking ON by default and bills the reasoning against
 // `max_tokens`. At our 8192 budget the model spent the whole allowance thinking
-// and returned either empty content or a JSON array truncated mid-stream
+// and returned either empty content or a JSON array cut off mid-stream
 // (`{"articles":[` and nothing more), at ~75s per call. Nothing in this app
 // needs a reasoning trace, so it is disabled outright.
-const THINKING_MODELS = new Set(['qwen/qwen3.6-27b']);
-
-function providerParams(provider, model) {
+function providerParams(provider) {
   if (provider.id === 'deepseek') return { thinking: { type: 'disabled' } };
-  if (provider.name === 'Groq' && THINKING_MODELS.has(model)) return { reasoning_format: 'hidden' };
   return {};
 }
 
 const providerQuotas = {};
 
-const FREE_MODEL_CACHE_TTL = 60 * 60 * 1000;
-let freeModelCache = { models: [], fetchedAt: 0 };
-
-function isTextOnlyModel(model) {
-  const id = model.id || '';
-  const reasoningIndicators = ['think', 'reasoning', 'thought', 'think_budget', 'thinking', 'o1-', 'o3-'];
-  if (reasoningIndicators.some(r => id.toLowerCase().includes(r))) return false;
-  const mod = model.architecture?.modality;
-  return !mod || mod === 'text->text' || mod === 'text';
-}
-
-async function getOpenRouterFreeModel(apiKey, currentModel) {
-  if (Date.now() - freeModelCache.fetchedAt < FREE_MODEL_CACHE_TTL) {
-    const cached = freeModelCache.models;
-    if (cached.length > 0) {
-      if (cached.find(m => m.id === currentModel)) return currentModel;
-      return cached[0].id;
-    }
-  }
-  try {
-    const response = await fetch('https://openrouter.ai/api/v1/models?sort=pricing-lowest', {
-      headers: { 'Authorization': `Bearer ${apiKey}` },
-    });
-    if (!response.ok) return currentModel;
-    const data = await response.json();
-    const freeTextModels = (data.data || [])
-      .filter(m => {
-        if (parseFloat(m.pricing?.prompt || 1) !== 0) return false;
-        if ((m.context_length || 0) < 32000) return false;
-        return isTextOnlyModel(m);
-      })
-      .sort((a, b) => (b.context_length || 0) - (a.context_length || 0));
-    freeModelCache = { models: freeTextModels, fetchedAt: Date.now() };
-    if (freeTextModels.length === 0) return currentModel;
-    if (freeTextModels.find(m => m.id === currentModel)) return currentModel;
-    return freeTextModels[0].id;
-  } catch {
-    return currentModel;
-  }
-}
-
 /**
- * `providerId` is tried first, then the rest of the chain. Pass
- * `exclusive: true` to use only that provider (e.g. a caller that must stay on
- * a cheap model rather than fall through to a paid one).
+ * `providerId` (a model ID from the menu) is tried first, then the rest of the
+ * chain — which, with DeepSeek as the only provider, is empty. `exclusive`
+ * is kept for callers that pass it; it no longer changes anything.
  */
 async function callLLM(messages, { purpose = 'unknown', categoryId = null, temperature = 0.3, max_tokens = 8192, providerId = null, exclusive = false, response_format = null, db } = {}) {
   const startedAt = Date.now();
   let providers = AI_PROVIDERS.filter(p => p.key());
-  if (providers.length === 0) throw new Error('No AI API keys configured. Set GROQ_API_KEY in .env');
+  if (providers.length === 0) throw new LLMError('No AI API key configured. Set DEEPSEEK_API_KEY in server/.env', { statusCode: 503 });
 
   // The requested model is a preference, not a pin: try it first, then fall
-  // through the rest of the chain. Pinning it meant the UI — which always sends
-  // the navbar model — turned off fallback for every user-initiated call, so a
-  // single Groq 429 failed summaries, chat and MindGames even with other keys set.
+  // through the rest of the chain (if more providers are ever added back).
   if (providerId) {
     const { provider, model } = resolveProvider(providerId);
     if (provider?.key()) {
-      // Same endpoint + model counts as the same provider (llama and llama8b
-      // share Groq's URL and key), or a 429 would be retried on it again.
+      // Same endpoint + model counts as the same provider, or a 429 would be
+      // retried on it again.
       const rest = exclusive ? [] : providers.filter((p) => !(p.url === provider.url && p.model === model));
       providers = [{ ...provider, model, preferred: true }, ...rest];
     } else if (exclusive) {
@@ -213,20 +111,7 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
   let lastError = null;
   let lastStatus = null;
   for (const provider of providers) {
-    let resolvedModel = provider.model;
-
-    // An explicitly requested OpenRouter model is used as-is; the default entry
-    // is swapped for a currently-free model.
-    if (provider.id === 'openrouter' && !(provider.preferred && providerId.includes('/'))) {
-      const apiKey = provider.key();
-      if (apiKey) {
-        const checked = await getOpenRouterFreeModel(apiKey, provider.model);
-        if (checked !== provider.model) {
-          console.log(`[LLM] OpenRouter model no longer free, switching to ${checked}`);
-          resolvedModel = checked;
-        }
-      }
-    }
+    const resolvedModel = provider.model;
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS_PER_PROVIDER; attempt++) {
       const remaining = TOTAL_BUDGET_MS - (Date.now() - startedAt);
@@ -238,10 +123,6 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
         console.log(`[LLM] Trying ${provider.name} (${resolvedModel}) for ${purpose}${attempt > 1 ? ` — retry ${attempt - 1}` : ''}...`);
 
         const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${provider.key()}` };
-        if (provider.id === 'openrouter') {
-          headers['HTTP-Referer'] = 'https://news-reader.app';
-          headers['X-Title'] = `News Reader · ${purpose}`;
-        }
 
         const response = await fetch(provider.url, {
           method: 'POST',
@@ -253,7 +134,7 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
             temperature,
             max_tokens,
             ...(response_format && { response_format }),
-            ...providerParams(provider, resolvedModel),
+            ...providerParams(provider),
           }),
         });
 
@@ -304,9 +185,6 @@ async function callLLM(messages, { purpose = 'unknown', categoryId = null, tempe
         const usage = data.usage || {};
 
         if (db) {
-          // resolvedModel, not provider.model — they diverge whenever the
-          // OpenRouter free-model switch fires, and the stats page was
-          // attributing usage to a model that was never called.
           db.prepare('INSERT INTO llm_usage (provider, model, prompt_tokens, completion_tokens, total_tokens, purpose, category_id, latency_ms, created_at) VALUES (?,?,?,?,?,?,?,?,?)').run(
             provider.name, resolvedModel, usage.prompt_tokens || 0, usage.completion_tokens || 0, usage.total_tokens || 0,
             purpose, categoryId, latency, new Date().toISOString()

@@ -107,7 +107,7 @@ function clearSeenUrls() {
 /* ─── Component ─── */
 
 export function BreakRoute() {
-  const { articleFontSize, categories } = useOutletContext<AppOutletContext>();
+  const { articleFontSize, categories, selectedLlm } = useOutletContext<AppOutletContext>();
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>(() =>
     getStoredCategoryIds(),
   );
@@ -251,6 +251,7 @@ export function BreakRoute() {
           title: article.title,
           source: article.source,
           content: article.raw_content || article.brief,
+          provider: selectedLlm,
         }),
       });
       if (!res.ok) {
@@ -269,7 +270,7 @@ export function BreakRoute() {
     } finally {
       if (!controller.signal.aborted) setElaborating(false);
     }
-  }, [article, elaborating]);
+  }, [article, elaborating, selectedLlm]);
 
   const handleSendChat = useCallback(
     async (text: string) => {
@@ -296,6 +297,7 @@ export function BreakRoute() {
             title: article.title,
             content: elaborated || article.raw_content || article.brief,
             message: text,
+            provider: selectedLlm,
           }),
         });
         if (!res.ok) {
@@ -327,7 +329,7 @@ export function BreakRoute() {
         if (!controller.signal.aborted) setChatSending(false);
       }
     },
-    [article, chatSending, elaborated],
+    [article, chatSending, elaborated, selectedLlm],
   );
 
   const toggleCategory = useCallback((id: number) => {

@@ -347,9 +347,11 @@ When given a new task, structure your response like this:
 - Deployment is Docker → CasaOS over SSH (`.github/workflows/deploy-*.yml`
   invoke scripts that live on the host). Vercel config in `vercel.json` still
   works for the frontend. There is no `server/nixpacks.toml`.
-- LLM provider fallback order is defined by `AI_PROVIDERS` in `server/lib/llm.js`
-  (Groq → Groq 8b → Google AI Studio → OpenRouter), each with a 90 s timeout and
-  one retry on transient failures
+- DeepSeek is the only LLM provider: `AI_PROVIDERS` in `server/lib/llm.js` has one entry
+  (`deepseek-flash` default, `deepseek-v4-pro`), 90 s timeout and one retry on transient
+  failures. Groq, Google AI Studio and OpenRouter were removed in 2026-10 — there is no
+  fallback vendor. Every call uses the model chosen in the navbar (`selectedLlm` → `provider`);
+  never hard-code a cheaper model. An unknown model ID falls back to `deepseek-flash`.
 - Each summary generation triggers **two LLM calls**: main summary + enrichment (sentiment + tags),
   plus a headline-only **triage** call (`category-triage` prompt, `lib/articleTriage.js`) when more
   than 30 articles survive dedupe, the age window (48 h, or 7 days with a filter keyword) and the
@@ -420,8 +422,7 @@ Cognitive: `forensic_analyses`, `inoculation_sessions`, `inoculation_headlines`,
 ### Environment Variables
 
 **Server** (`server/.env`):
-- `GROQ_API_KEY` — required for LLM (Groq provider)
-- `OPENROUTER_API_KEY` — required for LLM fallback (OpenRouter/MiniMax)
+- `DEEPSEEK_API_KEY` — required; the only LLM provider
 - `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` — optional, send-to-Telegram feature
 - `TMDB_API_KEY` — optional, movie/TV releases widget
 - `NEWS_SEARCH` — set to `off` to stop Google News searches: a summary filter keyword's search (merged into the triage pool) and homepage topic research's (US/UK/India editions, links decoded to article URLs by `lib/googleNewsLinks.js`). Flag is `NEWS_SEARCH_ENABLED` in `lib/bias-radar/newsSearch.js`
@@ -433,7 +434,7 @@ Cognitive: `forensic_analyses`, `inoculation_sessions`, `inoculation_headlines`,
 
 ### Key Patterns
 
-- **Provider fallback**: Iterate `AI_PROVIDERS` with try/catch; a `providerId` is tried **first**, then the rest of the chain (it used to pin a single provider, and the UI always sends one, so fallback never ran). Rate limit headers captured into `providerQuotas`
+- **Provider**: `callLLM` resolves the `providerId` (a model ID from the navbar) to DeepSeek and tries it first; the loop over `AI_PROVIDERS` remains so a provider can be added back. Rate limit headers captured into `providerQuotas`
 - **Widget data flow**: Single `useWidgets()` in App.tsx, passed as props to both sidebars (avoids double-fetching)
 - **AbortController**: `useSummary` and `useJobs` cancel in-flight requests on category/source switch
 - **Chat**: Pessimistic UI — user message added immediately, server returns assistant response with summary context
