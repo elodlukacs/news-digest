@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Briefing } from '../../types';
 import { API_BASE as BASE } from '../../config';
 
-export function useBriefing(providerId: string = 'openai/gpt-oss-20b') {
+export function useBriefing(providerId: string = 'deepseek-flash') {
   const [briefing, setBriefing] = useState<Briefing | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

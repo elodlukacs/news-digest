@@ -20,6 +20,9 @@ export function useTopicResearch(providerId: string) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recent, setRecent] = useState<RecentResearch[]>([]);
+  // Set only when a research run (not opening a saved one) failed, so the
+  // page can offer to retry that topic.
+  const [retryTopic, setRetryTopic] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const recentAbortRef = useRef<AbortController | null>(null);
 
@@ -45,6 +48,7 @@ export function useTopicResearch(providerId: string) {
     setLoading(true);
     setError(null);
     setResult(null);
+    setRetryTopic(null);
     try {
       const res = await fetch(RESEARCH_BASE, {
         method: 'POST',
@@ -61,6 +65,7 @@ export function useTopicResearch(providerId: string) {
     } catch (e) {
       if (isAbort(e)) return null;
       setError(e instanceof Error ? e.message : 'Research failed. Try again in a moment.');
+      setRetryTopic(topic);
       return null;
     } finally {
       if (!controller.signal.aborted) setLoading(false);
@@ -73,6 +78,9 @@ export function useTopicResearch(providerId: string) {
     abortRef.current = controller;
     setLoading(true);
     setError(null);
+    // Otherwise a failed load would show its error above the previous result.
+    setResult(null);
+    setRetryTopic(null);
     try {
       const res = await fetch(`${RESEARCH_BASE}/${id}`, { signal: controller.signal });
       if (!res.ok) throw new Error(await readError(res, 'Could not open that research.'));
@@ -101,6 +109,7 @@ export function useTopicResearch(providerId: string) {
     abortRef.current?.abort();
     setResult(null);
     setError(null);
+    setRetryTopic(null);
     setLoading(false);
   }, []);
 
@@ -112,7 +121,7 @@ export function useTopicResearch(providerId: string) {
     };
   }, [loadRecent]);
 
-  return { result, loading, error, recent, research, load, remove, clear };
+  return { result, loading, error, retryTopic, recent, research, load, remove, clear };
 }
 
 export function useResearchChat(researchId: number | null, providerId: string) {
@@ -124,6 +133,9 @@ export function useResearchChat(researchId: number | null, providerId: string) {
   useEffect(() => {
     setMessages([]);
     setError(null);
+    // An aborted send skips its own setSending(false), which left the input
+    // disabled after switching research mid-reply.
+    setSending(false);
     sendAbortRef.current?.abort();
     if (!researchId) return;
     const controller = new AbortController();

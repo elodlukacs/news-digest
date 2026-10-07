@@ -278,4 +278,4 @@ function fillWithReserved(picked, reserved, rest) {
   return reserved.length ? ownSourcesFirst(ordered) : ordered;
 }
 
-module.exports = { selectArticles, matchesKeyword, isSearchableKeyword, SUMMARY_POOL };
+module.exports = { selectArticles, matchesKeyword, isSearchableKeyword, normalizeText, SUMMARY_POOL };

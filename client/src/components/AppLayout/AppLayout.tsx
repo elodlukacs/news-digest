@@ -23,7 +23,7 @@ export function AppLayout() {
   // Persisted like articleFontSize — it reset on every reload, which was
   // inconsistent with the other toolbar preference.
   const [selectedLlm, setSelectedLlm] = useState(
-    () => localStorage.getItem('selectedLlm') || 'openai/gpt-oss-120b',
+    () => localStorage.getItem('selectedLlm') || 'deepseek-flash',
   );
   const [articleFontSize, setArticleFontSize] = useState(() => {
     const saved = localStorage.getItem('articleFontSize');

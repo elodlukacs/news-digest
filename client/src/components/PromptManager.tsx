@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { Input } from './ui/input';
 import { Alert, AlertDescription } from './ui/alert';
-import { Save, Check, Search, ArrowRightLeft, Briefcase, Brain, Newspaper, MapPin } from 'lucide-react';
+import { Save, Check, Search, ArrowRightLeft, Briefcase, Brain, Newspaper, MapPin, Telescope } from 'lucide-react';
 
 interface Prompt {
   id: number;
@@ -31,6 +31,7 @@ const CATEGORY_CONFIG: { id: string; label: string; shortLabel: string; icon: Re
   { id: 'jobs', label: 'Jobs', shortLabel: 'Jobs', icon: <Briefcase size={18} /> },
   { id: 'mindgames', label: 'MindGames', shortLabel: 'Mind', icon: <Brain size={18} /> },
   { id: 'news', label: 'News', shortLabel: 'News', icon: <Newspaper size={18} /> },
+  { id: 'research', label: 'Research', shortLabel: 'Research', icon: <Telescope size={18} /> },
 ];
 
 const PROMPT_LOCATIONS: Record<string, string> = {
@@ -62,6 +63,9 @@ const PROMPT_LOCATIONS: Record<string, string> = {
   'category-summary': 'News → Category Summary',
   'chat': 'News → Summary Chat',
   'morning-briefing': 'News → Morning Briefing',
+  'topic-research-plan': 'Home → Research → step 1: decides what to search for',
+  'topic-research': 'Home → Research → step 2: writes the explainer',
+  'topic-research-chat': 'Home → Research → Ask a follow-up',
 };
 
 export function PromptManager() {
