@@ -59,11 +59,15 @@ function enrichSentimentData(sentimentData) {
   });
 }
 
-async function refreshCategorySummary(db, callLLM, categoryId, { provider, keyword } = {}) {
+async function refreshCategorySummary(db, callLLM, categoryId, { provider, keyword, goodNews = false } = {}) {
   if (keyword != null && typeof keyword !== 'string') {
     throw new RefreshError('Filter keyword must be text', 400);
   }
   const keywordTrim = keyword?.trim() || '';
+  if (goodNews && keywordTrim) {
+    throw new RefreshError('Good News cannot be combined with a keyword filter', 400);
+  }
+  const mode = goodNews ? 'good-news' : null;
   if (keywordTrim && !isSearchableKeyword(keywordTrim)) {
     throw new RefreshError('Filter keyword must contain letters or numbers', 400);
   }
@@ -114,14 +118,17 @@ async function refreshCategorySummary(db, callLLM, categoryId, { provider, keywo
     category,
     keyword: keywordTrim,
     provider,
+    goodNews,
   });
-  console.log(`[Summary] ${category.name}: ${fetched.length} fetched, ${poolSize} in pool, ${allArticles.length} selected (${method})`);
+  console.log(`[Summary] ${category.name}${goodNews ? ' (good news)' : ''}: ${fetched.length} fetched, ${poolSize} in pool, ${allArticles.length} selected (${method})`);
 
   if (allArticles.length === 0) {
     throw new RefreshError(
-      keywordTrim
-        ? `No articles found matching "${keywordTrim}"`
-        : 'No recent articles in the feeds',
+      goodNews
+        ? 'No clear good news in this category right now. Try again later.'
+        : keywordTrim
+          ? `No articles found matching "${keywordTrim}"`
+          : 'No recent articles in the feeds',
       400
     );
   }
@@ -147,7 +154,9 @@ async function refreshCategorySummary(db, callLLM, categoryId, { provider, keywo
   // The stored category-summary prompt caps output at 8 and says "never repeat
   // information", which folded every article on a filtered story into one card.
   // This section is code-built, so it reaches DBs whose prompt predates it.
-  const orderingSection = '\nThe articles are ordered by importance. Lead with the first story; a major story outranks routine news.\n';
+  const orderingSection = goodNews
+    ? '\nThe articles are ordered from the strongest good news to the weakest. Lead with the first story that qualifies.\n'
+    : '\nThe articles are ordered by importance. Lead with the first story; a major story outranks routine news.\n';
   const feedNames = [...new Set(feeds.map((f) => f.name))].join(', ');
   const keywordSection = keywordTrim
     ? `\nFocus only on news related to: "${keywordTrim}". This overrides the article limit above: include up to 12 articles, each covering a distinct development or angle of this story.` +
@@ -155,13 +164,13 @@ async function refreshCategorySummary(db, callLLM, categoryId, { provider, keywo
     : '';
   const customPromptSection = (customPrompt ? `\nAdditional instructions:\n${customPrompt}\n` : '') + orderingSection + keywordSection;
 
-  const messages = buildMessages('category-summary', {
+  const messages = buildMessages(goodNews ? 'good-news-summary' : 'category-summary', {
     category: category.name,
     lang,
     customPrompt: customPromptSection,
     articles: articleText,
   });
-  const result = await callLLM(messages, { purpose: 'summary', categoryId: Number(categoryId), providerId: provider || null, db });
+  const result = await callLLM(messages, { purpose: goodNews ? 'good-news' : 'summary', categoryId: Number(categoryId), providerId: provider || null, db });
   const generated_at = new Date().toISOString();
   const dateKey = generated_at.split('T')[0];
 
@@ -189,6 +198,10 @@ async function refreshCategorySummary(db, callLLM, categoryId, { provider, keywo
     );
     // Nothing usable: fail before any write. Saving it used to replace the
     // previous good summary with a blank page and add an empty archive entry.
+    // For Good News an empty list is the prompt's way of saying "none qualifies".
+    if (parsedArticles.length === 0 && goodNews) {
+      throw new RefreshError('No clear good news in this category right now. Try again later.', 400);
+    }
     if (parsedArticles.length === 0) {
       console.warn('[Summary] Parsed JSON has no usable articles. Keys:', Object.keys(parsed || {}));
       console.warn('[Summary] Raw content (first 1000 chars):', rawContent.slice(0, 1000));
@@ -242,8 +255,8 @@ async function refreshCategorySummary(db, callLLM, categoryId, { provider, keywo
   // sentiment_data/tags_data are stored here as well as in summary_history:
   // this row is what the API falls back to once history is purged, and without
   // them the cards lose their source, bias, credibility, image and sentiment.
-  // A filtered run is not the category's digest, so it never lands here.
-  if (!keywordTrim) db.prepare(`
+  // A filtered or Good News run is not the category's digest, so it never lands here.
+  if (!keywordTrim && !mode) db.prepare(`
     INSERT INTO summaries (category_id, summary, article_count, feed_count, generated_at, sentiment_data, tags_data)
     VALUES (?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(category_id) DO UPDATE SET
@@ -255,8 +268,8 @@ async function refreshCategorySummary(db, callLLM, categoryId, { provider, keywo
       tags_data = excluded.tags_data
   `).run(categoryId, summary, allArticles.length, feeds.length, generated_at, JSON.stringify(sentimentData), JSON.stringify(tagsData));
 
-  const histResult = db.prepare('INSERT INTO summary_history (category_id, summary, article_count, feed_count, provider, sentiment_data, tags_data, date_key, generated_at, keyword) VALUES (?,?,?,?,?,?,?,?,?,?)').run(
-    categoryId, summary, allArticles.length, feeds.length, result.provider, JSON.stringify(sentimentData), JSON.stringify(tagsData), dateKey, generated_at, keywordTrim || null
+  const histResult = db.prepare('INSERT INTO summary_history (category_id, summary, article_count, feed_count, provider, sentiment_data, tags_data, date_key, generated_at, keyword, mode) VALUES (?,?,?,?,?,?,?,?,?,?,?)').run(
+    categoryId, summary, allArticles.length, feeds.length, result.provider, JSON.stringify(sentimentData), JSON.stringify(tagsData), dateKey, generated_at, keywordTrim || null, mode
   );
   const historyId = histResult.lastInsertRowid;
 
@@ -274,6 +287,7 @@ async function refreshCategorySummary(db, callLLM, categoryId, { provider, keywo
     sentiment_data: enrichSentimentData(sentimentData),
     tags_data: tagsData,
     keyword: keywordTrim || null,
+    mode,
   };
 }
 

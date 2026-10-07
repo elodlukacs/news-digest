@@ -5,7 +5,7 @@ const db = require('../db');
 router.get('/trending', (req, res) => {
   try {
     const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    const rows = db.prepare('SELECT tags_data FROM summary_history WHERE date_key >= ? AND tags_data IS NOT NULL AND keyword IS NULL').all(since);
+    const rows = db.prepare('SELECT tags_data FROM summary_history WHERE date_key >= ? AND tags_data IS NOT NULL AND keyword IS NULL AND mode IS NULL').all(since);
     const counts = {};
     for (const row of rows) {
       try {

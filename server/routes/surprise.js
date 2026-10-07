@@ -75,6 +75,7 @@ function pickArticle({ excludeUrls, categoryIds } = {}) {
     WHERE sh.generated_at > datetime('now', ?)
       AND sh.category_id > 0
       AND sh.keyword IS NULL
+      AND sh.mode IS NULL
       AND sh.summary IS NOT NULL
       ${categoryClause}
     ORDER BY sh.generated_at DESC

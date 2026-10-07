@@ -61,6 +61,8 @@ const PROMPT_LOCATIONS: Record<string, string> = {
   'propaganda-timeline': 'MindGames → Playbook → Propaganda Timeline',
   'ask-the-manipulator': 'MindGames → Playbook → Ask the Manipulator',
   'category-summary': 'News → Category Summary',
+  'good-news-triage': 'News → Good News button → step 1: picks the good news',
+  'good-news-summary': 'News → Good News button → step 2: writes the digest',
   'chat': 'News → Summary Chat',
   'morning-briefing': 'News → Morning Briefing',
   'topic-research-plan': 'Home → Research → step 1: decides what to search for',

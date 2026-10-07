@@ -30,8 +30,8 @@ export function CategoryRoute() {
   const { dates, refresh: refreshHistory } = useSummaryHistory(categoryId);
   const lens = useLens(categoryId, ctx.selectedLlm);
 
-  const handleRefresh = useCallback(async (keyword?: string) => {
-    const result = await refresh(keyword);
+  const handleRefresh = useCallback(async (keyword?: string, goodNews?: boolean) => {
+    const result = await refresh(keyword, goodNews);
     // Even when the request was cancelled (category or snapshot switch), the
     // server may have finished and written a new archive entry.
     refreshHistory();
@@ -40,6 +40,8 @@ export function CategoryRoute() {
     // kept it highlighted, and clicking it again did nothing.
     if (selectedSnapshotId !== null) setSelectedSnapshotId(result.id ?? null);
   }, [refresh, refreshHistory, selectedSnapshotId, setSelectedSnapshotId]);
+
+  const handleGoodNews = useCallback(() => handleRefresh(undefined, true), [handleRefresh]);
 
   const handleClearFilter = useCallback(() => {
     if (selectedSnapshotId !== null) setSelectedSnapshotId(null);
@@ -86,6 +88,7 @@ export function CategoryRoute() {
             error={error}
             errorStatus={errorStatus}
             onRefresh={handleRefresh}
+            onGoodNews={handleGoodNews}
             onClearFilter={handleClearFilter}
             onManageFeeds={() => ctx.onManageFeeds(category.id)}
             onDelete={handleDelete}
