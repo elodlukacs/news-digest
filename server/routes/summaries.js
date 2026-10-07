@@ -23,6 +23,7 @@ function historyResponse(category, hist) {
     sentiment_data: enrichSentimentData(parsedSentiment),
     tags_data: hist.tags_data ? JSON.parse(hist.tags_data) : null,
     keyword: hist.keyword || null,
+    mode: hist.mode || null,
   };
 }
 
@@ -41,11 +42,11 @@ router.get('/:id/summary', validateId, (req, res) => {
   // "Latest" and by-date reads mean the category's digest: a filtered run is a
   // view of one story and used to replace it until the next plain refresh.
   if (date) {
-    const hist = db.prepare('SELECT * FROM summary_history WHERE category_id = ? AND date_key = ? AND keyword IS NULL ORDER BY generated_at DESC LIMIT 1').get(req.params.id, date);
+    const hist = db.prepare('SELECT * FROM summary_history WHERE category_id = ? AND date_key = ? AND keyword IS NULL AND mode IS NULL ORDER BY generated_at DESC LIMIT 1').get(req.params.id, date);
     return res.json(hist ? historyResponse(category, hist) : { category: category.name, summary: null });
   }
 
-  const latest = db.prepare('SELECT * FROM summary_history WHERE category_id = ? AND keyword IS NULL ORDER BY generated_at DESC LIMIT 1').get(req.params.id);
+  const latest = db.prepare('SELECT * FROM summary_history WHERE category_id = ? AND keyword IS NULL AND mode IS NULL ORDER BY generated_at DESC LIMIT 1').get(req.params.id);
   if (latest) return res.json(historyResponse(category, latest));
 
   // Fallback once the history row has been purged by retention. It used to omit
@@ -63,6 +64,7 @@ router.get('/:id/summary', validateId, (req, res) => {
       sentiment_data: enrichSentimentData(parsedSentiment),
       tags_data: cached.tags_data ? JSON.parse(cached.tags_data) : null,
       keyword: null,
+      mode: null,
     });
   }
 
@@ -71,19 +73,19 @@ router.get('/:id/summary', validateId, (req, res) => {
 
 // 50, not 30: filtered snapshots are listed too and would push digests off.
 router.get('/:id/history', validateId, (req, res) => {
-  const rows = db.prepare('SELECT id, date_key, generated_at, keyword FROM summary_history WHERE category_id = ? ORDER BY generated_at DESC LIMIT 50').all(req.params.id);
+  const rows = db.prepare('SELECT id, date_key, generated_at, keyword, mode FROM summary_history WHERE category_id = ? ORDER BY generated_at DESC LIMIT 50').all(req.params.id);
   res.json(rows);
 });
 
 router.post('/:id/refresh', validateId, async (req, res) => {
   try {
-    const { provider, keyword } = req.body || {};
+    const { provider, keyword, goodNews } = req.body || {};
     const categoryId = Number(req.params.id);
     // Double-clicking Refresh would otherwise run two full feed-fetch + LLM
     // cycles and write two history rows; the second caller joins the first run.
     const result = await runExclusive(
-      `refresh:${categoryId}:${keyword || ''}`,
-      () => refreshCategorySummary(db, callLLM, categoryId, { provider, keyword })
+      `refresh:${categoryId}:${goodNews === true ? 'good-news' : ''}:${keyword || ''}`,
+      () => refreshCategorySummary(db, callLLM, categoryId, { provider, keyword, goodNews: goodNews === true })
     );
     res.json(result);
   } catch (err) {

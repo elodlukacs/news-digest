@@ -39,6 +39,11 @@ export function LeftSidebar({ dates, selectedSnapshotId, onSelectSnapshot, showH
                       {new Date(entry.generated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   )}
+                  {entry.mode === 'good-news' && (
+                    <span className="text-[10px] ml-1.5 italic text-[var(--color-positive-text)] truncate min-w-0">
+                      Good news
+                    </span>
+                  )}
                   {entry.keyword && (
                     <span
                       className="text-[10px] ml-1.5 italic opacity-70 truncate min-w-0"

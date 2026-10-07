@@ -94,13 +94,14 @@ export function useSummary(
   }, [categoryId, snapshotId, startRequest, fail, setSummary]);
 
   /**
-   * Generate a new summary, optionally filtered. Resolves to it, or null.
+   * Generate a new summary, optionally filtered by keyword or limited to good
+   * news (never both). Resolves to it, or null.
    * On failure the summary on screen is left as it was and the server's own
    * message (and status, for rate limits) is surfaced. This used to swap in
    * the archived summary under a generic "Refresh failed" — hiding "No
    * articles found matching X" and every 429.
    */
-  const refresh = useCallback(async (keyword?: string): Promise<Summary | null> => {
+  const refresh = useCallback(async (keyword?: string, goodNews = false): Promise<Summary | null> => {
     if (!categoryId) return null;
     const controller = startRequest();
     setRefreshing(true);
@@ -108,7 +109,7 @@ export function useSummary(
       const res = await fetch(`${BASE}/categories/${categoryId}/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider: providerId, keyword: keyword || undefined }),
+        body: JSON.stringify({ provider: providerId, keyword: keyword || undefined, goodNews: goodNews || undefined }),
         signal: controller.signal,
       });
       const data = await readSummary(res);

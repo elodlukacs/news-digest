@@ -22,6 +22,16 @@ const HOUR_MS = 3600000;
 const FRESH_WINDOW_MS = 48 * HOUR_MS;
 // A keyword search is looking for every article on one story, so reach back further.
 const KEYWORD_WINDOW_MS = 7 * 24 * HOUR_MS;
+// Good news is a small share of any feed, so look back a little further for it.
+const GOOD_NEWS_WINDOW_MS = 72 * HOUR_MS;
+// Most a Good News triage keeps. Fewer is normal: it keeps only real good news.
+const GOOD_NEWS_POOL = 20;
+// A headline alone often hides whether the news is good ("Drug trial ends early"),
+// so Good News triage also sees the start of each description.
+const GOOD_NEWS_EXCERPT = 160;
+// The prompt scores impact and evidence 0-3 and keeps only 2+ on both; this
+// enforces it in case the model lists an item it scored lower.
+const GOOD_NEWS_MIN_SCORE = 2;
 // Slow categories (weekly blogs, science) may have nothing inside the window;
 // below this many fresh items they get their newest items regardless of age.
 const MIN_FRESH_POOL = 8;
@@ -150,6 +160,59 @@ function headlineText(title) {
   return title.replace(/\s+/g, ' ').replace(/ [—·] /g, ' - ').slice(0, MAX_TRIAGE_TITLE);
 }
 
+/** Plain-text start of the description, for Good News triage lines. */
+function excerptText(description) {
+  const text = String(description || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  return text.length > GOOD_NEWS_EXCERPT ? `${text.slice(0, GOOD_NEWS_EXCERPT)}…` : text;
+}
+
+/**
+ * Keep only genuinely good news, best first. Unlike the importance triage this
+ * runs on any pool size and may return few or no ids: an empty answer means
+ * there is no good news, never a reason to top up with other stories.
+ */
+async function triageGoodNews(callLLM, candidates, { category, provider, now }) {
+  const headlines = candidates
+    .map((a, i) => {
+      const line = `[${i + 1}] ${headlineText(a.title)} — ${a.source} · ${formatAge(a, now)}`;
+      const excerpt = excerptText(a.description);
+      return excerpt ? `${line}\n    ${excerpt}` : line;
+    })
+    .join('\n');
+
+  const messages = buildMessages('good-news-triage', {
+    category: category.name,
+    limit: String(GOOD_NEWS_POOL),
+    headlines,
+  });
+  const result = await callLLM(messages, {
+    purpose: 'good-news-triage',
+    categoryId: category.id,
+    providerId: provider || null,
+    temperature: 0.1,
+    // Each kept item carries a short restatement and scores (~50 tokens).
+    max_tokens: 2500,
+  });
+
+  const parsed = parseJSON(result.content || '', null);
+  const entries = Array.isArray(parsed) ? parsed : parsed?.selected;
+  if (!Array.isArray(entries)) throw new Error('Good News triage response had no "selected" array');
+
+  const belowBar = (score) => Number.isFinite(Number(score)) && Number(score) < GOOD_NEWS_MIN_SCORE;
+  const picked = [];
+  const used = new Set();
+  for (const entry of entries) {
+    const isObject = entry && typeof entry === 'object';
+    if (isObject && (belowBar(entry.impact) || belowBar(entry.evidence))) continue;
+    const idx = Number(isObject ? entry.id : entry) - 1;
+    if (!Number.isInteger(idx) || idx < 0 || idx >= candidates.length || used.has(idx)) continue;
+    used.add(idx);
+    picked.push(candidates[idx]);
+    if (picked.length >= GOOD_NEWS_POOL) break;
+  }
+  return picked;
+}
+
 async function triageWithLLM(callLLM, candidates, { category, keyword, provider, now }) {
   const headlines = candidates
     .map((a, i) => `[${i + 1}] ${headlineText(a.title)} — ${a.source} · ${formatAge(a, now)} · ${a.coverage} outlet${a.coverage === 1 ? '' : 's'}`)
@@ -200,10 +263,13 @@ function withTimeout(promise, ms) {
 /**
  * @returns {Promise<{ articles: object[], poolSize: number, method: 'all'|'llm'|'heuristic' }>}
  *   `articles` is ordered most-important first and capped at SUMMARY_POOL.
+ *   With `goodNews`, `articles` holds only the good news triage found (possibly
+ *   none); if triage fails it is the heuristic top of the pool, and the Good
+ *   News summary prompt does the filtering on its own.
  */
-async function selectArticles(callLLM, rawArticles, { category, keyword, provider } = {}) {
+async function selectArticles(callLLM, rawArticles, { category, keyword, provider, goodNews = false } = {}) {
   const now = Date.now();
-  const windowMs = keyword ? KEYWORD_WINDOW_MS : FRESH_WINDOW_MS;
+  const windowMs = keyword ? KEYWORD_WINDOW_MS : goodNews ? GOOD_NEWS_WINDOW_MS : FRESH_WINDOW_MS;
   // Undated items are kept: some feeds omit pubDate, and dropping them would empty those feeds.
   const inWindow = (a) => !timeOf(a, now) || now - timeOf(a, now) <= windowMs;
 
@@ -224,6 +290,20 @@ async function selectArticles(callLLM, rawArticles, { category, keyword, provide
     .sort((a, b) => b.score - a.score);
 
   const poolSize = pool.length;
+  if (goodNews) {
+    const candidates = pool.slice(0, MAX_TRIAGE_CANDIDATES);
+    try {
+      const picked = await withTimeout(
+        triageGoodNews(callLLM, candidates, { category, provider, now }),
+        TRIAGE_TIMEOUT_MS
+      );
+      return { articles: picked, poolSize, method: 'llm' };
+    } catch (err) {
+      console.warn('[Triage] Good News filtering failed, leaving it to the summary prompt:', err.message);
+      return { articles: pool.slice(0, SUMMARY_POOL), poolSize, method: 'heuristic' };
+    }
+  }
+
   if (poolSize <= SUMMARY_POOL) {
     return { articles: ownSourcesFirst(pool), poolSize, method: 'all' };
   }

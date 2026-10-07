@@ -16,6 +16,7 @@ import {
   Filter,
   Search,
   ArrowUp,
+  Sun,
 } from 'lucide-react';
 import { ArticleChatPopup } from '../ArticleChatPopup';
 import { ChallengeQuiz } from '../ChallengeQuiz';
@@ -50,6 +51,8 @@ interface Props {
   /** HTTP status of the failed request, when there was one (429 → rate-limit dialog). */
   errorStatus?: number | null;
   onRefresh: (keyword?: string) => void | Promise<void>;
+  /** Generate a digest of only the good news in this category's feeds. */
+  onGoodNews: () => void | Promise<void>;
   onClearFilter?: () => void;
   onManageFeeds: () => void;
   onDelete: () => void;
@@ -75,6 +78,7 @@ export function SummaryView({
   error,
   errorStatus = null,
   onRefresh,
+  onGoodNews,
   onClearFilter,
   onManageFeeds,
   onDelete,
@@ -96,6 +100,18 @@ export function SummaryView({
   // filter used to leave the chip "active" over the unfiltered digest.
   const activeKeyword = summary?.keyword ?? '';
   const [showScrollTop, setShowScrollTop] = useState(false);
+  // Which action is running, so only its button says so.
+  const [goodNewsPending, setGoodNewsPending] = useState(false);
+  const isGoodNews = summary?.mode === 'good-news';
+
+  const handleGoodNews = async () => {
+    setGoodNewsPending(true);
+    try {
+      await onGoodNews();
+    } finally {
+      setGoodNewsPending(false);
+    }
+  };
 
   const handleFilterRefresh = () => {
     const kw = keyword.trim();
@@ -200,6 +216,23 @@ export function SummaryView({
                 Filtered: “{summary.keyword}”
               </span>
             )}
+            {isGoodNews && (
+              <span className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-full bg-[var(--color-positive-bg)] border border-[var(--color-positive-dot)]/40 text-[11px] font-medium text-[var(--color-positive-text)]">
+                <Sun size={10} />
+                Good news only
+                {onClearFilter && (
+                  <button
+                    onClick={onClearFilter}
+                    disabled={busy}
+                    className="ml-0.5 inline-flex items-center justify-center w-4 h-4 rounded-full hover:bg-[var(--color-positive-dot)]/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                    aria-label="Show the full digest"
+                    title="Show the full digest"
+                  >
+                    <X size={10} />
+                  </button>
+                )}
+              </span>
+            )}
           </div>
         )}
 
@@ -214,21 +247,35 @@ export function SummaryView({
           >
             <div className="flex flex-col items-start min-w-0">
               <span className="text-base font-semibold leading-tight truncate">
-                {refreshing ? 'Updating…' : 'Pull latest stories'}
+                {refreshing && !goodNewsPending ? 'Updating…' : 'Pull latest stories'}
               </span>
-              {!refreshing && (
+              {(!refreshing || goodNewsPending) && (
                 <span className="text-xs text-masthead/60 mt-0.5 truncate">Fetch new articles from your feeds</span>
               )}
             </div>
             <RefreshCw
               size={18}
-              strokeWidth={busy ? 2.5 : 2}
+              strokeWidth={busy && !goodNewsPending ? 2.5 : 2}
               className={
-                busy
+                busy && !goodNewsPending
                   ? 'shrink-0 ml-3 animate-spin'
                   : 'shrink-0 ml-3 transition-transform duration-200 ease-out group-active:rotate-[-35deg]'
               }
             />
+          </button>
+
+          <button
+            onClick={() => {
+              if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(8);
+              handleGoodNews();
+            }}
+            disabled={busy}
+            className="w-full h-12 flex items-center justify-between px-4 rounded-xl bg-[var(--color-positive-bg)] border border-[var(--color-positive-dot)]/40 text-[var(--color-positive-text)] disabled:opacity-60 active:scale-[0.97] transition-transform cursor-pointer"
+          >
+            <span className="text-[15px] font-semibold leading-tight truncate">
+              {goodNewsPending ? 'Finding good news…' : 'Good News'}
+            </span>
+            <Sun size={18} className={goodNewsPending ? 'shrink-0 ml-3 animate-spin [animation-duration:3s]' : 'shrink-0 ml-3'} />
           </button>
 
           <div className={`flex h-14 rounded-xl border bg-paper overflow-hidden transition-colors ${busy ? 'opacity-60' : ''} ${activeKeyword ? 'border-masthead/30' : 'border-rule'}`}>
@@ -271,8 +318,18 @@ export function SummaryView({
             disabled={busy}
             className="h-9 inline-flex items-center gap-2 px-3.5 rounded-md bg-masthead text-paper text-[13px] font-semibold hover:bg-masthead/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer shadow-sm"
           >
-            <RefreshCw size={14} className={busy ? 'animate-spin' : ''} />
-            {refreshing ? 'Refreshing…' : 'Refresh Articles'}
+            <RefreshCw size={14} className={busy && !goodNewsPending ? 'animate-spin' : ''} />
+            {refreshing && !goodNewsPending ? 'Refreshing…' : 'Refresh Articles'}
+          </button>
+
+          <button
+            onClick={handleGoodNews}
+            disabled={busy}
+            title="Fetch fresh articles and summarize only the good news"
+            className="h-9 inline-flex items-center gap-2 px-3.5 rounded-md border border-[var(--color-positive-dot)]/40 bg-[var(--color-positive-bg)] text-[var(--color-positive-text)] text-[13px] font-semibold hover:border-[var(--color-positive-dot)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer shadow-sm"
+          >
+            <Sun size={14} className={goodNewsPending ? 'animate-spin [animation-duration:3s]' : ''} />
+            {goodNewsPending ? 'Finding good news…' : 'Good News'}
           </button>
 
           <div className={`h-9 inline-flex items-stretch rounded-md border overflow-hidden transition-colors bg-paper shadow-sm ${activeKeyword ? 'border-masthead/40' : 'border-rule'} ${busy ? 'opacity-60' : ''}`}>
