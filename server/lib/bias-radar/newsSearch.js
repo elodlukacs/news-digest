@@ -69,6 +69,12 @@ function buildSmartQuery(title) {
   return [keywords.join(' '), keywords.join(' OR ')];
 }
 
+/** GDELT's "20261007T101500Z" → ISO 8601; Date.parse can't read the compact form. */
+function gdeltDate(seendate) {
+  const m = String(seendate || '').match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/);
+  return m ? `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}Z` : '';
+}
+
 async function searchGDELT(title, language = 'English') {
   if (!title) return [];
 
@@ -102,7 +108,7 @@ async function searchGDELT(title, language = 'English') {
             url: a.url,
             source: a.domain || 'Unknown',
             biasRating: getBiasRating(a.url) || 'unknown',
-            publishedAt: a.seendate || '',
+            publishedAt: gdeltDate(a.seendate),
             excerpt: a.socialimage || '',
             matchType: 'gdelt',
           }))
@@ -123,13 +129,17 @@ async function searchGDELT(title, language = 'English') {
  * @param {string} [opts.when] Google News recency operator, e.g. '7d'
  * @param {{hl: string, gl: string}} [opts.edition] Google News edition to
  *   search instead of the one `language` maps to (e.g. the UK edition)
+ * @param {boolean} [opts.fallback=true] when the query finds nothing, retry
+ *   with its keywords and then an OR of them. Off for callers that already
+ *   send short keyword queries — the OR form fills results with loosely
+ *   related stories.
  */
-async function searchGoogleNews(title, language = 'English', { limit = 10, when, edition } = {}) {
+async function searchGoogleNews(title, language = 'English', { limit = 10, when, edition, fallback = true } = {}) {
   if (!title) return [];
 
   const [exactQuery, orQuery] = buildSmartQuery(title);
   // Try full title first (Google News handles natural language well), then keyword queries
-  const queriesToTry = [title, exactQuery, orQuery].filter(Boolean);
+  const queriesToTry = fallback ? [title, exactQuery, orQuery].filter(Boolean) : [title];
   const langConfig = edition || getLanguageConfig(language);
 
   for (const query of queriesToTry) {
@@ -270,5 +280,6 @@ module.exports = {
   searchAllSources,
   extractKeywords,
   getLanguageConfig,
+  LANGUAGE_CONFIGS,
   NEWS_SEARCH_ENABLED,
 };

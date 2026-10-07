@@ -68,7 +68,8 @@ for (const path of [
   app.use(path, llmLimit);
 }
 // Research reads (saved results, recent list, chat history) are cheap and
-// happen on every page load; only the two LLM calls count against the bucket.
+// happen on every page load, so only the two POSTs count against the bucket
+// (a cached research result still counts — it can't be known before the lookup).
 app.post('/api/research', llmLimit);
 app.post('/api/research/:id/chat', llmLimit);
 

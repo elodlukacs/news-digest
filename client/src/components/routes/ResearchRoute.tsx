@@ -18,7 +18,7 @@ const RESULT_PARAM = 'r';
 
 export function ResearchRoute() {
   const { selectedLlm, articleFontSize } = useOutletContext<AppOutletContext>();
-  const { result, loading, error, recent, research, load, remove, clear } = useTopicResearch(selectedLlm);
+  const { result, loading, error, retryTopic, recent, research, load, remove, clear } = useTopicResearch(selectedLlm);
   const [searchParams, setSearchParams] = useSearchParams();
   const [pendingTopic, setPendingTopic] = useState('');
   // A new research run gets the step-by-step progress; reopening a saved one is
@@ -37,7 +37,9 @@ export function ResearchRoute() {
   useEffect(() => {
     if (paramId) {
       if (shownIdRef.current !== paramId) load(paramId);
-    } else if (shownIdRef.current) {
+    } else {
+      // Back to the search page — also cancels a "Research again" still
+      // running, which would otherwise push its result over this navigation.
       clear();
     }
   }, [paramId, load, clear]);
@@ -119,12 +121,12 @@ export function ResearchRoute() {
 
           {error && !loading && (
             <div role="alert" className="pt-12 max-w-[60ch]">
-              <p className="font-serif text-[22px] font-bold text-ink">The research didn’t finish.</p>
+              <p className="font-serif text-[22px] font-bold text-ink">{retryTopic ? 'The research didn’t finish.' : 'Couldn’t open this research.'}</p>
               <p className="mt-2 font-[family-name:var(--font-body)] text-[16px] leading-relaxed text-ink-light">{error}</p>
-              {pendingTopic && (
+              {retryTopic && (
                 <button
                   type="button"
-                  onClick={() => submit(pendingTopic)}
+                  onClick={() => submit(retryTopic)}
                   className="mt-5 inline-flex items-center gap-2 rounded-md bg-masthead text-paper px-4 py-2 font-[family-name:var(--font-widget)] text-[14px] font-semibold hover:bg-masthead/90 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-masthead focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
                 >
                   <RotateCw size={14} />
